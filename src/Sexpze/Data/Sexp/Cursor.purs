@@ -17,7 +17,7 @@ import Sexpze.Utility (bug, todo)
 data Cursor
   = PointCursor Point
   | SpanCursor Span
-  | SelectCursor Select
+  | ZipperCursor Zipper
 
 moveLeft_Cursor :: forall a. Sexp a -> Cursor -> Maybe Cursor
 moveLeft_Cursor x (PointCursor p) = PointCursor <$> moveLeft_Point x p
@@ -76,11 +76,11 @@ moveRight_Point (Group xs) (Point (i : is) j) =
 newtype Span = Span { p0 :: Point, p1 :: Point }
 
 --------------------------------------------------------------------------------
--- Select
+-- Zipper
 --------------------------------------------------------------------------------
 
--- | A `Select` is composed of two `Span`s that contains matching numbers of
--- | opening and closing parentheses. A `Select` has an associated number for
+-- | A `Zipper` is composed of two `Span`s that contains matching numbers of
+-- | opening and closing parentheses. A `Zipper` has an associated number for
 -- | how many outer unclosed parentheses it has.
-data Select = Select { s1 :: Span, s2 :: Span }
+data Zipper = Zipper { s1 :: Span, s2 :: Span }
 
