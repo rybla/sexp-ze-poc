@@ -14,7 +14,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Sexpze.Data.Sexp (Sexp(..))
+import Sexpze.Data.Sexp (Sexp, Sexp'(..))
 import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..), Span(..), moveLeft_Cursor, moveRight_Cursor, topPoint)
 import Sexpze.Utility (todo)
 import Web.Event.Event as Event
@@ -45,7 +45,7 @@ component = H.mkComponent { initialState, eval, render }
   where
   initialState :: Input -> State
   initialState _input =
-    { term: Atom "this is an example atom"
+    { term: []
     , cursor: PointCursor topPoint
     }
 
@@ -63,10 +63,7 @@ component = H.mkComponent { initialState, eval, render }
       [ HH.text "Editor.component" ]
 
 renderTerm :: List Int -> Term -> HTML
-renderTerm is (Atom label) =
-  HH.div [ HP.classes [ H.ClassName "sexp", H.ClassName "atom" ] ]
-    [ HH.text label ]
-renderTerm is (Group xs) =
+renderTerm is xs =
   let
     p0 = Point is 0
     p1 = Point is (Array.length xs)
@@ -77,7 +74,7 @@ renderTerm is (Group xs) =
             # Array.mapWithIndex
                 ( \j x ->
                     [ renderPointHandle (Point is j) (HH.text "•")
-                    , x # renderTerm (is `List.snoc` j)
+                    , x # renderTerm' (is `List.snoc` j)
                     ]
                 )
             # Array.fold
@@ -86,6 +83,12 @@ renderTerm is (Group xs) =
         ]
           # Array.fold
       )
+
+renderTerm' :: List Int -> Term' -> HTML
+renderTerm' is (Atom label) =
+  HH.div [ HP.classes [ H.ClassName "sexp", H.ClassName "atom" ] ]
+    [ HH.text label ]
+renderTerm' is (Group xs) = renderTerm is xs
 
 renderPointHandle :: Point -> HTML -> HTML
 renderPointHandle p label =
@@ -109,6 +112,7 @@ type State =
   }
 
 type Term = Sexp String
+type Term' = Sexp' String
 
 --------------------------------------------------------------------------------
 -- UserAction
