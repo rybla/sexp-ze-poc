@@ -7,7 +7,8 @@ import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
-import Sexpze.Data.Tree (Tree(..))
+import Sexpze.Data.Sexp (Sexp(..))
+import Sexpze.Data.Sexp.Cursor (Cursor(..), topPoint)
 import Sexpze.Utility (todo)
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.KeyboardEvent as KeyboardEvent
@@ -32,7 +33,8 @@ component = H.mkComponent { initialState, eval, render }
   where
   initialState :: Input -> State
   initialState _input =
-    { term: Tree "init" []
+    { term: Atom "this is an example atom"
+    , cursor: PointCursor topPoint
     }
 
   eval = H.mkEval H.defaultEval { handleAction = handleAction }
@@ -51,10 +53,10 @@ component = H.mkComponent { initialState, eval, render }
 
 type State =
   { term :: Term
+  , cursor :: Cursor
   }
 
-type Term = Tree Label
-type Label = String
+type Term = Sexp String
 
 --------------------------------------------------------------------------------
 -- UserAction
@@ -110,4 +112,10 @@ data Action =
 --------------------------------------------------------------------------------
 
 handleUserAction :: UserAction -> H.HalogenM State Action Slots Output M Unit
-handleUserAction = todo "doUserAction" {}
+handleUserAction MoveLeft = todo "handleUserAction" {}
+handleUserAction MoveRight = todo "handleUserAction" {}
+handleUserAction SelectLeft = todo "handleUserAction" {}
+handleUserAction SelectRight = todo "handleUserAction" {}
+handleUserAction Delete = todo "handleUserAction" {}
+handleUserAction Copy = todo "handleUserAction" {}
+handleUserAction Paste = todo "handleUserAction" {}
