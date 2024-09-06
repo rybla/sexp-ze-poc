@@ -2,6 +2,9 @@
   "name": "sexp-ze-poc",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "build": "spago build"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

@@ -1,9 +1,15 @@
 package:
   name: sexp-ze-poc
   dependencies:
+    - argonaut
+    - arrays
     - console
     - effect
+    - halogen
+    - lists
     - prelude
+    - profunctor-lenses
+    - transformers
   test:
     main: Test.Main
     dependencies: []
