@@ -3,7 +3,8 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "build": "spago build"
+    "build": "spago build",
+    "serve": "vite docs"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -13,6 +14,7 @@
   },
   "dependencies": {
     "purescript": "^0.15.16-3",
-    "spago": "^0.93.39"
+    "spago": "^0.93.39",
+    "vite": "^5.4.3"
   }
 }

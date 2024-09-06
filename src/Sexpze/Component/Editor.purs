@@ -6,6 +6,7 @@ import Data.Maybe (Maybe)
 import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
+import Sexpze.Data.Tree (Tree(..))
 import Sexpze.Utility (todo)
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 
@@ -15,17 +16,15 @@ import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 
 data Query a = KeyboardEvent_Query KeyboardEvent a
 
-data Input
+newtype Input = Input {}
 
-data Output
-
-type State = {}
+data Output = Updated Term
 
 component :: H.Component Query Input Output Aff
 component = H.mkComponent { initialState, eval, render }
   where
   initialState :: Input -> State
-  initialState _input = {}
+  initialState _input = { term: Tree "init" [] }
 
   eval = H.mkEval H.defaultEval
 
@@ -33,6 +32,17 @@ component = H.mkComponent { initialState, eval, render }
     HH.div
       []
       [ HH.text "Editor.component" ]
+
+--------------------------------------------------------------------------------
+-- State
+--------------------------------------------------------------------------------
+
+type State =
+  { term :: Term
+  }
+
+type Term = Tree Label
+type Label = String
 
 --------------------------------------------------------------------------------
 -- UserAction
@@ -46,8 +56,8 @@ data UserAction
   | SelectLeft
   | SelectRight
 
-parseUserActionsFromKeyboardEvent :: KeyboardEvent -> State -> Maybe (Array UserAction)
-parseUserActionsFromKeyboardEvent = todo "parseUserActionsFromKeyboardEvent" {}
+-- parseUserActionsFromKeyboardEvent :: KeyboardEvent -> State -> Maybe (Array UserAction)
+-- parseUserActionsFromKeyboardEvent = todo "parseUserActionsFromKeyboardEvent" {}
 
 -- parseUserActionsFromMouseClick :: TODO -> State -> Maybe (Array UserAction)
 -- parseUserActionsFromMouseClick = todo "parseUserActionsFromMouseClick" {}
