@@ -15,7 +15,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..), Span(..), topPoint)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..), PointType(..), Span(..), topPoint)
 import Sexpze.Utility (todo)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
@@ -65,15 +65,15 @@ component = H.mkComponent { initialState, eval, render }
 renderTerm :: List Int -> Term -> HTML
 renderTerm is xs =
   let
-    p0 = Point is 0
-    p1 = Point is (Array.length xs)
+    p0 = Point { is: is `List.snoc` 0, pointType: Between }
+    p1 = Point { is: is `List.snoc` Array.length xs, pointType: Between }
   in
     HH.div [ HP.classes [ H.ClassName "sexp", H.ClassName "group" ] ]
       ( [ [ renderSpanHandle (Span { p0, p1 }) (HH.text "(") ]
         , xs
             # Array.mapWithIndex
                 ( \j x ->
-                    [ renderPointHandle (Point is j) (HH.text "•")
+                    [ renderPointHandle (Point { is: is `List.snoc` j, pointType: Between }) (HH.text "•")
                     , x # renderTerm' (is `List.snoc` j)
                     ]
                 )

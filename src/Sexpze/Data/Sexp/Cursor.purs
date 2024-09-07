@@ -7,14 +7,14 @@ import Control.Plus (empty)
 import Data.Array as Array
 import Data.List (List(..), (:))
 import Data.List as List
-import Data.Maybe (Maybe, fromMaybe')
+import Data.Maybe (Maybe)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
-import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
+import Sexpze.Data.Sexp (Sexp, Sexp'(..))
 import Sexpze.Utility (bug, todo)
 
 --------------------------------------------------------------------------------
--- recursor
+-- traverseSexpWithCursor
 --------------------------------------------------------------------------------
 
 type TraverseSexpWithCursorRecs a r =
@@ -26,36 +26,65 @@ traverseSexpWithCursor
   :: forall a r
    . TraverseSexpWithCursorRecs a r
   -> List Int
-  -> Maybe Cursor
+  -> Maybe SubCursor
   -> Sexp a
   -> Array r
-traverseSexpWithCursor recs is mb_csr =
+traverseSexpWithCursor recs is mb_subcursor =
   Array.mapWithIndex \i x ->
-    traverseSexp'WithCursor recs (is `List.snoc` i) (unconsStepOfCursor i =<< mb_csr) x
+    traverseSexp'WithCursor recs (is `List.snoc` i) (mb_subcursor >>= matchStepSubCursor i) x
 
 traverseSexp'WithCursor
   :: forall a r
    . TraverseSexpWithCursorRecs a r
   -> List Int
-  -> Maybe Cursor
+  -> Maybe SubCursor
   -> Sexp' a
   -> r
-traverseSexp'WithCursor { atom } is mb_csr (Atom a) =
-  atom { cursorStatus: toCursorStatus =<< mb_csr, here: PointCursor (Point is On) } a
-traverseSexp'WithCursor recs@{ group } is mb_csr (Group xs) =
-  group { cursorStatus: toCursorStatus =<< mb_csr, here: PointCursor (Point is On) }
-    ( Array.zipWith (\(i /\ x) r -> { before: PointCursor (Point (is `List.snoc` i) Between), x, r })
+traverseSexp'WithCursor { atom } is mb_subcursor (Atom a) =
+  atom { cursorStatus: toCursorStatus =<< mb_subcursor, here: PointCursor (Point is) } a
+traverseSexp'WithCursor recs@{ group } is mb_subcursor (Group xs) =
+  group { cursorStatus: toCursorStatus =<< mb_subcursor, here: PointCursor (Point is) }
+    ( Array.zipWith (\(i /\ x) r -> { before: PointCursor (Point (is `List.snoc` i)), x, r })
         (xs # Array.mapWithIndex Tuple)
-        (xs # traverseSexpWithCursor recs is mb_csr)
+        (xs # traverseSexpWithCursor recs is mb_subcursor)
     )
-    { last: PointCursor (Point (is `List.snoc` Array.length xs) Between) }
+    { last: PointCursor (Point (is `List.snoc` Array.length xs)) }
 
--- | Checks if the next step of the `Cursor` can follow the 
-unconsStepOfCursor :: Int -> Cursor -> Maybe Cursor
-unconsStepOfCursor = todo "unconsStepOfCursor" {}
+--------------------------------------------------------------------------------
+-- SubCursor
+--------------------------------------------------------------------------------
 
-toCursorStatus :: Cursor -> Maybe CursorStatus
-toCursorStatus = todo "toCursorStatus"
+type SubCursor = Cursor /\ SubCursorStatus
+
+data SubCursorStatus
+  = TopSubCursorStatus
+  | SpanBeginSubCursorStatus
+  | SpanEndSubCursorStatus
+  | ZipperOuterBeginSubCursorStatus
+  | ZipperOuterEndSubCursorStatus
+  | ZipperInnerBeginSubCursorStatus
+  | ZipperInnerEndSubCursorStatus
+
+matchStepSubCursor :: Int -> SubCursor -> Maybe SubCursor
+-- 
+matchStepSubCursor j (PointCursor (Point (Cons i is')) /\ scs) | i == j = pure (PointCursor (Point is') /\ scs)
+matchStepSubCursor _ (PointCursor (Point Nil) /\ _) = bug $ "matchStepSubCursor: tried to step into a PointCursor with no steps left"
+-- 
+matchStepSubCursor j (SpanCursor (Span { p0: Point (Cons i is') }) /\ TopSubCursorStatus) | i == j = pure (PointCursor (Point is') /\ SpanBeginSubCursorStatus)
+matchStepSubCursor j (SpanCursor (Span { p1: Point (Cons i is') }) /\ TopSubCursorStatus) | i == j = pure (PointCursor (Point is') /\ SpanEndSubCursorStatus)
+matchStepSubCursor _ (SpanCursor _ /\ _) = bug $ "matchStepSubCursor: tries to step into a non-PointCursor with non-TopSubCursorStatus"
+-- 
+matchStepSubCursor j (ZipperCursor (Zipper { s1: Span { p0: Point (Cons i is') } }) /\ TopSubCursorStatus) | i == j = pure (PointCursor (Point is') /\ ZipperOuterBeginSubCursorStatus)
+matchStepSubCursor j (ZipperCursor (Zipper { s1: Span { p0: Point (Cons i is') } }) /\ TopSubCursorStatus) | i == j = pure (PointCursor (Point is') /\ ZipperOuterEndSubCursorStatus)
+matchStepSubCursor j (ZipperCursor (Zipper { s2: Span { p1: Point (Cons i is') } }) /\ TopSubCursorStatus) | i == j = pure (PointCursor (Point is') /\ ZipperInnerBeginSubCursorStatus)
+matchStepSubCursor j (ZipperCursor (Zipper { s2: Span { p1: Point (Cons i is') } }) /\ TopSubCursorStatus) | i == j = pure (PointCursor (Point is') /\ ZipperInnerEndSubCursorStatus)
+matchStepSubCursor _ (ZipperCursor _ /\ _) = bug $ "matchStepSubCursor: tries to step into a non-PointCursor with non-TopSubCursorStatus"
+-- 
+matchStepSubCursor _ _ = empty
+
+--------------------------------------------------------------------------------
+-- CursorStatus
+--------------------------------------------------------------------------------
 
 data CursorStatus
   = PointCursorStatus
@@ -65,6 +94,16 @@ data CursorStatus
   | ZipperOuterEndCursorStatus
   | ZipperInnerBeginCursorStatus
   | ZipperInnerEndCursorStatus
+
+toCursorStatus :: SubCursor -> Maybe CursorStatus
+toCursorStatus (PointCursor (Point Nil) /\ TopSubCursorStatus) = pure PointCursorStatus
+toCursorStatus (PointCursor (Point Nil) /\ SpanBeginSubCursorStatus) = pure SpanBeginCursorStatus
+toCursorStatus (PointCursor (Point Nil) /\ SpanEndSubCursorStatus) = pure SpanEndCursorStatus
+toCursorStatus (PointCursor (Point Nil) /\ ZipperOuterBeginSubCursorStatus) = pure ZipperOuterBeginCursorStatus
+toCursorStatus (PointCursor (Point Nil) /\ ZipperOuterEndSubCursorStatus) = pure ZipperOuterEndCursorStatus
+toCursorStatus (PointCursor (Point Nil) /\ ZipperInnerBeginSubCursorStatus) = pure ZipperInnerBeginCursorStatus
+toCursorStatus (PointCursor (Point Nil) /\ ZipperInnerEndSubCursorStatus) = pure ZipperInnerEndCursorStatus
+toCursorStatus _ = empty
 
 --------------------------------------------------------------------------------
 -- Cursor
@@ -87,15 +126,15 @@ data Cursor
 -- Point
 --------------------------------------------------------------------------------
 
--- | A `Point` is a position between two elements of a `Group`.
-data Point = Point (List Int) PointType
-data PointType = On | Between
+-- | A `Point` is either a position `Between` two elements of a `Group`. It is
+-- | encoded by a top-down index into a `Sexp`.
+newtype Point = Point (List Int)
 
 topPoint :: Point
-topPoint = Point mempty On
+topPoint = Point mempty
 
 consPoint :: Int -> Point -> Point
-consPoint i (Point is j) = Point (i : is) j
+consPoint i (Point is) = Point (i : is)
 
 -- moveLeft_Point :: forall a. Sexp a -> Point -> Maybe Point
 -- moveLeft_Point (Atom _) _ = empty
