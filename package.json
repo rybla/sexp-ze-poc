@@ -3,6 +3,7 @@
   "type": "module",
   "scripts": {
     "build": "spago build",
+    "test": "spago test",
     "bundle": "pnpm spago bundle --module Sexpze.Main  --outfile ./docs/main.js",
     "serve": "vite docs"
   },

@@ -24,24 +24,49 @@ body {
 
 .Term {
   font-family: monospace;
+  user-select: none;
 }
 
 .Term.Atom {
-  color: rgb(229, 79, 255);
+  color: rgb(31, 120, 255);
   font-weight: bold;
 }
 
-.Term.List {
+.Term.Group {
   display: flex;
   flex-direction: row;
   gap: 0.5em;
 }
 
-.Term.Group {}
+/* CursorHandle */
+
+.CursorHandle {
+  cursor: pointer;
+}
+
+.CursorHandle.NoCursorStatus {
+  color: rgb(196, 196, 196);
+}
+
+.CursorHandle.PointCursorStatus {
+  color: rgb(255, 75, 132);
+}
+
+.CursorHandle.SpanBeginCursorStatus {}
+
+.CursorHandle.SpanEndCursorStatus {}
+
+.CursorHandle.ZipperOuterBeginCursorStatus {}
+
+.CursorHandle.ZipperOuterEndCursorStatus {}
+
+.CursorHandle.ZipperInnerBeginCursorStatus {}
+
+.CursorHandle.ZipperInnerEndCursorStatus {}
+
 
 /* Punc */
 
 .Punc {
   font-weight: bold;
-  color: rgb(37, 255, 37);
 }

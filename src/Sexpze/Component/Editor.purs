@@ -5,9 +5,10 @@ import Prelude
 import Control.Monad.State (modify_)
 import Control.Plus (empty)
 import Data.Array as Array
-import Data.List (List(..))
+import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..), maybe)
-import Data.Tuple.Nested ((/\))
+import Data.Tuple.Nested (type (/\), (/\))
+import Debug as Debug
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Halogen as H
@@ -15,7 +16,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), CursorStatus, Point(..), Span, SubCursorStatus(..), traverseSexpWithCursor)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), CursorStatus(..), Point(..), Span, SubCursorStatus(..), traverseSexpWithCursor)
 import Sexpze.Utility (todo)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
@@ -45,8 +46,8 @@ component = H.mkComponent { initialState, eval, render }
   where
   initialState :: Input -> State
   initialState _input =
-    { term: [ Atom "a", Atom "b" ]
-    , cursor: PointCursor (Point Nil 0)
+    { term: [ Group [ Atom "a", Atom "b" ] ]
+    , cursor: PointCursor (Point (0 : Nil) 0)
     }
 
   eval = H.mkEval H.defaultEval { handleAction = handleAction }
@@ -61,45 +62,58 @@ component = H.mkComponent { initialState, eval, render }
     HH.div
       [ HP.classes [ HH.ClassName "Editor" ] ]
       [ HH.div [ HP.classes [ HH.ClassName "term" ] ]
-          [ renderTermNew state.cursor state.term ]
+          [ HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "Group" ] ]
+              (renderTerm state.cursor state.term)
+          ]
       ]
 
-renderTermNew :: Cursor -> Term -> HTML
-renderTermNew cursor =
+renderHandleWithCursorStatus :: Maybe CursorStatus -> HTML
+renderHandleWithCursorStatus = case _ of
+  Nothing -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "NoCursorStatus" ] "•"
+  Just PointCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "PointCursorStatus" ] "|"
+  Just SpanBeginCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "SpanBeginCursorStatus" ] "["
+  Just SpanEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "SpanEndCursorStatus" ] "]"
+  Just ZipperOuterBeginCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperOuterBeginCursorStatus" ] "<{"
+  Just ZipperOuterEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperOuterEndCursorStatus" ] "{>"
+  Just ZipperInnerBeginCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperInnerBeginCursorStatus" ] "<}"
+  Just ZipperInnerEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperInnerEndCursorStatus" ] "}>"
+
+renderTerm :: Cursor -> Term -> Array HTML
+renderTerm cursor =
   traverseSexpWithCursor
     { atom: \label ->
         HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "Atom" ] ]
           [ HH.text label ]
     , group: \xs { last } ->
         HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "Group" ] ]
-          ( [ [ renderPunc "(" ]
+          ( [ [ renderPunc [] "(" ]
             , xs
                 # map
                     ( \{ before, x: _, r: html_x } ->
-                        [ renderCursorHandle before (renderPunc "•")
+                        [ renderCursorHandle before.cursor (renderHandleWithCursorStatus before.status)
                         , html_x
                         ]
                     )
                 # Array.fold
-            , [ renderCursorHandle last (renderPunc "•") ]
-            , [ renderPunc ")" ]
+            , [ renderCursorHandle last.cursor (renderHandleWithCursorStatus last.status)
+              ]
+            , [ renderPunc [] ")" ]
             ]
               # Array.fold
           )
     }
     mempty
-    (pure (cursor /\ TopSubCursorStatus))
-    >>>
-      HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "List" ] ]
+    (pure (cursor /\ PointSubCursorStatus))
 
-renderPunc :: String -> HTML
-renderPunc s = HH.span [ HP.classes [ HH.ClassName "Punc" ] ] [ HH.text s ]
+renderPunc :: Array H.ClassName -> String -> HTML
+renderPunc cns s = HH.span [ HP.classes ([ HH.ClassName "Punc" ] <> cns) ] [ HH.text s ]
 
 renderCursorHandle :: Cursor -> HTML -> HTML
 renderCursorHandle cursor label =
   HH.div
     [ HE.onClick (SetCursor_Action cursor <<< Just) ]
-    [ label ]
+    [ label
+    ]
 
 renderPointHandle :: Point -> HTML -> HTML
 renderPointHandle p label =
