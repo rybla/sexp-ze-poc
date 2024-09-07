@@ -15,7 +15,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..), Span(..), moveLeft_Cursor, moveRight_Cursor, topPoint)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..), Span(..), topPoint)
 import Sexpze.Utility (todo)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
@@ -57,10 +57,10 @@ component = H.mkComponent { initialState, eval, render }
       mb_event # maybe (pure unit) (Event.stopPropagation <<< MouseEvent.toEvent) # liftEffect
       modify_ _ { cursor = c }
 
-  render _state =
+  render state =
     HH.div
       []
-      [ HH.text "Editor.component" ]
+      [ renderTerm mempty state.term ]
 
 renderTerm :: List Int -> Term -> HTML
 renderTerm is xs =
@@ -167,15 +167,17 @@ data Action
 
 handleUserAction :: UserAction -> H.HalogenM State Action Slots Output M Unit
 handleUserAction MoveLeft = do
-  { term, cursor } <- get
-  case moveLeft_Cursor term cursor of
-    Nothing -> pure unit
-    Just cursor' -> modify_ _ { cursor = cursor' }
+  -- { term, cursor } <- get
+  -- case moveLeft_Cursor term cursor of
+  --   Nothing -> pure unit
+  --   Just cursor' -> modify_ _ { cursor = cursor' }
+  todo "handleUserAction" {}
 handleUserAction MoveRight = do
-  { term, cursor } <- get
-  case moveRight_Cursor term cursor of
-    Nothing -> pure unit
-    Just cursor' -> modify_ _ { cursor = cursor' }
+  -- { term, cursor } <- get
+  -- case moveRight_Cursor term cursor of
+  --   Nothing -> pure unit
+  --   Just cursor' -> modify_ _ { cursor = cursor' }
+  todo "handleUserAction" {}
 handleUserAction SelectLeft = todo "handleUserAction" {}
 handleUserAction SelectRight = todo "handleUserAction" {}
 handleUserAction Delete = todo "handleUserAction" {}
