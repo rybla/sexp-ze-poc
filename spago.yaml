@@ -4,6 +4,7 @@ package:
     - argonaut
     - arrays
     - console
+    - debug
     - effect
     - halogen
     - lists

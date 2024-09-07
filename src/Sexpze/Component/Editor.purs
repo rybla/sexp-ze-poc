@@ -2,12 +2,12 @@ module Sexpze.Component.Editor where
 
 import Prelude
 
-import Control.Monad.State (get, modify_)
+import Control.Monad.State (modify_)
 import Control.Plus (empty)
 import Data.Array as Array
-import Data.List (List)
-import Data.List as List
+import Data.List (List(..))
 import Data.Maybe (Maybe(..), maybe)
+import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Halogen as H
@@ -15,7 +15,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..), PointType(..), Span(..), topPoint)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), CursorStatus, Point(..), Span, SubCursorStatus(..), traverseSexpWithCursor)
 import Sexpze.Utility (todo)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
@@ -45,8 +45,8 @@ component = H.mkComponent { initialState, eval, render }
   where
   initialState :: Input -> State
   initialState _input =
-    { term: []
-    , cursor: PointCursor topPoint
+    { term: [ Atom "a", Atom "b" ]
+    , cursor: PointCursor (Point Nil 0)
     }
 
   eval = H.mkEval H.defaultEval { handleAction = handleAction }
@@ -59,36 +59,47 @@ component = H.mkComponent { initialState, eval, render }
 
   render state =
     HH.div
-      []
-      [ renderTerm mempty state.term ]
+      [ HP.classes [ HH.ClassName "Editor" ] ]
+      [ HH.div [ HP.classes [ HH.ClassName "term" ] ]
+          [ renderTermNew state.cursor state.term ]
+      ]
 
-renderTerm :: List Int -> Term -> HTML
-renderTerm is xs =
-  let
-    p0 = Point { is: is `List.snoc` 0, pointType: Between }
-    p1 = Point { is: is `List.snoc` Array.length xs, pointType: Between }
-  in
-    HH.div [ HP.classes [ H.ClassName "sexp", H.ClassName "group" ] ]
-      ( [ [ renderSpanHandle (Span { p0, p1 }) (HH.text "(") ]
-        , xs
-            # Array.mapWithIndex
-                ( \j x ->
-                    [ renderPointHandle (Point { is: is `List.snoc` j, pointType: Between }) (HH.text "•")
-                    , x # renderTerm' (is `List.snoc` j)
-                    ]
-                )
-            # Array.fold
-        , [ renderPointHandle p1 (HH.text "•") ]
-        , [ renderSpanHandle (Span { p0, p1 }) (HH.text ")") ]
-        ]
-          # Array.fold
-      )
+renderTermNew :: Cursor -> Term -> HTML
+renderTermNew cursor =
+  traverseSexpWithCursor
+    { atom: \label ->
+        HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "Atom" ] ]
+          [ HH.text label ]
+    , group: \xs { last } ->
+        HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "Group" ] ]
+          ( [ [ renderPunc "(" ]
+            , xs
+                # map
+                    ( \{ before, x: _, r: html_x } ->
+                        [ renderCursorHandle before (renderPunc "•")
+                        , html_x
+                        ]
+                    )
+                # Array.fold
+            , [ renderCursorHandle last (renderPunc "•") ]
+            , [ renderPunc ")" ]
+            ]
+              # Array.fold
+          )
+    }
+    mempty
+    (pure (cursor /\ TopSubCursorStatus))
+    >>>
+      HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "List" ] ]
 
-renderTerm' :: List Int -> Term' -> HTML
-renderTerm' is (Atom label) =
-  HH.div [ HP.classes [ H.ClassName "sexp", H.ClassName "atom" ] ]
-    [ HH.text label ]
-renderTerm' is (Group xs) = renderTerm is xs
+renderPunc :: String -> HTML
+renderPunc s = HH.span [ HP.classes [ HH.ClassName "Punc" ] ] [ HH.text s ]
+
+renderCursorHandle :: Cursor -> HTML -> HTML
+renderCursorHandle cursor label =
+  HH.div
+    [ HE.onClick (SetCursor_Action cursor <<< Just) ]
+    [ label ]
 
 renderPointHandle :: Point -> HTML -> HTML
 renderPointHandle p label =
@@ -101,6 +112,9 @@ renderSpanHandle s label =
   HH.div
     [ HE.onClick (SetCursor_Action (SpanCursor s) <<< Just) ]
     [ label ]
+
+fromCursorStatusToClassName :: CursorStatus -> HH.ClassName
+fromCursorStatusToClassName = show >>> HH.ClassName
 
 --------------------------------------------------------------------------------
 -- State

@@ -1,10 +1,47 @@
+/* html */
+
 html,
 body {
   margin: 0;
   padding: 0;
 }
 
-body {
+/* body {
   background-color: black;
   color: white;
+} */
+
+/* Editor */
+
+.Editor {
+  padding: 1em;
+  box-shadow: 0 0 0 0.2em black inset;
+}
+
+/* .Editor>.Term {} */
+
+/* Term */
+
+.Term {
+  font-family: monospace;
+}
+
+.Term.Atom {
+  color: rgb(229, 79, 255);
+  font-weight: bold;
+}
+
+.Term.List {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5em;
+}
+
+.Term.Group {}
+
+/* Punc */
+
+.Punc {
+  font-weight: bold;
+  color: rgb(37, 255, 37);
 }
