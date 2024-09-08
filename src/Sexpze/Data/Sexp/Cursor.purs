@@ -4,6 +4,7 @@ module Sexpze.Data.Sexp.Cursor where
 import Prelude
 
 import Control.Plus (empty)
+import Data.Array (all)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Eq.Generic (genericEq)
@@ -114,6 +115,9 @@ data SubCursorStatus
   | SpanStartSubCursorStatus
   | SpanEndSubCursorStatus
   | ZipperOuterStartSubCursorStatus
+  | ZipperStartSubCursorStatus
+  | ZipperEndSubCursorStatus
+  | ZipperInnerSubCursorStatus
   | ZipperOuterEndSubCursorStatus
   | ZipperInnerStartSubCursorStatus
   | ZipperInnerEndSubCursorStatus
@@ -125,17 +129,44 @@ instance Show SubCursorStatus where
 
 matchStepSubCursor :: Int -> SubCursor -> Maybe SubCursor
 -- 
-matchStepSubCursor i' (PointCursor (Point (Cons i is') j) /\ scs) | i == i' = pure (PointCursor (Point is' j) /\ scs)
+-- PointCursor
+-- 
+matchStepSubCursor i' (PointCursor (Point (i : is') j) /\ scs) | i == i' = pure (PointCursor (Point is' j) /\ scs)
+-- 
+-- SpanCursor
+-- 
+-- SpanCursor, PointSubCursorStatus
+matchStepSubCursor i' (SpanCursor (Span (Point (i : is'0) j0) (Point (i_ : is'1) j1)) /\ PointSubCursorStatus) | i == i_ && i == i' = pure (SpanCursor (Span (Point is'0 j0) (Point is'1 j1)) /\ PointSubCursorStatus)
+matchStepSubCursor i' (SpanCursor (Span (Point (i : is') j) _) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanStartSubCursorStatus)
+matchStepSubCursor i' (SpanCursor (Span _ (Point (i : is') j)) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanEndSubCursorStatus)
+-- SpanCursor, ZipperStartSubCursorStatus|ZipperEndSubCursorStatus
+matchStepSubCursor i' (SpanCursor (Span (Point (i : is') j) _) /\ ZipperStartSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterStartSubCursorStatus)
+matchStepSubCursor i' (SpanCursor (Span _ (Point (i : is') j)) /\ ZipperStartSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerStartSubCursorStatus)
+matchStepSubCursor i' (SpanCursor (Span (Point (i : is') j) _) /\ ZipperEndSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerEndSubCursorStatus)
+matchStepSubCursor i' (SpanCursor (Span _ (Point (i : is') j)) /\ ZipperEndSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterEndSubCursorStatus)
+matchStepSubCursor i' (SpanCursor (Span (Point (i : is') j) _) /\ ZipperInnerSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerStartSubCursorStatus)
+matchStepSubCursor i' (SpanCursor (Span _ (Point (i : is') j)) /\ ZipperInnerSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerEndSubCursorStatus)
+-- 
+-- ZipperCursor
+-- 
+-- ZipperCursor, PointSubCursorStatus
+matchStepSubCursor i' (ZipperCursor (Zipper (Point (i0 : is'0) j0) (Point (i1 : is'1) j1) (Point (i2 : is'2) j2) (Point (i3 : is'3) j3)) /\ PointSubCursorStatus)
+  | all (i' == _) [ i0, i1, i2, i3 ] =
+      pure (ZipperCursor (Zipper (Point is'0 j0) (Point is'1 j1) (Point is'2 j2) (Point is'3 j3)) /\ PointSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper (Point (i0 : is'0) j0) (Point (i1 : is'1) j1) _ _) /\ PointSubCursorStatus)
+  | all (i' == _) [ i0, i1 ] =
+      pure (SpanCursor (Span (Point is'0 j0) (Point is'1 j1)) /\ ZipperStartSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper _ _ (Point (i2 : is'2) j2) (Point (i3 : is'3) j3)) /\ PointSubCursorStatus)
+  | all (i' == _) [ i2, i3 ] =
+      pure (SpanCursor (Span (Point is'2 j2) (Point is'3 j3)) /\ ZipperEndSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper _ (Point (i1 : is'1) j1) (Point (i2 : is'2) j2) _) /\ PointSubCursorStatus)
+  | all (i' == _) [ i1, i2 ] =
+      pure (SpanCursor (Span (Point is'1 j1) (Point is'2 j2)) /\ ZipperInnerSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper (Point (i : is') j) _ _ _) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterStartSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper _ (Point (i : is') j) _ _) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerStartSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper _ _ (Point (i : is') j) _) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerEndSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper _ _ _ (Point (i : is') j)) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterEndSubCursorStatus)
 --
-matchStepSubCursor i' (SpanCursor (Span { p0: Point (Cons i is'1) j1, p1: Point (Cons i_ is'2) j2 }) /\ PointSubCursorStatus) | i == i_ && i == i' = pure (SpanCursor (Span { p0: Point is'1 j1, p1: Point is'2 j2 }) /\ PointSubCursorStatus)
-matchStepSubCursor i' (SpanCursor (Span { p0: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanStartSubCursorStatus)
-matchStepSubCursor i' (SpanCursor (Span { p1: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanEndSubCursorStatus)
--- 
-matchStepSubCursor i' (ZipperCursor (Zipper { p0: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterStartSubCursorStatus)
-matchStepSubCursor i' (ZipperCursor (Zipper { p1: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerStartSubCursorStatus)
-matchStepSubCursor i' (ZipperCursor (Zipper { p2: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterEndSubCursorStatus)
-matchStepSubCursor i' (ZipperCursor (Zipper { p3: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerEndSubCursorStatus)
--- 
 matchStepSubCursor _ _ = empty
 
 --------------------------------------------------------------------------------
@@ -147,8 +178,8 @@ data CursorStatus
   | SpanStartCursorStatus
   | SpanEndCursorStatus
   | ZipperOuterStartCursorStatus
-  | ZipperOuterEndCursorStatus
   | ZipperInnerStartCursorStatus
+  | ZipperOuterEndCursorStatus
   | ZipperInnerEndCursorStatus
 
 derive instance Generic CursorStatus _
@@ -157,16 +188,30 @@ instance Show CursorStatus where
   show x = genericShow x
 
 toCursorStatus :: Int -> SubCursor -> Maybe CursorStatus
+-- 
 toCursorStatus j' (PointCursor (Point Nil j) /\ PointSubCursorStatus) | j == j' = pure PointCursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ SpanStartSubCursorStatus) | j == j' = pure SpanStartCursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ SpanEndSubCursorStatus) | j == j' = pure SpanEndCursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperOuterStartSubCursorStatus) | j == j' = pure ZipperOuterStartCursorStatus
-toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperOuterEndSubCursorStatus) | j == j' = pure ZipperOuterEndCursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperInnerStartSubCursorStatus) | j == j' = pure ZipperInnerStartCursorStatus
+toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperOuterEndSubCursorStatus) | j == j' = pure ZipperOuterEndCursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperInnerEndSubCursorStatus) | j == j' = pure ZipperInnerEndCursorStatus
-toCursorStatus j' (SpanCursor (Span { p0: Point Nil j }) /\ PointSubCursorStatus) | j == j' = pure SpanStartCursorStatus
-toCursorStatus j' (SpanCursor (Span { p1: Point Nil j }) /\ PointSubCursorStatus) | j == j' = pure SpanEndCursorStatus
+-- 
+toCursorStatus j' (SpanCursor (Span (Point Nil j) _) /\ PointSubCursorStatus) | j == j' = pure SpanStartCursorStatus
+toCursorStatus j' (SpanCursor (Span _ (Point Nil j)) /\ PointSubCursorStatus) | j == j' = pure SpanEndCursorStatus
+toCursorStatus j' (SpanCursor (Span (Point Nil j) _) /\ ZipperStartSubCursorStatus) | j == j' = pure ZipperOuterStartCursorStatus
+toCursorStatus j' (SpanCursor (Span _ (Point Nil j)) /\ ZipperStartSubCursorStatus) | j == j' = pure ZipperInnerStartCursorStatus
+toCursorStatus j' (SpanCursor (Span (Point Nil j) _) /\ ZipperEndSubCursorStatus) | j == j' = pure ZipperInnerStartCursorStatus
+toCursorStatus j' (SpanCursor (Span _ (Point Nil j)) /\ ZipperEndSubCursorStatus) | j == j' = pure ZipperOuterEndCursorStatus
+toCursorStatus j' (SpanCursor (Span (Point Nil j) _) /\ ZipperInnerSubCursorStatus) | j == j' = pure ZipperInnerStartCursorStatus
+toCursorStatus j' (SpanCursor (Span _ (Point Nil j)) /\ ZipperInnerSubCursorStatus) | j == j' = pure ZipperInnerEndCursorStatus
+-- 
+toCursorStatus j' (ZipperCursor (Zipper (Point Nil j) _ _ _) /\ PointSubCursorStatus) | j == j' = pure ZipperOuterStartCursorStatus
+toCursorStatus j' (ZipperCursor (Zipper _ (Point Nil j) _ _) /\ PointSubCursorStatus) | j == j' = pure ZipperInnerStartCursorStatus
+toCursorStatus j' (ZipperCursor (Zipper _ _ (Point Nil j) _) /\ PointSubCursorStatus) | j == j' = pure ZipperInnerEndCursorStatus
+toCursorStatus j' (ZipperCursor (Zipper _ _ _ (Point Nil j)) /\ PointSubCursorStatus) | j == j' = pure ZipperOuterEndCursorStatus
 -- TODO: same for Zipper as for Span above
+
 toCursorStatus _ _ = empty
 
 --------------------------------------------------------------------------------
@@ -250,9 +295,12 @@ consPoint i (Point is j) = Point (i : is) j
 -- | A `Span` is a contiguous span between two `Point`s that contains matching
 -- | numbers of opening and closing parentheses. A `Span` has an associated
 -- | number for how many outer unclosed parentheses it has.
-newtype Span = Span { p0 :: Point, p1 :: Point }
+data Span = Span Point Point
 
-derive newtype instance Show Span
+derive instance Generic Span _
+
+instance Show Span where
+  show x = genericShow x
 
 --------------------------------------------------------------------------------
 -- Zipper
@@ -261,9 +309,12 @@ derive newtype instance Show Span
 -- | A `Zipper` is composed of two `Span`s that contains matching numbers of
 -- | opening and closing parentheses. A `Zipper` has an associated number for
 -- | how many outer unclosed parentheses it has.
-newtype Zipper = Zipper { p0 :: Point, p1 :: Point, p2 :: Point, p3 :: Point }
+data Zipper = Zipper Point Point Point Point
 
-derive newtype instance Show Zipper
+derive instance Generic Zipper _
+
+instance Show Zipper where
+  show x = genericShow x
 
 --------------------------------------------------------------------------------
 -- operations
@@ -285,7 +336,7 @@ cursorBetweenPoints xs p p' =
       /\ { top: p1, sub: _p1_sub@(Point is1' _j1') } = longestCommonPath p p'
   in
     case is0' /\ is1' of
-      Nil /\ Nil -> SpanCursor (Span { p0, p1 })
+      Nil /\ Nil -> SpanCursor (Span p0 p1)
       Nil /\ (i1' : is1'_tail) ->
         -- zipper where p0 is outer and p1 is inner
         -- 
@@ -302,14 +353,7 @@ cursorBetweenPoints xs p p' =
           -- InnerEnd is at the last sibling position to p1
           -- InnerEnd is at the last position inside the innermost Sexp between p0 and p1
           -- OuterEnd is at the first sibling position to p0 that's after the outermost Sexp between p0 and p1
-          ZipperCursor
-            ( Zipper
-                { p0: p0
-                , p1: p1
-                , p2: Point (path <> is1') (Array.length innermostSexp)
-                , p3: Point path (i1' + 1)
-                }
-            )
+          ZipperCursor (Zipper p0 p1 (Point (path <> is1') (Array.length innermostSexp)) (Point path (i1' + 1)))
       (_ : _) /\ Nil -> PointCursor topPoint -- zipper wher p0 is inner and p1 is outer
       _ ->
         -- not a valid Span or Zipper between these two points directly, so just
@@ -317,7 +361,7 @@ cursorBetweenPoints xs p p' =
         let
           xs_sub = xs # getSubSexp path
         in
-          SpanCursor (Span { p0: Point path 0, p1: Point path (Array.length xs_sub) })
+          SpanCursor (Span (Point path 0) (Point path (Array.length xs_sub)))
 cursorBetweenPoints _ _ _ = PointCursor topPoint
 
 -- | Finds the longest common path (from the root) of the two points, and also

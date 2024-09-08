@@ -15,7 +15,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), CursorStatus(..), Point(..), Span(..), SubCursorStatus(..), cursorBetweenPoints, traverseSexpWithCursor)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), CursorStatus(..), Point(..), Span(..), SubCursorStatus(..), Zipper(..), cursorBetweenPoints, traverseSexpWithCursor)
 import Sexpze.Utility (todo)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
@@ -52,8 +52,13 @@ component = H.mkComponent { initialState, eval, render }
     -- { term: [ Group [ Atom "a", Atom "b" ] ]
     -- , cursor: SpanCursor (Span { p0: Point (0 : Nil) 0, p1: Point (0 : Nil) 1 })
     -- }
-    { term: [ Group [ Atom "a", Atom "b", Group [ Atom "c", Atom "d" ], Atom "e", Atom "f" ] ]
-    , cursor: SpanCursor (Span { p0: Point (0 : Nil) 0, p1: Point (0 : Nil) 1 })
+    -- { term: [ Group [ Atom "a", Atom "b", Group [ Atom "c", Atom "d" ], Atom "e", Atom "f" ] ]
+    -- , cursor: SpanCursor (Span { p0: Point (0 : Nil) 0, p1: Point (0 : Nil) 1 })
+    -- , mb_dragStart: Nothing
+    -- }
+    { term: [ Group [ Atom "a" ] ]
+    -- , cursor: PointCursor (Point (0 : Nil) 0)
+    , cursor: ZipperCursor (Zipper (Point Nil 0) (Point (0 : Nil) 0) (Point (0 : Nil) 1) (Point Nil 1))
     , mb_dragStart: Nothing
     }
 
@@ -79,10 +84,10 @@ renderHandleWithCursorStatus = case _ of
   Just PointCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "PointCursorStatus" ] "|"
   Just SpanStartCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "SpanStartCursorStatus" ] "["
   Just SpanEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "SpanEndCursorStatus" ] "]"
-  Just ZipperOuterStartCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperOuterStartCursorStatus" ] "<{"
-  Just ZipperOuterEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperOuterEndCursorStatus" ] "{>"
-  Just ZipperInnerStartCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperInnerStartCursorStatus" ] "<}"
-  Just ZipperInnerEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperInnerEndCursorStatus" ] "}>"
+  Just ZipperOuterStartCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperOuterStartCursorStatus" ] "{"
+  Just ZipperOuterEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperOuterEndCursorStatus" ] "}"
+  Just ZipperInnerStartCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperInnerStartCursorStatus" ] "<"
+  Just ZipperInnerEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperInnerEndCursorStatus" ] ">"
 
 renderTerm :: Cursor -> Term -> HTML
 renderTerm cursor =
@@ -235,9 +240,9 @@ handleUserAction (StartDrag start) = do
     -- if current cursor is a SpanCursor, and start is one of the endpoints,
     -- then actually set the cursor to the a PointCursor at the other endpoint
     -- of the Span
-    SpanCursor (Span { p0, p1 }) | p0 == start -> do
+    SpanCursor (Span p0 p1) | p0 == start -> do
       modify_ _ { mb_dragStart = pure p1 }
-    SpanCursor (Span { p0, p1 }) | p1 == start -> do
+    SpanCursor (Span p0 p1) | p1 == start -> do
       modify_ _ { mb_dragStart = pure p0 }
     _ -> do
       modify_ _ { mb_dragStart = pure start }

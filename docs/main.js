@@ -3672,6 +3672,14 @@
       return out;
     };
   }();
+  var allImpl = function(p2, xs) {
+    var len = xs.length;
+    for (var i2 = 0; i2 < len; i2++) {
+      if (!p2(xs[i2]))
+        return false;
+    }
+    return true;
+  };
 
   // output/Data.Array.ST/foreign.js
   var sortByImpl2 = function() {
@@ -3719,6 +3727,13 @@
   }();
 
   // output/Data.Function.Uncurried/foreign.js
+  var runFn2 = function(fn) {
+    return function(a2) {
+      return function(b2) {
+        return fn(a2, b2);
+      };
+    };
+  };
   var runFn4 = function(fn) {
     return function(a2) {
       return function(b2) {
@@ -3760,6 +3775,7 @@
       };
     };
   };
+  var all2 = /* @__PURE__ */ runFn2(allImpl);
 
   // output/Halogen.VDom.Machine/index.js
   var Step = /* @__PURE__ */ function() {
@@ -6869,6 +6885,27 @@
     ZipperOuterStartSubCursorStatus2.value = new ZipperOuterStartSubCursorStatus2();
     return ZipperOuterStartSubCursorStatus2;
   }();
+  var ZipperStartSubCursorStatus = /* @__PURE__ */ function() {
+    function ZipperStartSubCursorStatus2() {
+    }
+    ;
+    ZipperStartSubCursorStatus2.value = new ZipperStartSubCursorStatus2();
+    return ZipperStartSubCursorStatus2;
+  }();
+  var ZipperEndSubCursorStatus = /* @__PURE__ */ function() {
+    function ZipperEndSubCursorStatus2() {
+    }
+    ;
+    ZipperEndSubCursorStatus2.value = new ZipperEndSubCursorStatus2();
+    return ZipperEndSubCursorStatus2;
+  }();
+  var ZipperInnerSubCursorStatus = /* @__PURE__ */ function() {
+    function ZipperInnerSubCursorStatus2() {
+    }
+    ;
+    ZipperInnerSubCursorStatus2.value = new ZipperInnerSubCursorStatus2();
+    return ZipperInnerSubCursorStatus2;
+  }();
   var ZipperOuterEndSubCursorStatus = /* @__PURE__ */ function() {
     function ZipperOuterEndSubCursorStatus2() {
     }
@@ -6903,6 +6940,38 @@
     };
     return Point2;
   }();
+  var Span = /* @__PURE__ */ function() {
+    function Span2(value0, value1) {
+      this.value0 = value0;
+      this.value1 = value1;
+    }
+    ;
+    Span2.create = function(value0) {
+      return function(value1) {
+        return new Span2(value0, value1);
+      };
+    };
+    return Span2;
+  }();
+  var Zipper = /* @__PURE__ */ function() {
+    function Zipper2(value0, value1, value22, value32) {
+      this.value0 = value0;
+      this.value1 = value1;
+      this.value2 = value22;
+      this.value3 = value32;
+    }
+    ;
+    Zipper2.create = function(value0) {
+      return function(value1) {
+        return function(value22) {
+          return function(value32) {
+            return new Zipper2(value0, value1, value22, value32);
+          };
+        };
+      };
+    };
+    return Zipper2;
+  }();
   var PointCursorStatus = /* @__PURE__ */ function() {
     function PointCursorStatus2() {
     }
@@ -6931,19 +7000,19 @@
     ZipperOuterStartCursorStatus2.value = new ZipperOuterStartCursorStatus2();
     return ZipperOuterStartCursorStatus2;
   }();
-  var ZipperOuterEndCursorStatus = /* @__PURE__ */ function() {
-    function ZipperOuterEndCursorStatus2() {
-    }
-    ;
-    ZipperOuterEndCursorStatus2.value = new ZipperOuterEndCursorStatus2();
-    return ZipperOuterEndCursorStatus2;
-  }();
   var ZipperInnerStartCursorStatus = /* @__PURE__ */ function() {
     function ZipperInnerStartCursorStatus2() {
     }
     ;
     ZipperInnerStartCursorStatus2.value = new ZipperInnerStartCursorStatus2();
     return ZipperInnerStartCursorStatus2;
+  }();
+  var ZipperOuterEndCursorStatus = /* @__PURE__ */ function() {
+    function ZipperOuterEndCursorStatus2() {
+    }
+    ;
+    ZipperOuterEndCursorStatus2.value = new ZipperOuterEndCursorStatus2();
+    return ZipperOuterEndCursorStatus2;
   }();
   var ZipperInnerEndCursorStatus = /* @__PURE__ */ function() {
     function ZipperInnerEndCursorStatus2() {
@@ -7018,24 +7087,64 @@
         return pure9(ZipperOuterStartCursorStatus.value);
       }
       ;
-      if (v1.value0 instanceof PointCursor && (v1.value0.value0.value0 instanceof Nil && (v1.value1 instanceof ZipperOuterEndSubCursorStatus && v1.value0.value0.value1 === v))) {
-        return pure9(ZipperOuterEndCursorStatus.value);
-      }
-      ;
       if (v1.value0 instanceof PointCursor && (v1.value0.value0.value0 instanceof Nil && (v1.value1 instanceof ZipperInnerStartSubCursorStatus && v1.value0.value0.value1 === v))) {
         return pure9(ZipperInnerStartCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof PointCursor && (v1.value0.value0.value0 instanceof Nil && (v1.value1 instanceof ZipperOuterEndSubCursorStatus && v1.value0.value0.value1 === v))) {
+        return pure9(ZipperOuterEndCursorStatus.value);
       }
       ;
       if (v1.value0 instanceof PointCursor && (v1.value0.value0.value0 instanceof Nil && (v1.value1 instanceof ZipperInnerEndSubCursorStatus && v1.value0.value0.value1 === v))) {
         return pure9(ZipperInnerEndCursorStatus.value);
       }
       ;
-      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.p0.value0 instanceof Nil && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p0.value1 === v))) {
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value0.value0 instanceof Nil && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value0.value1 === v))) {
         return pure9(SpanStartCursorStatus.value);
       }
       ;
-      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.p1.value0 instanceof Nil && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p1.value1 === v))) {
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value1.value0 instanceof Nil && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value1.value1 === v))) {
         return pure9(SpanEndCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value0.value0 instanceof Nil && (v1.value1 instanceof ZipperStartSubCursorStatus && v1.value0.value0.value0.value1 === v))) {
+        return pure9(ZipperOuterStartCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value1.value0 instanceof Nil && (v1.value1 instanceof ZipperStartSubCursorStatus && v1.value0.value0.value1.value1 === v))) {
+        return pure9(ZipperInnerStartCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value0.value0 instanceof Nil && (v1.value1 instanceof ZipperEndSubCursorStatus && v1.value0.value0.value0.value1 === v))) {
+        return pure9(ZipperInnerStartCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value1.value0 instanceof Nil && (v1.value1 instanceof ZipperEndSubCursorStatus && v1.value0.value0.value1.value1 === v))) {
+        return pure9(ZipperOuterEndCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value0.value0 instanceof Nil && (v1.value1 instanceof ZipperInnerSubCursorStatus && v1.value0.value0.value0.value1 === v))) {
+        return pure9(ZipperInnerStartCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value1.value0 instanceof Nil && (v1.value1 instanceof ZipperInnerSubCursorStatus && v1.value0.value0.value1.value1 === v))) {
+        return pure9(ZipperInnerEndCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value0.value0 instanceof Nil && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value0.value1 === v))) {
+        return pure9(ZipperOuterStartCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value1.value0 instanceof Nil && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value1.value1 === v))) {
+        return pure9(ZipperInnerStartCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value2.value0 instanceof Nil && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value2.value1 === v))) {
+        return pure9(ZipperInnerEndCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value3.value0 instanceof Nil && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value3.value1 === v))) {
+        return pure9(ZipperOuterEndCursorStatus.value);
       }
       ;
       return empty7;
@@ -7047,35 +7156,80 @@
         return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value0.value1, v1.value0.value0.value1)), v1.value1));
       }
       ;
-      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.p0.value0 instanceof Cons && (v1.value0.value0.p1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && (v1.value0.value0.p0.value0.value0 === v1.value0.value0.p1.value0.value0 && v1.value0.value0.p0.value0.value0 === v))))) {
-        return pure9(new Tuple(new SpanCursor({
-          p0: new Point(v1.value0.value0.p0.value0.value1, v1.value0.value0.p0.value1),
-          p1: new Point(v1.value0.value0.p1.value0.value1, v1.value0.value0.p1.value1)
-        }), PointSubCursorStatus.value));
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value0.value0 instanceof Cons && (v1.value0.value0.value1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && (v1.value0.value0.value0.value0.value0 === v1.value0.value0.value1.value0.value0 && v1.value0.value0.value0.value0.value0 === v))))) {
+        return pure9(new Tuple(new SpanCursor(new Span(new Point(v1.value0.value0.value0.value0.value1, v1.value0.value0.value0.value1), new Point(v1.value0.value0.value1.value0.value1, v1.value0.value0.value1.value1))), PointSubCursorStatus.value));
       }
       ;
-      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.p0.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p0.value0.value0 === v))) {
-        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p0.value0.value1, v1.value0.value0.p0.value1)), SpanStartSubCursorStatus.value));
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value0.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value0.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value0.value0.value1, v1.value0.value0.value0.value1)), SpanStartSubCursorStatus.value));
       }
       ;
-      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.p1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p1.value0.value0 === v))) {
-        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p1.value0.value1, v1.value0.value0.p1.value1)), SpanEndSubCursorStatus.value));
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value1.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value1.value0.value1, v1.value0.value0.value1.value1)), SpanEndSubCursorStatus.value));
       }
       ;
-      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.p0.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p0.value0.value0 === v))) {
-        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p0.value0.value1, v1.value0.value0.p0.value1)), ZipperOuterStartSubCursorStatus.value));
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value0.value0 instanceof Cons && (v1.value1 instanceof ZipperStartSubCursorStatus && v1.value0.value0.value0.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value0.value0.value1, v1.value0.value0.value0.value1)), ZipperOuterStartSubCursorStatus.value));
       }
       ;
-      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.p1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p1.value0.value0 === v))) {
-        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p1.value0.value1, v1.value0.value0.p1.value1)), ZipperInnerStartSubCursorStatus.value));
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value1.value0 instanceof Cons && (v1.value1 instanceof ZipperStartSubCursorStatus && v1.value0.value0.value1.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value1.value0.value1, v1.value0.value0.value1.value1)), ZipperInnerStartSubCursorStatus.value));
       }
       ;
-      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.p2.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p2.value0.value0 === v))) {
-        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p2.value0.value1, v1.value0.value0.p2.value1)), ZipperOuterEndSubCursorStatus.value));
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value0.value0 instanceof Cons && (v1.value1 instanceof ZipperEndSubCursorStatus && v1.value0.value0.value0.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value0.value0.value1, v1.value0.value0.value0.value1)), ZipperInnerEndSubCursorStatus.value));
       }
       ;
-      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.p3.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p3.value0.value0 === v))) {
-        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p3.value0.value1, v1.value0.value0.p3.value1)), ZipperInnerEndSubCursorStatus.value));
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value1.value0 instanceof Cons && (v1.value1 instanceof ZipperEndSubCursorStatus && v1.value0.value0.value1.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value1.value0.value1, v1.value0.value0.value1.value1)), ZipperOuterEndSubCursorStatus.value));
+      }
+      ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value0.value0 instanceof Cons && (v1.value1 instanceof ZipperInnerSubCursorStatus && v1.value0.value0.value0.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value0.value0.value1, v1.value0.value0.value0.value1)), ZipperInnerStartSubCursorStatus.value));
+      }
+      ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.value1.value0 instanceof Cons && (v1.value1 instanceof ZipperInnerSubCursorStatus && v1.value0.value0.value1.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value1.value0.value1, v1.value0.value0.value1.value1)), ZipperInnerEndSubCursorStatus.value));
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value0.value0 instanceof Cons && (v1.value0.value0.value1.value0 instanceof Cons && (v1.value0.value0.value2.value0 instanceof Cons && (v1.value0.value0.value3.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && all2(function(v2) {
+        return v === v2;
+      })([v1.value0.value0.value0.value0.value0, v1.value0.value0.value1.value0.value0, v1.value0.value0.value2.value0.value0, v1.value0.value0.value3.value0.value0]))))))) {
+        return pure9(new Tuple(new ZipperCursor(new Zipper(new Point(v1.value0.value0.value0.value0.value1, v1.value0.value0.value0.value1), new Point(v1.value0.value0.value1.value0.value1, v1.value0.value0.value1.value1), new Point(v1.value0.value0.value2.value0.value1, v1.value0.value0.value2.value1), new Point(v1.value0.value0.value3.value0.value1, v1.value0.value0.value3.value1))), PointSubCursorStatus.value));
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value0.value0 instanceof Cons && (v1.value0.value0.value1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && all2(function(v2) {
+        return v === v2;
+      })([v1.value0.value0.value0.value0.value0, v1.value0.value0.value1.value0.value0]))))) {
+        return pure9(new Tuple(new SpanCursor(new Span(new Point(v1.value0.value0.value0.value0.value1, v1.value0.value0.value0.value1), new Point(v1.value0.value0.value1.value0.value1, v1.value0.value0.value1.value1))), ZipperStartSubCursorStatus.value));
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value2.value0 instanceof Cons && (v1.value0.value0.value3.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && all2(function(v2) {
+        return v === v2;
+      })([v1.value0.value0.value2.value0.value0, v1.value0.value0.value3.value0.value0]))))) {
+        return pure9(new Tuple(new SpanCursor(new Span(new Point(v1.value0.value0.value2.value0.value1, v1.value0.value0.value2.value1), new Point(v1.value0.value0.value3.value0.value1, v1.value0.value0.value3.value1))), ZipperEndSubCursorStatus.value));
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value1.value0 instanceof Cons && (v1.value0.value0.value2.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && all2(function(v2) {
+        return v === v2;
+      })([v1.value0.value0.value1.value0.value0, v1.value0.value0.value2.value0.value0]))))) {
+        return pure9(new Tuple(new SpanCursor(new Span(new Point(v1.value0.value0.value1.value0.value1, v1.value0.value0.value1.value1), new Point(v1.value0.value0.value2.value0.value1, v1.value0.value0.value2.value1))), ZipperInnerSubCursorStatus.value));
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value0.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value0.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value0.value0.value1, v1.value0.value0.value0.value1)), ZipperOuterStartSubCursorStatus.value));
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value1.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value1.value0.value1, v1.value0.value0.value1.value1)), ZipperInnerStartSubCursorStatus.value));
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value2.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value2.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value2.value0.value1, v1.value0.value0.value2.value1)), ZipperInnerEndSubCursorStatus.value));
+      }
+      ;
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.value3.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.value3.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value3.value0.value1, v1.value0.value0.value3.value1)), ZipperOuterEndSubCursorStatus.value));
       }
       ;
       return empty7;
@@ -7134,7 +7288,7 @@
               })(v4.value1);
             }
             ;
-            throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 91, column 1 - line 98, column 7): " + [v.constructor.name, v1.constructor.name, v2.constructor.name, v3.constructor.name]);
+            throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 92, column 1 - line 99, column 7): " + [v.constructor.name, v1.constructor.name, v2.constructor.name, v3.constructor.name]);
           };
         };
       };
@@ -7203,8 +7357,8 @@
               }
               ;
               if (v1.value0 instanceof Cons && v2.value0 instanceof Cons) {
-                var $401 = v1.value0.value0 !== v2.value0.value0;
-                if ($401) {
+                var $679 = v1.value0.value0 !== v2.value0.value0;
+                if ($679) {
                   $tco_done = true;
                   return new Tuple(reverse(v), swapUnless(v1.value0.value0 <= v2.value0.value0)(new Tuple({
                     top: p_top,
@@ -7221,7 +7375,7 @@
                 return;
               }
               ;
-              throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 331, column 3 - line 332, column 101): " + [v.constructor.name, v1.constructor.name, v2.constructor.name]);
+              throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 375, column 3 - line 376, column 101): " + [v.constructor.name, v1.constructor.name, v2.constructor.name]);
             }
             ;
             while (!$tco_done) {
@@ -7264,10 +7418,10 @@
             return bug("[getSubSexp] step into an Atom");
           }
           ;
-          throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 274, column 26 - line 277, column 56): " + [v2.constructor.name]);
+          throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 325, column 26 - line 328, column 56): " + [v2.constructor.name]);
         }
         ;
-        throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 272, column 1 - line 272, column 49): " + [v.constructor.name, v1.constructor.name]);
+        throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 323, column 1 - line 323, column 49): " + [v.constructor.name, v1.constructor.name]);
       }
       ;
       while (!$tco_done) {
@@ -7287,21 +7441,13 @@
         var v3 = longestCommonPath(v1)(v2);
         var v4 = new Tuple(v3.value1.value0.sub.value0, v3.value1.value1.sub.value0);
         if (v4.value0 instanceof Nil && v4.value1 instanceof Nil) {
-          return new SpanCursor({
-            p0: v3.value1.value0.top,
-            p1: v3.value1.value1.top
-          });
+          return new SpanCursor(new Span(v3.value1.value0.top, v3.value1.value1.top));
         }
         ;
         if (v4.value0 instanceof Nil && v4.value1 instanceof Cons) {
           var outermostSexp = getSubSexp(snoc(v3.value0)(v4.value1.value0))(v);
           var innermostSexp = getSubSexp(append5(v3.value0)(v3.value1.value1.sub.value0))(v);
-          return new ZipperCursor({
-            p0: v3.value1.value0.top,
-            p1: v3.value1.value1.top,
-            p2: new Point(append5(v3.value0)(v3.value1.value1.sub.value0), length3(innermostSexp)),
-            p3: new Point(v3.value0, v4.value1.value0 + 1 | 0)
-          });
+          return new ZipperCursor(new Zipper(v3.value1.value0.top, v3.value1.value1.top, new Point(append5(v3.value0)(v3.value1.value1.sub.value0), length3(innermostSexp)), new Point(v3.value0, v4.value1.value0 + 1 | 0)));
         }
         ;
         if (v4.value0 instanceof Cons && v4.value1 instanceof Nil) {
@@ -7309,10 +7455,7 @@
         }
         ;
         var xs_sub = getSubSexp(v3.value0)(v);
-        return new SpanCursor({
-          p0: new Point(v3.value0, 0),
-          p1: new Point(v3.value0, length3(xs_sub))
-        });
+        return new SpanCursor(new Span(new Point(v3.value0, 0), new Point(v3.value0, length3(xs_sub))));
       };
     };
   };
@@ -7465,22 +7608,22 @@
     }
     ;
     if (v instanceof Just && v.value0 instanceof ZipperOuterStartCursorStatus) {
-      return renderPunc(["CursorHandle", "ZipperOuterStartCursorStatus"])("<{");
+      return renderPunc(["CursorHandle", "ZipperOuterStartCursorStatus"])("{");
     }
     ;
     if (v instanceof Just && v.value0 instanceof ZipperOuterEndCursorStatus) {
-      return renderPunc(["CursorHandle", "ZipperOuterEndCursorStatus"])("{>");
+      return renderPunc(["CursorHandle", "ZipperOuterEndCursorStatus"])("}");
     }
     ;
     if (v instanceof Just && v.value0 instanceof ZipperInnerStartCursorStatus) {
-      return renderPunc(["CursorHandle", "ZipperInnerStartCursorStatus"])("<}");
+      return renderPunc(["CursorHandle", "ZipperInnerStartCursorStatus"])("<");
     }
     ;
     if (v instanceof Just && v.value0 instanceof ZipperInnerEndCursorStatus) {
-      return renderPunc(["CursorHandle", "ZipperInnerEndCursorStatus"])("}>");
+      return renderPunc(["CursorHandle", "ZipperInnerEndCursorStatus"])(">");
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 77, column 32 - line 85, column 126): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 82, column 32 - line 90, column 125): " + [v.constructor.name]);
   };
   var renderTerm = function(cursor) {
     return traverseSexpWithCursor2({
@@ -7532,7 +7675,7 @@
     ;
     if (v instanceof StartDrag) {
       return bind5(get2)(function(v1) {
-        if (v1.cursor instanceof SpanCursor && eq14(v1.cursor.value0.p0)(v.value0)) {
+        if (v1.cursor instanceof SpanCursor && eq14(v1.cursor.value0.value0)(v.value0)) {
           return modify_3(function(v2) {
             var $67 = {};
             for (var $68 in v2) {
@@ -7542,12 +7685,12 @@
               ;
             }
             ;
-            $67.mb_dragStart = pure10(v1.cursor.value0.p1);
+            $67.mb_dragStart = pure10(v1.cursor.value0.value1);
             return $67;
           });
         }
         ;
-        if (v1.cursor instanceof SpanCursor && eq14(v1.cursor.value0.p1)(v.value0)) {
+        if (v1.cursor instanceof SpanCursor && eq14(v1.cursor.value0.value1)(v.value0)) {
           return modify_3(function(v2) {
             var $73 = {};
             for (var $74 in v2) {
@@ -7557,7 +7700,7 @@
               ;
             }
             ;
-            $73.mb_dragStart = pure10(v1.cursor.value0.p0);
+            $73.mb_dragStart = pure10(v1.cursor.value0.value0);
             return $73;
           });
         }
@@ -7601,11 +7744,11 @@
           });
         }
         ;
-        throw new Error("Failed pattern match at Sexpze.Component.Editor (line 246, column 3 - line 255, column 10): " + [v1.mb_dragStart.constructor.name]);
+        throw new Error("Failed pattern match at Sexpze.Component.Editor (line 251, column 3 - line 260, column 10): " + [v1.mb_dragStart.constructor.name]);
       });
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 214, column 1 - line 214, column 42): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 219, column 1 - line 219, column 42): " + [v.constructor.name]);
   };
   var handleActionConfig = function(v) {
     return discard5(when4(v.value0.doStopPropagation)(liftEffect7(stopPropagation(toEvent(v.value0.event)))))(function() {
@@ -7618,11 +7761,8 @@
     };
     var initialState = function(_input) {
       return {
-        term: [new Group([new Atom("a"), new Atom("b"), new Group([new Atom("c"), new Atom("d")]), new Atom("e"), new Atom("f")])],
-        cursor: new SpanCursor({
-          p0: new Point(new Cons(0, Nil.value), 0),
-          p1: new Point(new Cons(0, Nil.value), 1)
-        }),
+        term: [new Group([new Atom("a")])],
+        cursor: new ZipperCursor(new Zipper(new Point(Nil.value, 0), new Point(new Cons(0, Nil.value), 0), new Point(new Cons(0, Nil.value), 1), new Point(Nil.value, 1))),
         mb_dragStart: Nothing.value
       };
     };
