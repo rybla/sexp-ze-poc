@@ -53,7 +53,7 @@ body {
   color: rgb(255, 75, 132);
 }
 
-.CursorHandle.SpanBeginCursorStatus {
+.CursorHandle.SpanStartCursorStatus {
   color: rgb(255, 75, 132);
 }
 
@@ -61,7 +61,7 @@ body {
   color: rgb(255, 75, 132);
 }
 
-.CursorHandle.ZipperOuterBeginCursorStatus {
+.CursorHandle.ZipperOuterStartCursorStatus {
   color: rgb(255, 75, 132);
 }
 
@@ -69,7 +69,7 @@ body {
   color: rgb(255, 75, 132);
 }
 
-.CursorHandle.ZipperInnerBeginCursorStatus {
+.CursorHandle.ZipperInnerStartCursorStatus {
   color: rgb(255, 75, 132);
 }
 
