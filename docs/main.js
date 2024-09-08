@@ -6875,6 +6875,14 @@
         return pure9(ZipperInnerEndCursorStatus.value);
       }
       ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.p0.value0 instanceof Nil && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p0.value1 === v))) {
+        return pure9(SpanBeginCursorStatus.value);
+      }
+      ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.p1.value0 instanceof Nil && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p1.value1 === v))) {
+        return pure9(SpanEndCursorStatus.value);
+      }
+      ;
       return empty7;
     };
   };
@@ -6882,6 +6890,13 @@
     return function(v1) {
       if (v1.value0 instanceof PointCursor && (v1.value0.value0.value0 instanceof Cons && v1.value0.value0.value0.value0 === v)) {
         return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.value0.value1, v1.value0.value0.value1)), v1.value1));
+      }
+      ;
+      if (v1.value0 instanceof SpanCursor && (v1.value0.value0.p0.value0 instanceof Cons && (v1.value0.value0.p1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && (v1.value0.value0.p0.value0.value0 === v1.value0.value0.p1.value0.value0 && v1.value0.value0.p0.value0.value0 === v))))) {
+        return pure9(new Tuple(new SpanCursor({
+          p0: new Point(v1.value0.value0.p0.value0.value1, v1.value0.value0.p0.value1),
+          p1: new Point(v1.value0.value0.p1.value0.value1, v1.value0.value0.p1.value1)
+        }), PointSubCursorStatus.value));
       }
       ;
       if (v1.value0 instanceof SpanCursor && (v1.value0.value0.p0.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p0.value0.value0 === v))) {
@@ -7093,7 +7108,7 @@
       return renderPunc(["CursorHandle", "ZipperInnerEndCursorStatus"])("}>");
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 71, column 32 - line 79, column 126): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 72, column 32 - line 80, column 126): " + [v.constructor.name]);
   };
   var renderCursorHandle = function(cursor) {
     return function(label5) {
@@ -7148,7 +7163,7 @@
       return todo("handleUserAction")({});
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 196, column 1 - line 196, column 78): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 197, column 1 - line 197, column 78): " + [v.constructor.name]);
   };
   var component = /* @__PURE__ */ function() {
     var render = function(state3) {
@@ -7157,7 +7172,10 @@
     var initialState = function(_input) {
       return {
         term: [new Group([new Atom("a"), new Atom("b")])],
-        cursor: new PointCursor(new Point(new Cons(0, Nil.value), 0))
+        cursor: new SpanCursor({
+          p0: new Point(new Cons(0, Nil.value), 0),
+          p1: new Point(new Cons(0, Nil.value), 1)
+        })
       };
     };
     var handleAction = function(v) {
@@ -7184,7 +7202,7 @@
         });
       }
       ;
-      throw new Error("Failed pattern match at Sexpze.Component.Editor (line 55, column 18 - line 59, column 31): " + [v.constructor.name]);
+      throw new Error("Failed pattern match at Sexpze.Component.Editor (line 56, column 18 - line 60, column 31): " + [v.constructor.name]);
     };
     var $$eval = mkEval({
       handleQuery: defaultEval.handleQuery,

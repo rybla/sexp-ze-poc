@@ -101,7 +101,8 @@ instance Show SubCursorStatus where
 matchStepSubCursor :: Int -> SubCursor -> Maybe SubCursor
 -- 
 matchStepSubCursor i' (PointCursor (Point (Cons i is') j) /\ scs) | i == i' = pure (PointCursor (Point is' j) /\ scs)
--- 
+--
+matchStepSubCursor i' (SpanCursor (Span { p0: Point (Cons i is'1) j1, p1: Point (Cons i_ is'2) j2 }) /\ PointSubCursorStatus) | i == i_ && i == i' = pure (SpanCursor (Span { p0: Point is'1 j1, p1: Point is'2 j2 }) /\ PointSubCursorStatus)
 matchStepSubCursor i' (SpanCursor (Span { p0: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanBeginSubCursorStatus)
 matchStepSubCursor i' (SpanCursor (Span { p1: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanEndSubCursorStatus)
 -- 
@@ -138,6 +139,9 @@ toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperOuterBeginSubCursorStatus)
 toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperOuterEndSubCursorStatus) | j == j' = pure ZipperOuterEndCursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperInnerBeginSubCursorStatus) | j == j' = pure ZipperInnerBeginCursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperInnerEndSubCursorStatus) | j == j' = pure ZipperInnerEndCursorStatus
+toCursorStatus j' (SpanCursor (Span { p0: Point Nil j }) /\ PointSubCursorStatus) | j == j' = pure SpanBeginCursorStatus
+toCursorStatus j' (SpanCursor (Span { p1: Point Nil j }) /\ PointSubCursorStatus) | j == j' = pure SpanEndCursorStatus
+-- TODO: same for Zipper as for Span above
 toCursorStatus _ _ = empty
 
 --------------------------------------------------------------------------------

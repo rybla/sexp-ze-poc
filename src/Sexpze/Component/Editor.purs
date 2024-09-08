@@ -16,7 +16,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), CursorStatus(..), Point(..), Span, SubCursorStatus(..), traverseSexpWithCursor)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), CursorStatus(..), Point(..), Span(..), SubCursorStatus(..), traverseSexpWithCursor)
 import Sexpze.Utility (todo)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
@@ -47,7 +47,8 @@ component = H.mkComponent { initialState, eval, render }
   initialState :: Input -> State
   initialState _input =
     { term: [ Group [ Atom "a", Atom "b" ] ]
-    , cursor: PointCursor (Point (0 : Nil) 0)
+    -- , cursor: PointCursor (Point (0 : Nil) 0)
+    , cursor: SpanCursor (Span { p0: Point (0 : Nil) 0, p1: Point (0 : Nil) 1 })
     }
 
   eval = H.mkEval H.defaultEval { handleAction = handleAction }
@@ -111,21 +112,10 @@ renderPunc cns s = HH.span [ HP.classes ([ HH.ClassName "Punc" ] <> cns) ] [ HH.
 renderCursorHandle :: Cursor -> HTML -> HTML
 renderCursorHandle cursor label =
   HH.div
-    [ HE.onClick (SetCursor_Action cursor <<< Just) ]
+    [ HE.onMouseDown (SetCursor_Action cursor <<< Just)
+    ]
     [ label
     ]
-
-renderPointHandle :: Point -> HTML -> HTML
-renderPointHandle p label =
-  HH.div
-    [ HE.onClick (SetCursor_Action (PointCursor p) <<< Just) ]
-    [ label ]
-
-renderSpanHandle :: Span -> HTML -> HTML
-renderSpanHandle s label =
-  HH.div
-    [ HE.onClick (SetCursor_Action (SpanCursor s) <<< Just) ]
-    [ label ]
 
 fromCursorStatusToClassName :: CursorStatus -> HH.ClassName
 fromCursorStatusToClassName = show >>> HH.ClassName
