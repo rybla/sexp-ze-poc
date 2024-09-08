@@ -52,17 +52,29 @@ body {
   color: rgb(255, 75, 132);
 }
 
-.CursorHandle.SpanBeginCursorStatus {}
+.CursorHandle.SpanBeginCursorStatus {
+  color: rgb(255, 75, 132);
+}
 
-.CursorHandle.SpanEndCursorStatus {}
+.CursorHandle.SpanEndCursorStatus {
+  color: rgb(255, 75, 132);
+}
 
-.CursorHandle.ZipperOuterBeginCursorStatus {}
+.CursorHandle.ZipperOuterBeginCursorStatus {
+  color: rgb(255, 75, 132);
+}
 
-.CursorHandle.ZipperOuterEndCursorStatus {}
+.CursorHandle.ZipperOuterEndCursorStatus {
+  color: rgb(255, 75, 132);
+}
 
-.CursorHandle.ZipperInnerBeginCursorStatus {}
+.CursorHandle.ZipperInnerBeginCursorStatus {
+  color: rgb(255, 75, 132);
+}
 
-.CursorHandle.ZipperInnerEndCursorStatus {}
+.CursorHandle.ZipperInnerEndCursorStatus {
+  color: rgb(255, 75, 132);
+}
 
 
 /* Punc */
