@@ -5,13 +5,14 @@ import Prelude
 
 import Control.Plus (empty)
 import Data.Array as Array
+import Data.Bifunctor (lmap)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
-import Data.Tuple (snd)
+import Data.Tuple (snd, swap)
 import Data.Tuple.Nested (type (/\), (/\))
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
 import Sexpze.Utility (todo)
@@ -43,7 +44,7 @@ traverseSexpWithCursor
   :: forall a r
    . Show a
   => TraverseSexpWithCursorRecs a r
-  -> List Int
+  -> Path
   -> Maybe SubCursor
   -> Sexp a
   -> r
@@ -53,7 +54,7 @@ traverseSexpWithCursor_helper
   :: forall a r
    . Show a
   => TraverseSexpWithCursorRecs a r
-  -> List Int
+  -> Path
   -> Maybe SubCursor
   -> Sexp a
   -> { first :: { point :: Point, status :: Maybe CursorStatus }
@@ -88,7 +89,7 @@ traverseSexp'WithCursor
   :: forall a r
    . Show a
   => TraverseSexpWithCursorRecs a r
-  -> List Int
+  -> Path
   -> Maybe SubCursor
   -> Sexp' a
   -> r
@@ -191,10 +192,13 @@ instance Show Cursor where
 -- Point
 --------------------------------------------------------------------------------
 
+-- | A top-down path from the root to a sub-expression.
+type Path = List Int
+
 -- | A `Point` is either a position `Between` two elements of a `Sexp`. It is
--- | encoded by a top-down index to a sub-`Sexp`, and then the index of a
+-- | encoded by a top-down path to a sub-`Sexp`, and then the index of a
 -- | position between two elements of it.
-data Point = Point (List Int) Int
+data Point = Point Path Int
 
 derive instance Generic Point _
 
@@ -264,5 +268,41 @@ derive newtype instance Show Zipper
 
 cursorBetweenPoints :: forall a. Sexp a -> Point -> Point -> Cursor
 cursorBetweenPoints _ p p_ | p == p_ = PointCursor p
+cursorBetweenPoints x p p' =
+  let
+    _path
+      /\ { top: p0, sub: _p0_sub@(Point is0' _j0') }
+      /\ { top: p1, sub: _p1_sub@(Point is1' _j1') } = longestCommonPath p p'
+  in
+    if List.null is0' && List.null is1' then
+      SpanCursor (Span { p0, p1 })
+    else if List.null is0' then
+      PointCursor topPoint -- zipper where p is outer and p' is inner
+    else if List.null is1' then
+      PointCursor topPoint -- zipper wher p is inner and p' is outer
+    else
+      PointCursor topPoint
 cursorBetweenPoints _ _ _ = PointCursor topPoint
+
+-- | Finds the longest common path (from the root) of the two points, and also
+-- | orders the points by which appears first from left-to-right.
+longestCommonPath
+  :: Point
+  -> Point
+  -> Path /\ ({ top :: Point, sub :: Point } /\ { top :: Point, sub :: Point })
+longestCommonPath p_top p'_top = go Nil p_top p'_top
+  where
+  go revPath p@(Point Nil j) p'@(Point Nil j') =
+    List.reverse revPath /\ swapUnless (j < j') ({ top: p_top, sub: p } /\ { top: p'_top, sub: p' })
+  go revPath p@(Point (Cons i _) _) p'@(Point Nil j') =
+    List.reverse revPath /\ swapUnless (i < j') ({ top: p_top, sub: p } /\ { top: p'_top, sub: p' })
+  go revPath p@(Point Nil j) p'@(Point (Cons i' _) _) =
+    List.reverse revPath /\ swapUnless (j < i') ({ top: p_top, sub: p } /\ { top: p'_top, sub: p' })
+  go revPath p@(Point (Cons i is) j) p'@(Point (Cons i' is') j') =
+    if i /= i' then
+      List.reverse revPath /\ swapUnless (i <= i') ({ top: p_top, sub: p } /\ { top: p'_top, sub: p' })
+    else
+      go (i : revPath) (Point is j) (Point is' j')
+
+  swapUnless = if _ then identity else swap
 

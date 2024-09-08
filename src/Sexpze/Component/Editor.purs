@@ -6,9 +6,8 @@ import Control.Monad.State (get, modify_)
 import Control.Plus (empty)
 import Data.Array as Array
 import Data.List (List(..), (:))
-import Data.Maybe (Maybe(..), maybe)
-import Data.Tuple.Nested (type (/\), (/\))
-import Debug as Debug
+import Data.Maybe (Maybe(..))
+import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Halogen as H
@@ -74,9 +73,6 @@ component = H.mkComponent { initialState, eval, render }
           ]
       ]
 
-orderPoints :: Point -> Point -> Point /\ Point
-orderPoints p0 p1 = p0 /\ p1
-
 renderHandleWithCursorStatus :: Maybe CursorStatus -> HTML
 renderHandleWithCursorStatus = case _ of
   Nothing -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "NoCursorStatus" ] "•"
@@ -125,9 +121,6 @@ renderPunc cns s = HH.span [ HP.classes ([ HH.ClassName "Punc" ] <> cns) ] [ HH.
 renderPointHandle :: Point -> HTML -> HTML
 renderPointHandle point label =
   HH.div
-    -- [ HE.onMouseDown (StartDrag_Action (PointCursor point) <<< Just)
-    -- , HE.onMouseUp (SetSelectOtherPoint_Action point <<< Just)
-    -- ]
     [ HE.onMouseDown
         ( \event ->
             UserAction_Action

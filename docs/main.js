@@ -1780,6 +1780,9 @@
     };
     return Tuple2;
   }();
+  var swap = function(v) {
+    return new Tuple(v.value1, v.value0);
+  };
   var snd = function(v) {
     return v.value1;
   };
@@ -6820,6 +6823,7 @@
   var pure9 = /* @__PURE__ */ pure(applicativeMaybe);
   var empty7 = /* @__PURE__ */ empty(plusMaybe);
   var bindFlipped8 = /* @__PURE__ */ bindFlipped(bindMaybe);
+  var identity8 = /* @__PURE__ */ identity(categoryFn);
   var PointSubCursorStatus = /* @__PURE__ */ function() {
     function PointSubCursorStatus2() {
     }
@@ -7113,7 +7117,7 @@
               })(v4.value1);
             }
             ;
-            throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 87, column 1 - line 94, column 7): " + [v.constructor.name, v1.constructor.name, v2.constructor.name, v3.constructor.name]);
+            throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 88, column 1 - line 95, column 7): " + [v.constructor.name, v1.constructor.name, v2.constructor.name, v3.constructor.name]);
           };
         };
       };
@@ -7131,11 +7135,113 @@
       };
     };
   };
+  var longestCommonPath = function(p_top) {
+    return function(p$prime_top) {
+      var swapUnless = function(v) {
+        if (v) {
+          return identity8;
+        }
+        ;
+        return swap;
+      };
+      var go2 = function($copy_v) {
+        return function($copy_v1) {
+          return function($copy_v2) {
+            var $tco_var_v = $copy_v;
+            var $tco_var_v1 = $copy_v1;
+            var $tco_done = false;
+            var $tco_result;
+            function $tco_loop(v, v1, v2) {
+              if (v1.value0 instanceof Nil && v2.value0 instanceof Nil) {
+                $tco_done = true;
+                return new Tuple(reverse(v), swapUnless(v1.value1 < v2.value1)(new Tuple({
+                  top: p_top,
+                  sub: v1
+                }, {
+                  top: p$prime_top,
+                  sub: v2
+                })));
+              }
+              ;
+              if (v1.value0 instanceof Cons && v2.value0 instanceof Nil) {
+                $tco_done = true;
+                return new Tuple(reverse(v), swapUnless(v1.value0.value0 < v2.value1)(new Tuple({
+                  top: p_top,
+                  sub: v1
+                }, {
+                  top: p$prime_top,
+                  sub: v2
+                })));
+              }
+              ;
+              if (v1.value0 instanceof Nil && v2.value0 instanceof Cons) {
+                $tco_done = true;
+                return new Tuple(reverse(v), swapUnless(v1.value1 < v2.value0.value0)(new Tuple({
+                  top: p_top,
+                  sub: v1
+                }, {
+                  top: p$prime_top,
+                  sub: v2
+                })));
+              }
+              ;
+              if (v1.value0 instanceof Cons && v2.value0 instanceof Cons) {
+                var $394 = v1.value0.value0 !== v2.value0.value0;
+                if ($394) {
+                  $tco_done = true;
+                  return new Tuple(reverse(v), swapUnless(v1.value0.value0 <= v2.value0.value0)(new Tuple({
+                    top: p_top,
+                    sub: v1
+                  }, {
+                    top: p$prime_top,
+                    sub: v2
+                  })));
+                }
+                ;
+                $tco_var_v = new Cons(v1.value0.value0, v);
+                $tco_var_v1 = new Point(v1.value0.value1, v1.value1);
+                $copy_v2 = new Point(v2.value0.value1, v2.value1);
+                return;
+              }
+              ;
+              throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 295, column 3 - line 296, column 101): " + [v.constructor.name, v1.constructor.name, v2.constructor.name]);
+            }
+            ;
+            while (!$tco_done) {
+              $tco_result = $tco_loop($tco_var_v, $tco_var_v1, $copy_v2);
+            }
+            ;
+            return $tco_result;
+          };
+        };
+      };
+      return go2(Nil.value)(p_top)(p$prime_top);
+    };
+  };
   var cursorBetweenPoints = function(v) {
     return function(v1) {
       return function(v2) {
         if (eq13(v1)(v2)) {
           return new PointCursor(v1);
+        }
+        ;
+        var v3 = longestCommonPath(v1)(v2);
+        var $407 = $$null(v3.value1.value0.sub.value0) && $$null(v3.value1.value1.sub.value0);
+        if ($407) {
+          return new SpanCursor({
+            p0: v3.value1.value0.top,
+            p1: v3.value1.value1.top
+          });
+        }
+        ;
+        var $408 = $$null(v3.value1.value0.sub.value0);
+        if ($408) {
+          return new PointCursor(topPoint);
+        }
+        ;
+        var $409 = $$null(v3.value1.value1.sub.value0);
+        if ($409) {
+          return new PointCursor(topPoint);
         }
         ;
         return new PointCursor(topPoint);
@@ -7312,7 +7418,7 @@
       return renderPunc(["CursorHandle", "ZipperInnerEndCursorStatus"])("}>");
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 81, column 32 - line 89, column 126): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 78, column 32 - line 86, column 126): " + [v.constructor.name]);
   };
   var renderTerm = function(cursor) {
     return traverseSexpWithCursor2({
@@ -7401,11 +7507,11 @@
           });
         }
         ;
-        throw new Error("Failed pattern match at Sexpze.Component.Editor (line 243, column 3 - line 252, column 10): " + [v1.mb_dragStart.constructor.name]);
+        throw new Error("Failed pattern match at Sexpze.Component.Editor (line 240, column 3 - line 249, column 10): " + [v1.mb_dragStart.constructor.name]);
       });
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 221, column 1 - line 221, column 42): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 218, column 1 - line 218, column 42): " + [v.constructor.name]);
   };
   var handleActionConfig = function(v) {
     return discard5(when4(v.value0.doStopPropagation)(liftEffect7(stopPropagation(toEvent(v.value0.event)))))(function() {
