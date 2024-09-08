@@ -229,8 +229,18 @@ handleUserAction SelectRight = todo "handleUserAction" {}
 handleUserAction Delete = todo "handleUserAction" {}
 handleUserAction Copy = todo "handleUserAction" {}
 handleUserAction Paste = todo "handleUserAction" {}
-handleUserAction (StartDrag cursor) = do
-  modify_ _ { mb_dragStart = pure cursor }
+handleUserAction (StartDrag start) = do
+  { cursor } <- get
+  case cursor of
+    -- if current cursor is a SpanCursor, and start is one of the endpoints,
+    -- then actually set the cursor to the a PointCursor at the other endpoint
+    -- of the Span
+    SpanCursor (Span { p0, p1 }) | p0 == start -> do
+      modify_ _ { mb_dragStart = pure p1 }
+    SpanCursor (Span { p0, p1 }) | p1 == start -> do
+      modify_ _ { mb_dragStart = pure p0 }
+    _ -> do
+      modify_ _ { mb_dragStart = pure start }
 handleUserAction (EndDrag end) = do
   { term, mb_dragStart } <- get
   case mb_dragStart of

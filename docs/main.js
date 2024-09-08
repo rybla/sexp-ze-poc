@@ -1799,11 +1799,11 @@
   var eqTuple = function(dictEq) {
     var eq2 = eq(dictEq);
     return function(dictEq1) {
-      var eq14 = eq(dictEq1);
+      var eq15 = eq(dictEq1);
       return {
         eq: function(x) {
           return function(y) {
-            return eq2(x.value0)(y.value0) && eq14(x.value1)(y.value1);
+            return eq2(x.value0)(y.value0) && eq15(x.value1)(y.value1);
           };
         }
       };
@@ -7266,9 +7266,10 @@
   var map18 = /* @__PURE__ */ map(functorArray);
   var mempty2 = /* @__PURE__ */ mempty(monoidList);
   var pure10 = /* @__PURE__ */ pure(applicativeMaybe);
-  var modify_3 = /* @__PURE__ */ modify_2(monadStateHalogenM);
   var bind5 = /* @__PURE__ */ bind(bindHalogenM);
   var get2 = /* @__PURE__ */ get(monadStateHalogenM);
+  var eq14 = /* @__PURE__ */ eq(eqPoint);
+  var modify_3 = /* @__PURE__ */ modify_2(monadStateHalogenM);
   var pure13 = /* @__PURE__ */ pure(applicativeHalogenM);
   var discard5 = /* @__PURE__ */ discard(discardUnit)(bindHalogenM);
   var when4 = /* @__PURE__ */ when(applicativeHalogenM);
@@ -7418,7 +7419,7 @@
       return renderPunc(["CursorHandle", "ZipperInnerEndCursorStatus"])("}>");
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 78, column 32 - line 86, column 126): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 77, column 32 - line 85, column 126): " + [v.constructor.name]);
   };
   var renderTerm = function(cursor) {
     return traverseSexpWithCursor2({
@@ -7469,17 +7470,49 @@
     }
     ;
     if (v instanceof StartDrag) {
-      return modify_3(function(v1) {
-        var $61 = {};
-        for (var $62 in v1) {
-          if ({}.hasOwnProperty.call(v1, $62)) {
-            $61[$62] = v1[$62];
-          }
-          ;
+      return bind5(get2)(function(v1) {
+        if (v1.cursor instanceof SpanCursor && eq14(v1.cursor.value0.p0)(v.value0)) {
+          return modify_3(function(v2) {
+            var $67 = {};
+            for (var $68 in v2) {
+              if ({}.hasOwnProperty.call(v2, $68)) {
+                $67[$68] = v2[$68];
+              }
+              ;
+            }
+            ;
+            $67.mb_dragStart = pure10(v1.cursor.value0.p1);
+            return $67;
+          });
         }
         ;
-        $61.mb_dragStart = pure10(v.value0);
-        return $61;
+        if (v1.cursor instanceof SpanCursor && eq14(v1.cursor.value0.p1)(v.value0)) {
+          return modify_3(function(v2) {
+            var $73 = {};
+            for (var $74 in v2) {
+              if ({}.hasOwnProperty.call(v2, $74)) {
+                $73[$74] = v2[$74];
+              }
+              ;
+            }
+            ;
+            $73.mb_dragStart = pure10(v1.cursor.value0.p0);
+            return $73;
+          });
+        }
+        ;
+        return modify_3(function(v2) {
+          var $79 = {};
+          for (var $80 in v2) {
+            if ({}.hasOwnProperty.call(v2, $80)) {
+              $79[$80] = v2[$80];
+            }
+            ;
+          }
+          ;
+          $79.mb_dragStart = pure10(v.value0);
+          return $79;
+        });
       });
     }
     ;
@@ -7492,26 +7525,26 @@
         if (v1.mb_dragStart instanceof Just) {
           return discard5(pure13(unit))(function() {
             return modify_3(function(v2) {
-              var $67 = {};
-              for (var $68 in v2) {
-                if ({}.hasOwnProperty.call(v2, $68)) {
-                  $67[$68] = v2[$68];
+              var $86 = {};
+              for (var $87 in v2) {
+                if ({}.hasOwnProperty.call(v2, $87)) {
+                  $86[$87] = v2[$87];
                 }
                 ;
               }
               ;
-              $67.cursor = cursorBetweenPoints(v1.term)(v1.mb_dragStart.value0)(v.value0);
-              $67.mb_dragStart = Nothing.value;
-              return $67;
+              $86.cursor = cursorBetweenPoints(v1.term)(v1.mb_dragStart.value0)(v.value0);
+              $86.mb_dragStart = Nothing.value;
+              return $86;
             });
           });
         }
         ;
-        throw new Error("Failed pattern match at Sexpze.Component.Editor (line 240, column 3 - line 249, column 10): " + [v1.mb_dragStart.constructor.name]);
+        throw new Error("Failed pattern match at Sexpze.Component.Editor (line 246, column 3 - line 255, column 10): " + [v1.mb_dragStart.constructor.name]);
       });
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 218, column 1 - line 218, column 42): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 214, column 1 - line 214, column 42): " + [v.constructor.name]);
   };
   var handleActionConfig = function(v) {
     return discard5(when4(v.value0.doStopPropagation)(liftEffect7(stopPropagation(toEvent(v.value0.event)))))(function() {
