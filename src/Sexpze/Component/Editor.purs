@@ -16,7 +16,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), CursorStatus(..), Point(..), Span(..), SubCursorStatus(..), traverseSexpWithCursor)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), CursorStatus(..), Point(..), Span(..), SubCursorStatus(..), cursorBetweenPoints, traverseSexpWithCursor)
 import Sexpze.Utility (todo)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
@@ -38,6 +38,7 @@ type Slots :: Row Type
 type Slots = ()
 
 type M = Aff
+type HM = H.HalogenM State Action Slots Output M
 
 type HTML = H.ComponentHTML Action Slots M
 
@@ -46,35 +47,30 @@ component = H.mkComponent { initialState, eval, render }
   where
   initialState :: Input -> State
   initialState _input =
-    { term: [ Group [ Atom "a", Atom "b" ] ]
+    -- { term: [ Group [ Atom "a", Atom "b" ] ]
     -- , cursor: PointCursor (Point (0 : Nil) 0)
+    -- }
+    -- { term: [ Group [ Atom "a", Atom "b" ] ]
+    -- , cursor: SpanCursor (Span { p0: Point (0 : Nil) 0, p1: Point (0 : Nil) 1 })
+    -- }
+    { term: [ Group [ Atom "a", Atom "b", Group [ Atom "c", Atom "d" ], Atom "e", Atom "f" ] ]
     , cursor: SpanCursor (Span { p0: Point (0 : Nil) 0, p1: Point (0 : Nil) 1 })
+    , mb_dragStart: Nothing
     }
 
   eval = H.mkEval H.defaultEval { handleAction = handleAction }
 
   handleAction = case _ of
-    UserAction_Action a -> handleUserAction a
-    SetCursor_Action cursor mb_event -> do
-      mb_event # maybe (pure unit) (Event.stopPropagation <<< MouseEvent.toEvent) # liftEffect
-      modify_ _ { cursor = cursor }
-    SetSelectOtherPoint_Action p' mb_event -> do
-      mb_event # maybe (pure unit) (Event.stopPropagation <<< MouseEvent.toEvent) # liftEffect
-      { cursor } <- get
-      case cursor of
-        PointCursor p -> do
-          -- order p and p'
-          -- TODO: for now assume the order is p then p'
-          whenM (mb_event # maybe true (MouseEvent.button >>> (_ == 0)) # pure) do
-            modify_ _ { cursor = SpanCursor (Span { p0: p, p1: p' }) }
-        _ -> pure unit
+    UserAction_Action a config -> do
+      handleActionConfig config
+      handleUserAction a
 
   render state =
     HH.div
       [ HP.classes [ HH.ClassName "Editor" ] ]
       [ HH.div [ HP.classes [ HH.ClassName "term" ] ]
           [ HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "Group" ] ]
-              (renderTerm state.cursor state.term)
+              [ renderTerm state.cursor state.term ]
           ]
       ]
 
@@ -85,33 +81,37 @@ renderHandleWithCursorStatus :: Maybe CursorStatus -> HTML
 renderHandleWithCursorStatus = case _ of
   Nothing -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "NoCursorStatus" ] "•"
   Just PointCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "PointCursorStatus" ] "|"
-  Just SpanBeginCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "SpanBeginCursorStatus" ] "["
+  Just SpanStartCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "SpanStartCursorStatus" ] "["
   Just SpanEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "SpanEndCursorStatus" ] "]"
-  Just ZipperOuterBeginCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperOuterBeginCursorStatus" ] "<{"
+  Just ZipperOuterStartCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperOuterStartCursorStatus" ] "<{"
   Just ZipperOuterEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperOuterEndCursorStatus" ] "{>"
-  Just ZipperInnerBeginCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperInnerBeginCursorStatus" ] "<}"
+  Just ZipperInnerStartCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperInnerStartCursorStatus" ] "<}"
   Just ZipperInnerEndCursorStatus -> renderPunc [ H.ClassName "CursorHandle", H.ClassName "ZipperInnerEndCursorStatus" ] "}>"
 
-renderTerm :: Cursor -> Term -> Array HTML
+renderTerm :: Cursor -> Term -> HTML
 renderTerm cursor =
   traverseSexpWithCursor
     { atom: \label ->
         HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "Atom" ] ]
           [ HH.text label ]
-    , group: \xs { last } ->
+    , group: \{ first, last } html ->
         HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "Group" ] ]
-          ( [ [ renderPunc [] "(" ]
-            , xs
+          [ renderPointHandle first.point $ renderPunc [] "("
+          , html
+          , renderPointHandle last.point $ renderPunc [] ")"
+          ]
+    , list: \xs { last } ->
+        HH.div [ HP.classes [ H.ClassName "Term", H.ClassName "List" ] ]
+          ( [ xs
                 # map
                     ( \{ before, x: _, r: html_x } ->
-                        [ renderPointCursorHandle before.point (renderHandleWithCursorStatus before.status)
+                        [ renderPointHandle before.point $ renderHandleWithCursorStatus before.status
                         , html_x
                         ]
                     )
                 # Array.fold
-            , [ renderPointCursorHandle last.point (renderHandleWithCursorStatus last.status)
+            , [ renderPointHandle last.point $ renderHandleWithCursorStatus last.status
               ]
-            , [ renderPunc [] ")" ]
             ]
               # Array.fold
           )
@@ -122,11 +122,24 @@ renderTerm cursor =
 renderPunc :: Array H.ClassName -> String -> HTML
 renderPunc cns s = HH.span [ HP.classes ([ HH.ClassName "Punc" ] <> cns) ] [ HH.text s ]
 
-renderPointCursorHandle :: Point -> HTML -> HTML
-renderPointCursorHandle point label =
+renderPointHandle :: Point -> HTML -> HTML
+renderPointHandle point label =
   HH.div
-    [ HE.onMouseDown (SetCursor_Action (PointCursor point) <<< Just)
-    , HE.onMouseUp (SetSelectOtherPoint_Action point <<< Just)
+    -- [ HE.onMouseDown (StartDrag_Action (PointCursor point) <<< Just)
+    -- , HE.onMouseUp (SetSelectOtherPoint_Action point <<< Just)
+    -- ]
+    [ HE.onMouseDown
+        ( \event ->
+            UserAction_Action
+              (StartDrag point)
+              (MouseActionConfig { event, doStopPropagation: true })
+        )
+    , HE.onMouseUp
+        ( \event ->
+            UserAction_Action
+              (EndDrag point)
+              (MouseActionConfig { event, doStopPropagation: true })
+        )
     ]
     [ label
     ]
@@ -141,6 +154,7 @@ fromCursorStatusToClassName = show >>> HH.ClassName
 type State =
   { term :: Term
   , cursor :: Cursor
+  , mb_dragStart :: Maybe Point
   }
 
 type Term = Sexp String
@@ -160,6 +174,8 @@ data UserAction
   | Delete
   | Copy
   | Paste
+  | StartDrag Point
+  | EndDrag Point
 
 parseUserActionsFromKeyboardEvent :: KeyboardEvent -> State -> Maybe (Array UserAction)
 parseUserActionsFromKeyboardEvent ke {} =
@@ -189,16 +205,20 @@ parseUserActionsFromKeyboardEvent ke {} =
 -- Action
 --------------------------------------------------------------------------------
 
-data Action
-  = UserAction_Action UserAction
-  | SetCursor_Action Cursor (Maybe MouseEvent)
-  | SetSelectOtherPoint_Action Point (Maybe MouseEvent)
+data Action = UserAction_Action UserAction ActionConfig
 
---------------------------------------------------------------------------------
--- Logic
---------------------------------------------------------------------------------
+data ActionConfig = MouseActionConfig
+  { event :: MouseEvent
+  , doStopPropagation :: Boolean
+  }
 
-handleUserAction :: UserAction -> H.HalogenM State Action Slots Output M Unit
+handleActionConfig :: ActionConfig -> HM Unit
+handleActionConfig (MouseActionConfig args) = do
+  when args.doStopPropagation do
+    args.event # MouseEvent.toEvent # Event.stopPropagation # liftEffect
+  pure unit
+
+handleUserAction :: UserAction -> HM Unit
 handleUserAction MoveLeft = do
   -- { term, cursor } <- get
   -- case moveLeft_Cursor term cursor of
@@ -216,3 +236,18 @@ handleUserAction SelectRight = todo "handleUserAction" {}
 handleUserAction Delete = todo "handleUserAction" {}
 handleUserAction Copy = todo "handleUserAction" {}
 handleUserAction Paste = todo "handleUserAction" {}
+handleUserAction (StartDrag cursor) = do
+  modify_ _ { mb_dragStart = pure cursor }
+handleUserAction (EndDrag end) = do
+  { term, mb_dragStart } <- get
+  case mb_dragStart of
+    Nothing -> do
+      -- TODO: this shouldn't happen
+      pure unit
+    Just start -> do
+      pure unit
+      modify_ _
+        { cursor = cursorBetweenPoints term start end
+        , mb_dragStart = Nothing
+        }
+

@@ -5,14 +5,16 @@ import Prelude
 
 import Control.Plus (empty)
 import Data.Array as Array
+import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
-import Data.Tuple (Tuple(..))
+import Data.Tuple (snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
+import Sexpze.Utility (todo)
 
 --------------------------------------------------------------------------------
 -- traverseSexpWithCursor
@@ -21,6 +23,12 @@ import Sexpze.Data.Sexp (Sexp, Sexp'(..))
 type TraverseSexpWithCursorRecs a r =
   { atom :: a -> r
   , group ::
+      { first :: { point :: Point, status :: Maybe CursorStatus }
+      , last :: { point :: Point, status :: Maybe CursorStatus }
+      }
+      -> r
+      -> r
+  , list ::
       Array
         ( { before :: { point :: Point, status :: Maybe CursorStatus }
           , x :: Sexp' a
@@ -38,11 +46,43 @@ traverseSexpWithCursor
   -> List Int
   -> Maybe SubCursor
   -> Sexp a
-  -> Array r
--- traverseSexpWithCursor recs is mb_subcursor sexp = Debug.trace ("[traverseSexpWithCursor] " <> show { mb_subcursor, sexp }) \_ -> sexp #
-traverseSexpWithCursor recs is mb_subcursor sexp = sexp #
-  Array.mapWithIndex \i x ->
-    traverseSexp'WithCursor recs (is `List.snoc` i) (mb_subcursor >>= matchStepSubCursor i) x
+  -> r
+traverseSexpWithCursor recs is mb_subcursor xs = traverseSexpWithCursor_helper recs is mb_subcursor xs # snd
+
+traverseSexpWithCursor_helper
+  :: forall a r
+   . Show a
+  => TraverseSexpWithCursorRecs a r
+  -> List Int
+  -> Maybe SubCursor
+  -> Sexp a
+  -> { first :: { point :: Point, status :: Maybe CursorStatus }
+     , last :: { point :: Point, status :: Maybe CursorStatus }
+     } /\ r
+traverseSexpWithCursor_helper recs is mb_subcursor xs =
+  let
+    l = Array.length xs
+    first =
+      { point: Point is 0
+      , status: toCursorStatus 0 =<< mb_subcursor
+      }
+    last =
+      { point: Point is l
+      , status: toCursorStatus l =<< mb_subcursor
+      }
+  in
+    { first, last } /\
+      recs.list
+        ( xs # Array.mapWithIndex \i x ->
+            { before:
+                { point: Point is i
+                , status: toCursorStatus i =<< mb_subcursor
+                }
+            , x
+            , r: traverseSexp'WithCursor recs (is `List.snoc` i) (matchStepSubCursor i =<< mb_subcursor) x
+            }
+        )
+        { last }
 
 traverseSexp'WithCursor
   :: forall a r
@@ -52,30 +92,12 @@ traverseSexp'WithCursor
   -> Maybe SubCursor
   -> Sexp' a
   -> r
--- traverseSexp'WithCursor { atom } _is mb_subcursor sexp'@(Atom a) = Debug.trace ("[traverseSexp'WithCursor] " <> show { mb_subcursor, sexp' }) \_ ->
-traverseSexp'WithCursor { atom } _is mb_subcursor sexp'@(Atom a) =
-  atom a
--- traverseSexp'WithCursor recs@{ group } is mb_subcursor sexp'@(Group xs) = Debug.trace ("[traverseSexp'WithCursor] " <> show { mb_subcursor, sexp' }) \_ ->
-traverseSexp'WithCursor recs@{ group } is mb_subcursor sexp'@(Group xs) =
-  group
-    ( Array.zipWith
-        ( \(j /\ x) r ->
-            { before:
-                { point: Point is j
-                , status: toCursorStatus j =<< mb_subcursor
-                }
-            , x
-            , r
-            }
-        )
-        (xs # Array.mapWithIndex Tuple)
-        (xs # traverseSexpWithCursor recs is mb_subcursor)
-    )
-    { last:
-        { point: Point is (Array.length xs)
-        , status: toCursorStatus (Array.length xs) =<< mb_subcursor
-        }
-    }
+traverseSexp'WithCursor { atom } _is _mb_subcursor (Atom a) = atom a
+traverseSexp'WithCursor recs@{ group } is mb_subcursor (Group xs) =
+  let
+    { first, last } /\ r = traverseSexpWithCursor_helper recs is mb_subcursor xs
+  in
+    group { first, last } r
 
 --------------------------------------------------------------------------------
 -- SubCursor
@@ -85,11 +107,11 @@ type SubCursor = Cursor /\ SubCursorStatus
 
 data SubCursorStatus
   = PointSubCursorStatus
-  | SpanBeginSubCursorStatus
+  | SpanStartSubCursorStatus
   | SpanEndSubCursorStatus
-  | ZipperOuterBeginSubCursorStatus
+  | ZipperOuterStartSubCursorStatus
   | ZipperOuterEndSubCursorStatus
-  | ZipperInnerBeginSubCursorStatus
+  | ZipperInnerStartSubCursorStatus
   | ZipperInnerEndSubCursorStatus
 
 derive instance Generic SubCursorStatus _
@@ -102,12 +124,12 @@ matchStepSubCursor :: Int -> SubCursor -> Maybe SubCursor
 matchStepSubCursor i' (PointCursor (Point (Cons i is') j) /\ scs) | i == i' = pure (PointCursor (Point is' j) /\ scs)
 --
 matchStepSubCursor i' (SpanCursor (Span { p0: Point (Cons i is'1) j1, p1: Point (Cons i_ is'2) j2 }) /\ PointSubCursorStatus) | i == i_ && i == i' = pure (SpanCursor (Span { p0: Point is'1 j1, p1: Point is'2 j2 }) /\ PointSubCursorStatus)
-matchStepSubCursor i' (SpanCursor (Span { p0: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanBeginSubCursorStatus)
+matchStepSubCursor i' (SpanCursor (Span { p0: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanStartSubCursorStatus)
 matchStepSubCursor i' (SpanCursor (Span { p1: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanEndSubCursorStatus)
 -- 
-matchStepSubCursor i' (ZipperCursor (Zipper { s1: Span { p0: Point (Cons i is') j } }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterBeginSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper { s1: Span { p0: Point (Cons i is') j } }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterStartSubCursorStatus)
 matchStepSubCursor i' (ZipperCursor (Zipper { s1: Span { p0: Point (Cons i is') j } }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterEndSubCursorStatus)
-matchStepSubCursor i' (ZipperCursor (Zipper { s2: Span { p1: Point (Cons i is') j } }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerBeginSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper { s2: Span { p1: Point (Cons i is') j } }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerStartSubCursorStatus)
 matchStepSubCursor i' (ZipperCursor (Zipper { s2: Span { p1: Point (Cons i is') j } }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerEndSubCursorStatus)
 -- 
 matchStepSubCursor _ _ = empty
@@ -118,11 +140,11 @@ matchStepSubCursor _ _ = empty
 
 data CursorStatus
   = PointCursorStatus
-  | SpanBeginCursorStatus
+  | SpanStartCursorStatus
   | SpanEndCursorStatus
-  | ZipperOuterBeginCursorStatus
+  | ZipperOuterStartCursorStatus
   | ZipperOuterEndCursorStatus
-  | ZipperInnerBeginCursorStatus
+  | ZipperInnerStartCursorStatus
   | ZipperInnerEndCursorStatus
 
 derive instance Generic CursorStatus _
@@ -132,13 +154,13 @@ instance Show CursorStatus where
 
 toCursorStatus :: Int -> SubCursor -> Maybe CursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ PointSubCursorStatus) | j == j' = pure PointCursorStatus
-toCursorStatus j' (PointCursor (Point Nil j) /\ SpanBeginSubCursorStatus) | j == j' = pure SpanBeginCursorStatus
+toCursorStatus j' (PointCursor (Point Nil j) /\ SpanStartSubCursorStatus) | j == j' = pure SpanStartCursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ SpanEndSubCursorStatus) | j == j' = pure SpanEndCursorStatus
-toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperOuterBeginSubCursorStatus) | j == j' = pure ZipperOuterBeginCursorStatus
+toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperOuterStartSubCursorStatus) | j == j' = pure ZipperOuterStartCursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperOuterEndSubCursorStatus) | j == j' = pure ZipperOuterEndCursorStatus
-toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperInnerBeginSubCursorStatus) | j == j' = pure ZipperInnerBeginCursorStatus
+toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperInnerStartSubCursorStatus) | j == j' = pure ZipperInnerStartCursorStatus
 toCursorStatus j' (PointCursor (Point Nil j) /\ ZipperInnerEndSubCursorStatus) | j == j' = pure ZipperInnerEndCursorStatus
-toCursorStatus j' (SpanCursor (Span { p0: Point Nil j }) /\ PointSubCursorStatus) | j == j' = pure SpanBeginCursorStatus
+toCursorStatus j' (SpanCursor (Span { p0: Point Nil j }) /\ PointSubCursorStatus) | j == j' = pure SpanStartCursorStatus
 toCursorStatus j' (SpanCursor (Span { p1: Point Nil j }) /\ PointSubCursorStatus) | j == j' = pure SpanEndCursorStatus
 -- TODO: same for Zipper as for Span above
 toCursorStatus _ _ = empty
@@ -178,6 +200,9 @@ derive instance Generic Point _
 
 instance Show Point where
   show x = genericShow x
+
+instance Eq Point where
+  eq x = genericEq x
 
 topPoint :: Point
 topPoint = Point mempty 0
@@ -232,4 +257,12 @@ derive newtype instance Show Span
 newtype Zipper = Zipper { s1 :: Span, s2 :: Span }
 
 derive newtype instance Show Zipper
+
+--------------------------------------------------------------------------------
+-- operations
+--------------------------------------------------------------------------------
+
+cursorBetweenPoints :: forall a. Sexp a -> Point -> Point -> Cursor
+cursorBetweenPoints _ p p_ | p == p_ = PointCursor p
+cursorBetweenPoints _ _ _ = PointCursor topPoint
 
