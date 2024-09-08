@@ -10,12 +10,15 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
 import Data.List as List
-import Data.Maybe (Maybe)
+import Data.List.NonEmpty as List.NonEmpty
+import Data.List.Types as ListTypes
+import Data.Maybe (Maybe(..), fromMaybe')
+import Data.NonEmpty (NonEmpty(..))
 import Data.Show.Generic (genericShow)
 import Data.Tuple (snd, swap)
 import Data.Tuple.Nested (type (/\), (/\))
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Utility (todo)
+import Sexpze.Utility (bug, todo)
 
 --------------------------------------------------------------------------------
 -- traverseSexpWithCursor
@@ -128,10 +131,10 @@ matchStepSubCursor i' (SpanCursor (Span { p0: Point (Cons i is'1) j1, p1: Point 
 matchStepSubCursor i' (SpanCursor (Span { p0: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanStartSubCursorStatus)
 matchStepSubCursor i' (SpanCursor (Span { p1: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ SpanEndSubCursorStatus)
 -- 
-matchStepSubCursor i' (ZipperCursor (Zipper { s1: Span { p0: Point (Cons i is') j } }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterStartSubCursorStatus)
-matchStepSubCursor i' (ZipperCursor (Zipper { s1: Span { p0: Point (Cons i is') j } }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterEndSubCursorStatus)
-matchStepSubCursor i' (ZipperCursor (Zipper { s2: Span { p1: Point (Cons i is') j } }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerStartSubCursorStatus)
-matchStepSubCursor i' (ZipperCursor (Zipper { s2: Span { p1: Point (Cons i is') j } }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerEndSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper { p0: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterStartSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper { p1: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerStartSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper { p2: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperOuterEndSubCursorStatus)
+matchStepSubCursor i' (ZipperCursor (Zipper { p3: Point (Cons i is') j }) /\ PointSubCursorStatus) | i == i' = pure (PointCursor (Point is' j) /\ ZipperInnerEndSubCursorStatus)
 -- 
 matchStepSubCursor _ _ = empty
 
@@ -258,7 +261,7 @@ derive newtype instance Show Span
 -- | A `Zipper` is composed of two `Span`s that contains matching numbers of
 -- | opening and closing parentheses. A `Zipper` has an associated number for
 -- | how many outer unclosed parentheses it has.
-newtype Zipper = Zipper { s1 :: Span, s2 :: Span }
+newtype Zipper = Zipper { p0 :: Point, p1 :: Point, p2 :: Point, p3 :: Point }
 
 derive newtype instance Show Zipper
 
@@ -266,22 +269,55 @@ derive newtype instance Show Zipper
 -- operations
 --------------------------------------------------------------------------------
 
+getSubSexp :: forall a. Path -> Sexp a -> Sexp a
+getSubSexp Nil xs = xs
+getSubSexp (i : is) xs = case xs Array.!! i of
+  Nothing -> bug "[getSubSexp] step index out of bounds"
+  Just (Group xs') -> getSubSexp is xs'
+  Just (Atom _) -> bug "[getSubSexp] step into an Atom"
+
 cursorBetweenPoints :: forall a. Sexp a -> Point -> Point -> Cursor
 cursorBetweenPoints _ p p_ | p == p_ = PointCursor p
-cursorBetweenPoints x p p' =
+cursorBetweenPoints xs p p' =
   let
-    _path
+    path
       /\ { top: p0, sub: _p0_sub@(Point is0' _j0') }
       /\ { top: p1, sub: _p1_sub@(Point is1' _j1') } = longestCommonPath p p'
   in
-    if List.null is0' && List.null is1' then
-      SpanCursor (Span { p0, p1 })
-    else if List.null is0' then
-      PointCursor topPoint -- zipper where p is outer and p' is inner
-    else if List.null is1' then
-      PointCursor topPoint -- zipper wher p is inner and p' is outer
-    else
-      PointCursor topPoint
+    case is0' /\ is1' of
+      Nil /\ Nil -> SpanCursor (Span { p0, p1 })
+      Nil /\ (i1' : is1'_tail) ->
+        -- zipper where p0 is outer and p1 is inner
+        -- 
+        let
+          -- find the outermost Sexp between p0 and p1
+          outermostSexp = getSubSexp (path `List.snoc` i1') xs
+          -- find the innermost Sexp between p0 and p1
+          -- innermost_group = List.NonEmpty.snoc' path i1' # List.NonEmpty.tail
+          innermostSexp = getSubSexp (path <> is1') xs
+        in
+          --
+          -- OuterStart is at p0
+          -- InnerStart is at p1
+          -- InnerEnd is at the last sibling position to p1
+          -- InnerEnd is at the last position inside the innermost Sexp between p0 and p1
+          -- OuterEnd is at the first sibling position to p0 that's after the outermost Sexp between p0 and p1
+          ZipperCursor
+            ( Zipper
+                { p0: p0
+                , p1: p1
+                , p2: Point (path <> is1') (Array.length innermostSexp)
+                , p3: Point path (i1' + 1)
+                }
+            )
+      (_ : _) /\ Nil -> PointCursor topPoint -- zipper wher p0 is inner and p1 is outer
+      _ ->
+        -- not a valid Span or Zipper between these two points directly, so just
+        -- span to the smallest Span that contains both points
+        let
+          xs_sub = xs # getSubSexp path
+        in
+          SpanCursor (Span { p0: Point path 0, p1: Point path (Array.length xs_sub) })
 cursorBetweenPoints _ _ _ = PointCursor topPoint
 
 -- | Finds the longest common path (from the root) of the two points, and also

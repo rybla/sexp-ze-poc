@@ -1998,12 +1998,12 @@
   var foldMapDefaultR = function(dictFoldable) {
     var foldr22 = foldr(dictFoldable);
     return function(dictMonoid) {
-      var append6 = append(dictMonoid.Semigroup0());
+      var append7 = append(dictMonoid.Semigroup0());
       var mempty3 = mempty(dictMonoid);
       return function(f) {
         return foldr22(function(x) {
           return function(acc) {
-            return append6(f(x))(acc);
+            return append7(f(x))(acc);
           };
         })(mempty3);
       };
@@ -3610,6 +3610,9 @@
   var length3 = function(xs) {
     return xs.length;
   };
+  var indexImpl = function(just, nothing, xs, i2) {
+    return i2 < 0 || i2 >= xs.length ? nothing : just(xs[i2]);
+  };
   var findIndexImpl = function(just, nothing, f, xs) {
     for (var i2 = 0, l = xs.length; i2 < l; i2++) {
       if (f(xs[i2]))
@@ -3732,6 +3735,9 @@
   var fromJust2 = /* @__PURE__ */ fromJust();
   var fold1 = /* @__PURE__ */ fold(foldableArray);
   var mapWithIndex2 = /* @__PURE__ */ mapWithIndex(functorWithIndexArray);
+  var index2 = /* @__PURE__ */ function() {
+    return runFn4(indexImpl)(Just.create)(Nothing.value);
+  }();
   var fold2 = function(dictMonoid) {
     return fold1(dictMonoid);
   };
@@ -6819,11 +6825,22 @@
     return Group2;
   }();
 
+  // output/Sexpze.Utility/index.js
+  var todo = function(msg) {
+    return function(v) {
+      return unsafeCrashWith("[todo] " + msg);
+    };
+  };
+  var bug = function(msg) {
+    return unsafeCrashWith("[bug] " + msg);
+  };
+
   // output/Sexpze.Data.Sexp.Cursor/index.js
   var pure9 = /* @__PURE__ */ pure(applicativeMaybe);
   var empty7 = /* @__PURE__ */ empty(plusMaybe);
   var bindFlipped8 = /* @__PURE__ */ bindFlipped(bindMaybe);
   var identity8 = /* @__PURE__ */ identity(categoryFn);
+  var append5 = /* @__PURE__ */ append(semigroupList);
   var PointSubCursorStatus = /* @__PURE__ */ function() {
     function PointSubCursorStatus2() {
     }
@@ -7045,20 +7062,20 @@
         return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p1.value0.value1, v1.value0.value0.p1.value1)), SpanEndSubCursorStatus.value));
       }
       ;
-      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.s1.p0.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.s1.p0.value0.value0 === v))) {
-        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.s1.p0.value0.value1, v1.value0.value0.s1.p0.value1)), ZipperOuterStartSubCursorStatus.value));
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.p0.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p0.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p0.value0.value1, v1.value0.value0.p0.value1)), ZipperOuterStartSubCursorStatus.value));
       }
       ;
-      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.s1.p0.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.s1.p0.value0.value0 === v))) {
-        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.s1.p0.value0.value1, v1.value0.value0.s1.p0.value1)), ZipperOuterEndSubCursorStatus.value));
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.p1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p1.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p1.value0.value1, v1.value0.value0.p1.value1)), ZipperInnerStartSubCursorStatus.value));
       }
       ;
-      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.s2.p1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.s2.p1.value0.value0 === v))) {
-        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.s2.p1.value0.value1, v1.value0.value0.s2.p1.value1)), ZipperInnerStartSubCursorStatus.value));
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.p2.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p2.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p2.value0.value1, v1.value0.value0.p2.value1)), ZipperOuterEndSubCursorStatus.value));
       }
       ;
-      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.s2.p1.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.s2.p1.value0.value0 === v))) {
-        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.s2.p1.value0.value1, v1.value0.value0.s2.p1.value1)), ZipperInnerEndSubCursorStatus.value));
+      if (v1.value0 instanceof ZipperCursor && (v1.value0.value0.p3.value0 instanceof Cons && (v1.value1 instanceof PointSubCursorStatus && v1.value0.value0.p3.value0.value0 === v))) {
+        return pure9(new Tuple(new PointCursor(new Point(v1.value0.value0.p3.value0.value1, v1.value0.value0.p3.value1)), ZipperInnerEndSubCursorStatus.value));
       }
       ;
       return empty7;
@@ -7117,7 +7134,7 @@
               })(v4.value1);
             }
             ;
-            throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 88, column 1 - line 95, column 7): " + [v.constructor.name, v1.constructor.name, v2.constructor.name, v3.constructor.name]);
+            throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 91, column 1 - line 98, column 7): " + [v.constructor.name, v1.constructor.name, v2.constructor.name, v3.constructor.name]);
           };
         };
       };
@@ -7186,8 +7203,8 @@
               }
               ;
               if (v1.value0 instanceof Cons && v2.value0 instanceof Cons) {
-                var $394 = v1.value0.value0 !== v2.value0.value0;
-                if ($394) {
+                var $401 = v1.value0.value0 !== v2.value0.value0;
+                if ($401) {
                   $tco_done = true;
                   return new Tuple(reverse(v), swapUnless(v1.value0.value0 <= v2.value0.value0)(new Tuple({
                     top: p_top,
@@ -7204,7 +7221,7 @@
                 return;
               }
               ;
-              throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 295, column 3 - line 296, column 101): " + [v.constructor.name, v1.constructor.name, v2.constructor.name]);
+              throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 331, column 3 - line 332, column 101): " + [v.constructor.name, v1.constructor.name, v2.constructor.name]);
             }
             ;
             while (!$tco_done) {
@@ -7218,6 +7235,48 @@
       return go2(Nil.value)(p_top)(p$prime_top);
     };
   };
+  var getSubSexp = function($copy_v) {
+    return function($copy_v1) {
+      var $tco_var_v = $copy_v;
+      var $tco_done = false;
+      var $tco_result;
+      function $tco_loop(v, v1) {
+        if (v instanceof Nil) {
+          $tco_done = true;
+          return v1;
+        }
+        ;
+        if (v instanceof Cons) {
+          var v2 = index2(v1)(v.value0);
+          if (v2 instanceof Nothing) {
+            $tco_done = true;
+            return bug("[getSubSexp] step index out of bounds");
+          }
+          ;
+          if (v2 instanceof Just && v2.value0 instanceof Group) {
+            $tco_var_v = v.value1;
+            $copy_v1 = v2.value0.value0;
+            return;
+          }
+          ;
+          if (v2 instanceof Just && v2.value0 instanceof Atom) {
+            $tco_done = true;
+            return bug("[getSubSexp] step into an Atom");
+          }
+          ;
+          throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 274, column 26 - line 277, column 56): " + [v2.constructor.name]);
+        }
+        ;
+        throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 272, column 1 - line 272, column 49): " + [v.constructor.name, v1.constructor.name]);
+      }
+      ;
+      while (!$tco_done) {
+        $tco_result = $tco_loop($tco_var_v, $copy_v1);
+      }
+      ;
+      return $tco_result;
+    };
+  };
   var cursorBetweenPoints = function(v) {
     return function(v1) {
       return function(v2) {
@@ -7226,33 +7285,35 @@
         }
         ;
         var v3 = longestCommonPath(v1)(v2);
-        var $407 = $$null(v3.value1.value0.sub.value0) && $$null(v3.value1.value1.sub.value0);
-        if ($407) {
+        var v4 = new Tuple(v3.value1.value0.sub.value0, v3.value1.value1.sub.value0);
+        if (v4.value0 instanceof Nil && v4.value1 instanceof Nil) {
           return new SpanCursor({
             p0: v3.value1.value0.top,
             p1: v3.value1.value1.top
           });
         }
         ;
-        var $408 = $$null(v3.value1.value0.sub.value0);
-        if ($408) {
+        if (v4.value0 instanceof Nil && v4.value1 instanceof Cons) {
+          var outermostSexp = getSubSexp(snoc(v3.value0)(v4.value1.value0))(v);
+          var innermostSexp = getSubSexp(append5(v3.value0)(v3.value1.value1.sub.value0))(v);
+          return new ZipperCursor({
+            p0: v3.value1.value0.top,
+            p1: v3.value1.value1.top,
+            p2: new Point(append5(v3.value0)(v3.value1.value1.sub.value0), length3(innermostSexp)),
+            p3: new Point(v3.value0, v4.value1.value0 + 1 | 0)
+          });
+        }
+        ;
+        if (v4.value0 instanceof Cons && v4.value1 instanceof Nil) {
           return new PointCursor(topPoint);
         }
         ;
-        var $409 = $$null(v3.value1.value1.sub.value0);
-        if ($409) {
-          return new PointCursor(topPoint);
-        }
-        ;
-        return new PointCursor(topPoint);
+        var xs_sub = getSubSexp(v3.value0)(v);
+        return new SpanCursor({
+          p0: new Point(v3.value0, 0),
+          p1: new Point(v3.value0, length3(xs_sub))
+        });
       };
-    };
-  };
-
-  // output/Sexpze.Utility/index.js
-  var todo = function(msg) {
-    return function(v) {
-      return unsafeCrashWith("[todo] " + msg);
     };
   };
 
@@ -7260,7 +7321,7 @@
   var toEvent = unsafeCoerce2;
 
   // output/Sexpze.Component.Editor/index.js
-  var append5 = /* @__PURE__ */ append(semigroupArray);
+  var append6 = /* @__PURE__ */ append(semigroupArray);
   var traverseSexpWithCursor2 = /* @__PURE__ */ traverseSexpWithCursor(showString);
   var fold3 = /* @__PURE__ */ fold2(monoidArray);
   var map18 = /* @__PURE__ */ map(functorArray);
@@ -7368,7 +7429,7 @@
   }();
   var renderPunc = function(cns) {
     return function(s) {
-      return span3([classes(append5(["Punc"])(cns))])([text5(s)]);
+      return span3([classes(append6(["Punc"])(cns))])([text5(s)]);
     };
   };
   var renderPointHandle = function(point) {
