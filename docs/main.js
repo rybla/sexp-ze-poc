@@ -6659,7 +6659,8 @@
   }
 
   // output/Web.UIEvent.MouseEvent.EventTypes/index.js
-  var click2 = "click";
+  var mouseup = "mouseup";
+  var mousedown = "mousedown";
 
   // output/Halogen.HTML.Events/index.js
   var mouseHandler = unsafeCoerce2;
@@ -6670,10 +6671,16 @@
       });
     };
   };
-  var onClick = /* @__PURE__ */ function() {
-    var $15 = handler2(click2);
-    return function($16) {
-      return $15(mouseHandler($16));
+  var onMouseDown = /* @__PURE__ */ function() {
+    var $27 = handler2(mousedown);
+    return function($28) {
+      return $27(mouseHandler($28));
+    };
+  }();
+  var onMouseUp = /* @__PURE__ */ function() {
+    var $39 = handler2(mouseup);
+    return function($40) {
+      return $39(mouseHandler($40));
     };
   }();
 
@@ -6955,7 +6962,7 @@
                 return function(r) {
                   return {
                     before: {
-                      cursor: new PointCursor(new Point(v1, v4.value0)),
+                      point: new Point(v1, v4.value0),
                       status: bindFlipped8(toCursorStatus(v4.value0))(v2)
                     },
                     x: v4.value1,
@@ -6964,13 +6971,13 @@
                 };
               })(mapWithIndex2(Tuple.create)(v3.value0))(traverseSexpWithCursor(dictShow)(v)(v1)(v2)(v3.value0)))({
                 last: {
-                  cursor: new PointCursor(new Point(v1, length3(v3.value0))),
+                  point: new Point(v1, length3(v3.value0)),
                   status: bindFlipped8(toCursorStatus(length3(v3.value0)))(v2)
                 }
               });
             }
             ;
-            throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 48, column 1 - line 55, column 7): " + [v.constructor.name, v1.constructor.name, v2.constructor.name, v3.constructor.name]);
+            throw new Error("Failed pattern match at Sexpze.Data.Sexp.Cursor (line 47, column 1 - line 54, column 7): " + [v.constructor.name, v1.constructor.name, v2.constructor.name, v3.constructor.name]);
           };
         };
       };
@@ -7070,9 +7077,37 @@
     };
     return SetCursor_Action2;
   }();
+  var SetSelectEndPoint_Action = /* @__PURE__ */ function() {
+    function SetSelectEndPoint_Action2(value0, value1) {
+      this.value0 = value0;
+      this.value1 = value1;
+    }
+    ;
+    SetSelectEndPoint_Action2.create = function(value0) {
+      return function(value1) {
+        return new SetSelectEndPoint_Action2(value0, value1);
+      };
+    };
+    return SetSelectEndPoint_Action2;
+  }();
   var renderPunc = function(cns) {
     return function(s) {
       return span3([classes(append5(["Punc"])(cns))])([text5(s)]);
+    };
+  };
+  var renderPointCursorHandle = function(point) {
+    return function(label5) {
+      return div2([onMouseDown(function() {
+        var $61 = SetCursor_Action.create(new PointCursor(point));
+        return function($62) {
+          return $61(Just.create($62));
+        };
+      }()), onMouseUp(function() {
+        var $63 = SetSelectEndPoint_Action.create(point);
+        return function($64) {
+          return $63(Just.create($64));
+        };
+      }())])([label5]);
     };
   };
   var renderHandleWithCursorStatus = function(v) {
@@ -7108,17 +7143,7 @@
       return renderPunc(["CursorHandle", "ZipperInnerEndCursorStatus"])("}>");
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 72, column 32 - line 80, column 126): " + [v.constructor.name]);
-  };
-  var renderCursorHandle = function(cursor) {
-    return function(label5) {
-      return div2([onClick(function() {
-        var $63 = SetCursor_Action.create(cursor);
-        return function($64) {
-          return $63(Just.create($64));
-        };
-      }())])([label5]);
-    };
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 73, column 32 - line 81, column 126): " + [v.constructor.name]);
   };
   var renderTerm = function(cursor) {
     return traverseSexpWithCursor2({
@@ -7128,8 +7153,8 @@
       group: function(xs) {
         return function(v) {
           return div2([classes(["Term", "Group"])])(fold3([[renderPunc([])("(")], fold3(map18(function(v1) {
-            return [renderCursorHandle(v1.before.cursor)(renderHandleWithCursorStatus(v1.before.status)), v1.r];
-          })(xs)), [renderCursorHandle(v.last.cursor)(renderHandleWithCursorStatus(v.last.status))], [renderPunc([])(")")]]));
+            return [renderPointCursorHandle(v1.before.point)(renderHandleWithCursorStatus(v1.before.status)), v1.r];
+          })(xs)), [renderPointCursorHandle(v.last.point)(renderHandleWithCursorStatus(v.last.status))], [renderPunc([])(")")]]));
         };
       }
     })(mempty2)(pure10(new Tuple(cursor, PointSubCursorStatus.value)));
@@ -7163,7 +7188,7 @@
       return todo("handleUserAction")({});
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 197, column 1 - line 197, column 78): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 189, column 1 - line 189, column 78): " + [v.constructor.name]);
   };
   var component = /* @__PURE__ */ function() {
     var render = function(state3) {
@@ -7202,7 +7227,11 @@
         });
       }
       ;
-      throw new Error("Failed pattern match at Sexpze.Component.Editor (line 56, column 18 - line 60, column 31): " + [v.constructor.name]);
+      if (v instanceof SetSelectEndPoint_Action) {
+        return todo("")({});
+      }
+      ;
+      throw new Error("Failed pattern match at Sexpze.Component.Editor (line 56, column 18 - line 61, column 59): " + [v.constructor.name]);
     };
     var $$eval = mkEval({
       handleQuery: defaultEval.handleQuery,

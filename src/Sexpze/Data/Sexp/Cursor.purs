@@ -12,7 +12,6 @@ import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
-import Debug as Debug
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
 
 --------------------------------------------------------------------------------
@@ -23,12 +22,12 @@ type TraverseSexpWithCursorRecs a r =
   { atom :: a -> r
   , group ::
       Array
-        ( { before :: { cursor :: Cursor, status :: Maybe CursorStatus }
+        ( { before :: { point :: Point, status :: Maybe CursorStatus }
           , x :: Sexp' a
           , r :: r
           }
         )
-      -> { last :: { cursor :: Cursor, status :: Maybe CursorStatus } }
+      -> { last :: { point :: Point, status :: Maybe CursorStatus } }
       -> r
   }
 
@@ -62,7 +61,7 @@ traverseSexp'WithCursor recs@{ group } is mb_subcursor sexp'@(Group xs) =
     ( Array.zipWith
         ( \(j /\ x) r ->
             { before:
-                { cursor: PointCursor (Point is j)
+                { point: Point is j
                 , status: toCursorStatus j =<< mb_subcursor
                 }
             , x
@@ -73,7 +72,7 @@ traverseSexp'WithCursor recs@{ group } is mb_subcursor sexp'@(Group xs) =
         (xs # traverseSexpWithCursor recs is mb_subcursor)
     )
     { last:
-        { cursor: PointCursor (Point is (Array.length xs))
+        { point: Point is (Array.length xs)
         , status: toCursorStatus (Array.length xs) =<< mb_subcursor
         }
     }

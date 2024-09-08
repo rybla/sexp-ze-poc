@@ -55,9 +55,10 @@ component = H.mkComponent { initialState, eval, render }
 
   handleAction = case _ of
     UserAction_Action a -> handleUserAction a
-    SetCursor_Action c mb_event -> do
+    SetCursor_Action cursor mb_event -> do
       mb_event # maybe (pure unit) (Event.stopPropagation <<< MouseEvent.toEvent) # liftEffect
-      modify_ _ { cursor = c }
+      modify_ _ { cursor = cursor }
+    SetSelectEndPoint_Action cursor mb_event -> todo "" {}
 
   render state =
     HH.div
@@ -91,12 +92,12 @@ renderTerm cursor =
             , xs
                 # map
                     ( \{ before, x: _, r: html_x } ->
-                        [ renderCursorHandle before.cursor (renderHandleWithCursorStatus before.status)
+                        [ renderPointCursorHandle before.point (renderHandleWithCursorStatus before.status)
                         , html_x
                         ]
                     )
                 # Array.fold
-            , [ renderCursorHandle last.cursor (renderHandleWithCursorStatus last.status)
+            , [ renderPointCursorHandle last.point (renderHandleWithCursorStatus last.status)
               ]
             , [ renderPunc [] ")" ]
             ]
@@ -109,10 +110,11 @@ renderTerm cursor =
 renderPunc :: Array H.ClassName -> String -> HTML
 renderPunc cns s = HH.span [ HP.classes ([ HH.ClassName "Punc" ] <> cns) ] [ HH.text s ]
 
-renderCursorHandle :: Cursor -> HTML -> HTML
-renderCursorHandle cursor label =
+renderPointCursorHandle :: Point -> HTML -> HTML
+renderPointCursorHandle point label =
   HH.div
-    [ HE.onMouseDown (SetCursor_Action cursor <<< Just)
+    [ HE.onMouseDown (SetCursor_Action (PointCursor point) <<< Just)
+    , HE.onMouseUp (SetSelectEndPoint_Action point <<< Just)
     ]
     [ label
     ]
@@ -178,6 +180,7 @@ parseUserActionsFromKeyboardEvent ke {} =
 data Action
   = UserAction_Action UserAction
   | SetCursor_Action Cursor (Maybe MouseEvent)
+  | SetSelectEndPoint_Action Point (Maybe MouseEvent)
 
 --------------------------------------------------------------------------------
 -- Logic
