@@ -13,7 +13,7 @@ import Data.List (List(..), (:))
 import Data.List as List
 import Data.List.NonEmpty as List.NonEmpty
 import Data.List.Types as ListTypes
-import Data.Maybe (Maybe(..), fromMaybe')
+import Data.Maybe (Maybe(..), fromMaybe', maybe')
 import Data.NonEmpty (NonEmpty(..))
 import Data.Show.Generic (genericShow)
 import Data.Tuple (snd, swap)
@@ -295,6 +295,7 @@ consPoint i (Point is j) = Point (i : is) j
 -- | A `Span` is a contiguous span between two `Point`s that contains matching
 -- | numbers of opening and closing parentheses. A `Span` has an associated
 -- | number for how many outer unclosed parentheses it has.
+-- TODO: refactor this to actually be a Path and two Ints, since the Path of each of these Points must be the SAME
 data Span = Span Point Point
 
 derive instance Generic Span _
@@ -323,9 +324,30 @@ instance Show Zipper where
 getSubSexp :: forall a. Path -> Sexp a -> Sexp a
 getSubSexp Nil xs = xs
 getSubSexp (i : is) xs = case xs Array.!! i of
-  Nothing -> bug "[getSubSexp] step index out of bounds"
+  Nothing -> bug "getSubSexp" "step index out of bounds"
   Just (Group xs') -> getSubSexp is xs'
-  Just (Atom _) -> bug "[getSubSexp] step into an Atom"
+  Just (Atom _) -> bug "getSubSexp" "step into an Atom"
+
+getSubWrapAndSexpAtPath :: forall a. Path -> Sexp a -> (Sexp a -> Sexp a) /\ Sexp a
+getSubWrapAndSexpAtPath Nil xs = identity /\ xs
+getSubWrapAndSexpAtPath (i : is) xs = case xs Array.!! i of
+  Nothing -> bug "getSubWrapAndSexpAtPath" "Path step index out of bounds"
+  Just (Group ys) ->
+    lmap
+      (\wrap ys' -> wrap $ xs # Array.updateAt i (Group ys') # fromMaybe' (\_ -> bug "getSubWrapAndSexpAtPath" "Path step index out of bounds"))
+      (getSubWrapAndSexpAtPath is ys)
+  Just (Atom _) -> bug "getSubWrapAndSexpAtPath" "Path step into an Atom"
+
+getSubWrapAtPoint :: forall a. Point -> Sexp a -> (Sexp a -> Sexp a)
+getSubWrapAtPoint (Point is j) xs =
+  let
+    wrap_ys /\ ys = xs # getSubWrapAndSexpAtPath is
+  in
+    wrap_ys <<< \ys_middle ->
+      let
+        { before: ys_before, after: ys_after } = ys # Array.splitAt j
+      in
+        ys_before <> ys_middle <> ys_after
 
 cursorBetweenPoints :: forall a. Sexp a -> Point -> Point -> Cursor
 cursorBetweenPoints _ p p_ | p == p_ = PointCursor p
@@ -362,7 +384,6 @@ cursorBetweenPoints xs p p' =
           xs_sub = xs # getSubSexp path
         in
           SpanCursor (Span (Point path 0) (Point path (Array.length xs_sub)))
-cursorBetweenPoints _ _ _ = PointCursor topPoint
 
 -- | Finds the longest common path (from the root) of the two points, and also
 -- | orders the points by which appears first from left-to-right.
@@ -386,3 +407,9 @@ longestCommonPath p_top p'_top = go Nil p_top p'_top
 
   swapUnless = if _ then identity else swap
 
+--------------------------------------------------------------------------------
+-- edits
+--------------------------------------------------------------------------------
+
+insertSexpAtPoint :: forall a. Point -> Sexp a -> Sexp a -> Maybe (Point /\ Sexp a)
+insertSexpAtPoint point@(Point is j) ys xs = Point is (j + 1) /\ (getSubWrapAtPoint point xs) ys # pure

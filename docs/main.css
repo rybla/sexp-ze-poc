@@ -36,44 +36,46 @@ body {
 .Term.Group {
   display: flex;
   flex-direction: row;
-  gap: 0.5em;
+  /* gap: 0.0em; */
 }
 
-/* CursorHandle */
+/* PointHandle */
 
-.CursorHandle {
+.PointHandle {
+  display: inline-block;
   cursor: pointer;
+  padding: 0 -0.2em;
 }
 
-.CursorHandle.NoCursorStatus {
+.PointHandle.NoCursorStatus {
   color: rgb(196, 196, 196);
 }
 
-.CursorHandle.PointCursorStatus {
+.PointHandle.PointCursorStatus {
   color: rgb(255, 75, 132);
 }
 
-.CursorHandle.SpanStartCursorStatus {
+.PointHandle.SpanStartCursorStatus {
   color: rgb(255, 75, 132);
 }
 
-.CursorHandle.SpanEndCursorStatus {
+.PointHandle.SpanEndCursorStatus {
   color: rgb(255, 75, 132);
 }
 
-.CursorHandle.ZipperOuterStartCursorStatus {
+.PointHandle.ZipperOuterStartCursorStatus {
   color: rgb(255, 75, 132);
 }
 
-.CursorHandle.ZipperOuterEndCursorStatus {
+.PointHandle.ZipperOuterEndCursorStatus {
   color: rgb(255, 75, 132);
 }
 
-.CursorHandle.ZipperInnerStartCursorStatus {
+.PointHandle.ZipperInnerStartCursorStatus {
   color: rgb(255, 75, 132);
 }
 
-.CursorHandle.ZipperInnerEndCursorStatus {
+.PointHandle.ZipperInnerEndCursorStatus {
   color: rgb(255, 75, 132);
 }
 
