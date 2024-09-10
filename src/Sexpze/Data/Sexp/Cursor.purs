@@ -1,4 +1,4 @@
--- | A cursor into a s-expression.
+-- | Cursors into `Sexp`s.
 module Sexpze.Data.Sexp.Cursor where
 
 import Prelude
@@ -6,8 +6,11 @@ import Prelude
 import Control.Plus (empty)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe, fromMaybe')
+import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
@@ -79,6 +82,14 @@ atPath ph xs = case ph of
 -- | two of that sub-`Sexp`'s kids.
 data Point = Point Path SexpPointIndex
 
+derive instance Generic Point _
+
+instance Show Point where
+  show x = genericShow x
+
+instance Eq Point where
+  eq x = genericEq x
+
 unconsPoint :: Point -> Maybe (SexpKidIndex /\ Point)
 unconsPoint (Point Nil _) = empty
 unconsPoint (Point (i : ph) j) = pure (i /\ Point ph j)
@@ -95,6 +106,14 @@ atPoint (Point ph i) xs =
 --------------------------------------------------------------------------------
 
 data SpanCursor = SpanCursor Path SexpPointIndex SexpPointIndex
+
+derive instance Generic SpanCursor _
+
+instance Show SpanCursor where
+  show x = genericShow x
+
+instance Eq SpanCursor where
+  eq x = genericEq x
 
 leftEndpoint_SpanCursor :: SpanCursor -> Point
 leftEndpoint_SpanCursor (SpanCursor p i1 _) = Point p i1
@@ -118,8 +137,24 @@ atSpanCursor (SpanCursor ph p1 p2) xs =
 
 data ZipperCursor = ZipperCursor SpanCursor SpanCursor
 
+derive instance Generic ZipperCursor _
+
+instance Show ZipperCursor where
+  show x = genericShow x
+
+instance Eq ZipperCursor where
+  eq x = genericEq x
+
 -- | The `Point` is at the hole of the zipper.
 data Zipper a = Zipper (Sexp a) Point
+
+derive instance Generic (Zipper a) _
+
+instance Show a => Show (Zipper a) where
+  show x = genericShow x
+
+instance Eq a => Eq (Zipper a) where
+  eq x = genericEq x
 
 atZipperCursor :: forall a. ZipperCursor -> Sexp a -> ((Sexp a -> Sexp a) -> Sexp a) /\ Zipper a
 atZipperCursor (ZipperCursor s1 s2) xs =
@@ -130,3 +165,46 @@ atZipperCursor (ZipperCursor s1 s2) xs =
     Tuple
       (w1 <<< (_ $ xs2))
       (Zipper xs1 (leftEndpoint_SpanCursor s2))
+
+--------------------------------------------------------------------------------
+-- Cursor
+--------------------------------------------------------------------------------
+
+data Cursor
+  = InjectPoint Point
+  | InjectSpanCursor SpanCursor
+  | InjectZipperCursor ZipperCursor
+
+derive instance Generic Cursor _
+
+instance Show Cursor where
+  show x = genericShow x
+
+instance Eq Cursor where
+  eq x = genericEq x
+
+--------------------------------------------------------------------------------
+-- dragFromPoint
+--------------------------------------------------------------------------------
+
+dragFromPoint :: Point -> Point -> Cursor
+dragFromPoint _p1 _p2 = todo "dragFromPoint" {}
+
+--------------------------------------------------------------------------------
+-- dragFromZipper
+--------------------------------------------------------------------------------
+
+data SpanHandle = StartSpanHandle | EndSpanHandle
+
+dragFromSpan :: SpanCursor -> SpanHandle -> Point -> Cursor
+dragFromSpan _s = todo "dragFromSpan" {}
+
+--------------------------------------------------------------------------------
+-- dragFromZipper
+--------------------------------------------------------------------------------
+
+dragFromZipper :: ZipperCursor -> ZipperHandle -> Point -> Cursor
+dragFromZipper _z = todo "dragFromZipper" {}
+
+data ZipperHandle = StartZipperHandle | EndZipperHandle
+
