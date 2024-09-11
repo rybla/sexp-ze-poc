@@ -1,0 +1,30 @@
+[
+  [
+    "Cursor dragFromPoint example1",
+    {
+      "timestamp": "1726062249392.0",
+      "success": true
+    }
+  ],
+  [
+    "Cursor dragFromPoint shallow 1-wide span",
+    {
+      "timestamp": "1726062360494.0",
+      "success": true
+    }
+  ],
+  [
+    "Cursor dragFromPoint shallow 2-wide span",
+    {
+      "timestamp": "1726062360494.0",
+      "success": true
+    }
+  ],
+  [
+    "Cursor dragFromPoint shallow don't move",
+    {
+      "timestamp": "1726062360494.0",
+      "success": true
+    }
+  ]
+]

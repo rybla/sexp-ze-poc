@@ -1,14 +1,15 @@
 module Test.Main where
 
--- import Prelude
--- import Sexpze.Data.Sexp
--- import Sexpze.Data.Sexp.Cursor
+import Prelude
 
--- import Data.Array as Array
--- import Data.List (List(..), (:))
--- import Data.Tuple.Nested ((/\))
--- import Effect (Effect)
--- import Effect.Class.Console as Console
+import Effect (Effect)
+import Test.Cursor as Cursor
+import Test.Spec.Reporter (consoleReporter)
+import Test.Spec.Runner.Node (runSpecAndExitProcess)
+
+main :: Effect Unit
+main = runSpecAndExitProcess [ consoleReporter ] do
+  Cursor.spec
 
 -- main :: Effect Unit
 -- main = do

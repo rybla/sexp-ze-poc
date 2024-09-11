@@ -10,6 +10,8 @@ package:
     - lists
     - prelude
     - profunctor-lenses
+    - spec
+    - spec-node
     - transformers
   test:
     main: Test.Main
