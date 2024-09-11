@@ -10,6 +10,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe, fromMaybe')
+import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
@@ -23,6 +24,7 @@ import Sexpze.Utility (bug, todo)
 -- | A `SexpKidIndex` specifies a kid of a `Sexp`.
 newtype SexpKidIndex = SexpKidIndex Int
 
+derive instance Newtype SexpKidIndex _
 derive newtype instance Show SexpKidIndex
 derive newtype instance Eq SexpKidIndex
 derive newtype instance Ord SexpKidIndex
@@ -40,12 +42,17 @@ atSexpKidIndex (SexpKidIndex i) xs =
 -- | A `SexpPointIndex` specifies a point between two kids of a `Sexp`.
 newtype SexpPointIndex = SexpPointIndex Int
 
+derive instance Newtype SexpPointIndex _
 derive newtype instance Show SexpPointIndex
 derive newtype instance Eq SexpPointIndex
 derive newtype instance Ord SexpPointIndex
 
 atSexpPointIndex :: forall a. SexpPointIndex -> Sexp a -> (Sexp a -> Sexp a)
-atSexpPointIndex = todo "" {}
+atSexpPointIndex (SexpPointIndex i) xs =
+  let
+    { before, after } = Array.splitAt i xs
+  in
+    \ys -> before <> ys <> after
 
 atSexpPointIndexSpan :: forall a. SexpPointIndex -> SexpPointIndex -> Sexp a -> (Sexp a -> Sexp a) /\ Sexp a
 atSexpPointIndexSpan (SexpPointIndex i1) (SexpPointIndex i2) xs =
@@ -58,6 +65,10 @@ atSexpPointIndexSpan (SexpPointIndex i1) (SexpPointIndex i2) xs =
           before <> ys <> after
     )
     (Array.slice i1 i2 xs)
+
+-- | true = LT, false = GT
+isSexpPointIndexBeforeSexpKidIndex :: SexpPointIndex -> SexpKidIndex -> Boolean
+isSexpPointIndexBeforeSexpKidIndex (SexpPointIndex i) (SexpKidIndex j) = i <= j
 
 --------------------------------------------------------------------------------
 -- Path
@@ -73,6 +84,12 @@ atPath ph xs = case ph of
     w_i /\ Group xs_i ->
       lmap ((w_i <<< Group) <<< _) $
         atPath ph' xs_i
+
+commonPathOfPoints :: Point -> Point -> Path /\ Point /\ Point
+commonPathOfPoints (Point (i : ph1) j1) (Point (i_ : ph2) j2) | i == i_ =
+  lmap (i : _) $
+    commonPathOfPoints (Point ph1 j1) (Point ph2 j2)
+commonPathOfPoints p1 p2 = Nil /\ p1 /\ p2
 
 --------------------------------------------------------------------------------
 -- Point
@@ -90,6 +107,15 @@ instance Show Point where
 instance Eq Point where
   eq x = genericEq x
 
+instance Ord Point where
+  compare (Point Nil j1) (Point Nil j2) = compare j1 j2
+  compare (Point Nil j1) (Point (i2 : _) _) = if isSexpPointIndexBeforeSexpKidIndex j1 i2 then LT else GT
+  compare (Point (i1 : _) _) (Point Nil j2) = if isSexpPointIndexBeforeSexpKidIndex j2 i1 then GT else LT
+  compare (Point (i1 : ph1) j1) (Point (i2 : ph2) j2) = case compare i1 i2 of
+    LT -> LT
+    EQ -> compare (Point ph1 j1) (Point ph2 j2)
+    GT -> GT
+
 unconsPoint :: Point -> Maybe (SexpKidIndex /\ Point)
 unconsPoint (Point Nil _) = empty
 unconsPoint (Point (i : ph) j) = pure (i /\ Point ph j)
@@ -100,6 +126,15 @@ atPoint (Point ph i) xs =
     w_ph /\ xs_ph = atPath ph xs
   in
     w_ph <<< atSexpPointIndex i xs_ph
+
+orderPoints :: Point -> Point -> Ordering /\ Point /\ Point
+orderPoints p1 p2 =
+  let
+    o = compare p1 p2
+  in
+    o /\ case o of
+      LT -> p1 /\ p2
+      _ -> p2 /\ p1
 
 --------------------------------------------------------------------------------
 -- Span
@@ -187,8 +222,52 @@ instance Eq Cursor where
 -- dragFromPoint
 --------------------------------------------------------------------------------
 
-dragFromPoint :: Point -> Point -> Cursor
-dragFromPoint _p1 _p2 = todo "dragFromPoint" {}
+dragFromPoint :: forall a. Point -> Point -> Sexp a -> Cursor
+dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
+  let
+    ph /\ _p1@(Point ph1 j1) /\ _p2@(Point ph2 j2) = commonPathOfPoints p1_top p2_top
+    _wrap_ph /\ _xs_ph = atPath ph xs
+  in
+    case ph1 /\ ph2 of
+      -- ==> PointCursor
+      Nil /\ Nil | j1 == j2 -> InjectPoint $ p1_top
+      -- ==> SpanCursor
+      Nil /\ Nil -> InjectSpanCursor $ SpanCursor ph j1 j2
+      -- p1 is above p2
+      -- ==> ZipperCursor
+      Nil /\ (i2' : _) ->
+        let
+          _wrap_ph2_top /\ xs_ph2_top = atPath ph2_top xs
+        in
+          InjectZipperCursor $
+            ZipperCursor
+              (SpanCursor ph (SexpPointIndex (unwrap j2)) (SexpPointIndex (unwrap j2 + 1)))
+              ( if isSexpPointIndexBeforeSexpKidIndex j1 i2' then
+                  SpanCursor ph2 (SexpPointIndex (unwrap j1)) (SexpPointIndex (Array.length xs_ph2_top))
+                else
+                  SpanCursor ph2 (SexpPointIndex 0) (SexpPointIndex (unwrap j1))
+              )
+      -- p2 is above p1
+      -- ==> ZipperCursor
+      (i1' : _) /\ Nil ->
+        let
+          _wrap_ph2_top /\ xs_ph1_top = atPath ph1_top xs
+        in
+          InjectZipperCursor $
+            ZipperCursor
+              (SpanCursor ph (SexpPointIndex (unwrap j1)) (SexpPointIndex (unwrap j1 + 1)))
+              ( if isSexpPointIndexBeforeSexpKidIndex j2 i1' then
+                  SpanCursor ph1 (SexpPointIndex (unwrap j2)) (SexpPointIndex (Array.length xs_ph1_top))
+                else
+                  SpanCursor ph1 (SexpPointIndex 0) (SexpPointIndex (unwrap j2))
+              )
+      -- ==> Span
+      -- span around the kids that contain the endpoints
+      (i1'_ : _ph1') /\ (i2'_ : _ph2') ->
+        let
+          i1' /\ i2' = order i1'_ i2'_
+        in
+          InjectSpanCursor $ SpanCursor ph (SexpPointIndex (unwrap i1')) (SexpPointIndex (unwrap i2' + 1))
 
 --------------------------------------------------------------------------------
 -- dragFromZipper
@@ -207,4 +286,11 @@ dragFromZipper :: ZipperCursor -> ZipperHandle -> Point -> Cursor
 dragFromZipper _z = todo "dragFromZipper" {}
 
 data ZipperHandle = StartZipperHandle | EndZipperHandle
+
+--------------------------------------------------------------------------------
+-- utilities
+--------------------------------------------------------------------------------
+
+order :: forall a. Ord a => a -> a -> a /\ a
+order x y = if x <= y then x /\ y else y /\ x
 
