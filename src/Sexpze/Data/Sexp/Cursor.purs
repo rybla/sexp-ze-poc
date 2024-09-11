@@ -3,15 +3,13 @@ module Sexpze.Data.Sexp.Cursor where
 
 import Prelude
 
-import Control.Plus (empty)
-import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
-import Data.Maybe (Maybe(..), fromMaybe')
+import Data.Maybe (fromMaybe')
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
@@ -294,7 +292,7 @@ dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
       -- ==> PointCursor
       Nil /\ Nil | j1 == j2 -> InjectPoint $ p1_top
       -- ==> SpanCursor
-      Nil /\ Nil -> InjectSpanCursor $ SpanCursor ph j1 j2
+      Nil /\ Nil -> InjectSpanCursor $ if j1 <= j2 then SpanCursor ph j1 j2 else SpanCursor ph j2 j1
       -- p1 is above p2
       -- ==> ZipperCursor
       Nil /\ (i2' : _) ->
@@ -303,25 +301,29 @@ dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
         in
           InjectZipperCursor $
             ZipperCursor
-              (SpanCursor ph (SexpPointIndex (unwrap j2)) (SexpPointIndex (unwrap j2 + 1)))
+              (SpanCursor ph (SexpPointIndex (unwrap j1)) (SexpPointIndex (unwrap j1 + 1)))
               ( if isSexpPointIndexBeforeSexpKidIndex j1 i2' then
-                  SpanCursor ph2 (SexpPointIndex (unwrap j1)) (SexpPointIndex (Array.length xs_ph2_top))
+                  -- p1 before p2
+                  SpanCursor ph2 (SexpPointIndex (unwrap j2)) (SexpPointIndex (Array.length xs_ph2_top))
                 else
-                  SpanCursor ph2 (SexpPointIndex 0) (SexpPointIndex (unwrap j1))
+                  -- p2 before p1
+                  SpanCursor ph2 (SexpPointIndex 0) (SexpPointIndex (unwrap j2))
               )
       -- p2 is above p1
       -- ==> ZipperCursor
       (i1' : _) /\ Nil ->
         let
-          _wrap_ph2_top /\ xs_ph1_top = atPath ph1_top xs
+          _wrap_ph1_top /\ xs_ph1_top = atPath ph1_top xs
         in
           InjectZipperCursor $
             ZipperCursor
-              (SpanCursor ph (SexpPointIndex (unwrap j1)) (SexpPointIndex (unwrap j1 + 1)))
+              (SpanCursor ph (SexpPointIndex (unwrap j2)) (SexpPointIndex (unwrap j2 + 1)))
               ( if isSexpPointIndexBeforeSexpKidIndex j2 i1' then
-                  SpanCursor ph1 (SexpPointIndex (unwrap j2)) (SexpPointIndex (Array.length xs_ph1_top))
+                  -- p2 before p1
+                  SpanCursor ph1 (SexpPointIndex (unwrap j1)) (SexpPointIndex (Array.length xs_ph1_top))
                 else
-                  SpanCursor ph1 (SexpPointIndex 0) (SexpPointIndex (unwrap j2))
+                  -- p1 before p2
+                  SpanCursor ph1 (SexpPointIndex 0) (SexpPointIndex (unwrap j1))
               )
       -- ==> Span
       -- span around the kids that contain the endpoints

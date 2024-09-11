@@ -60,14 +60,45 @@ spec_dragFromPoint = Spec.describe "dragFromPoint" do
       pure unit
   Spec.describe "deeper" do
     let xs = [ atom "a", Group [ atom "b", atom "c" ], atom "d" ]
-    Spec.it "deeper span" do
+    Spec.it "point" do
+      shouldEqualCursor xs
+        (dragFromPoint (point [ 1 ] 0) (point [ 1 ] 0) xs)
+        (InjectPoint $ point [ 1 ] 0)
+    Spec.it "span from left to right" do
       shouldEqualCursor xs
         (dragFromPoint (point [ 1 ] 0) (point [ 1 ] 1) xs)
         (InjectSpanCursor $ spanCursor [ 1 ] 0 1)
-    Spec.it "simplest zipper" do
+    Spec.it "span from right to left" do
+      shouldEqualCursor xs
+        (dragFromPoint (point [ 1 ] 1) (point [ 1 ] 0) xs)
+        (InjectSpanCursor $ spanCursor [ 1 ] 0 1)
+    Spec.it "zipper from outer left to inner left" do
       shouldEqualCursor xs
         (dragFromPoint (point [] 1) (point [ 1 ] 0) xs)
         (InjectZipperCursor $ zipperCursor [] 1 2 [ 1 ] 0 2)
+    Spec.it "zipper from inner left to outer left" do
+      shouldEqualCursor xs
+        (dragFromPoint (point [ 1 ] 0) (point [] 1) xs)
+        (InjectZipperCursor $ zipperCursor [] 1 2 [ 1 ] 0 2)
+    pure unit
+  Spec.describe "even deeper" do
+    let xs = [ atom "a", Group [ atom "b", Group [ atom "c", atom "d", atom "e" ], atom "f" ], atom "g" ]
+    Spec.it "span from left to right" do
+      shouldEqualCursor xs
+        (dragFromPoint (point [ 1, 1 ] 1) (point [ 1, 1 ] 2) xs)
+        (InjectSpanCursor $ spanCursor [ 1, 1 ] 1 2)
+    Spec.it "span from right to left" do
+      shouldEqualCursor xs
+        (dragFromPoint (point [ 1, 1 ] 2) (point [ 1, 1 ] 1) xs)
+        (InjectSpanCursor $ spanCursor [ 1, 1 ] 1 2)
+    Spec.it "zipper from outer left to inner left" do
+      shouldEqualCursor xs
+        (dragFromPoint (point [ 1 ] 1) (point [ 1, 1 ] 1) xs)
+        (InjectZipperCursor $ zipperCursor [ 1 ] 1 2 [ 1 ] 1 3)
+    Spec.it "zipper from inner left to outer left" do
+      shouldEqualCursor xs
+        (dragFromPoint (point [ 1, 1 ] 1) (point [ 1 ] 1) xs)
+        (InjectZipperCursor $ zipperCursor [ 1 ] 1 2 [ 1 ] 1 3)
     pure unit
   pure unit
 
