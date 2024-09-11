@@ -207,8 +207,8 @@ atZipperCursor (ZipperCursor s1 s2) xs =
 
 data Cursor
   = InjectPoint Point
-  | InjectSpanCursor SpanCursor
-  | InjectZipperCursor ZipperCursor
+  | InjectSpanCursor SpanCursor SpanHandle
+  | InjectZipperCursor ZipperCursor ZipperHandle
 
 derive instance Generic Cursor _
 
@@ -231,8 +231,8 @@ prettySexp' (Group xs') = "(" <> prettySexp xs' <> ")"
 
 prettySexpWithCursor :: forall a. Show a => Cursor -> Sexp a -> String
 prettySexpWithCursor (InjectPoint p) xs = prettySexpWithPoint p xs
-prettySexpWithCursor (InjectSpanCursor s) xs = prettySexpWithSpanCursor s xs
-prettySexpWithCursor (InjectZipperCursor z) xs = prettySexpWithZipperCursor z xs
+prettySexpWithCursor (InjectSpanCursor s h) xs = prettySexpWithSpanCursor s xs
+prettySexpWithCursor (InjectZipperCursor z h) xs = prettySexpWithZipperCursor z xs
 
 prettySexpWithPoint :: forall a. Show a => Point -> Sexp a -> String
 prettySexpWithPoint p xs = case unconsPoint p of
@@ -289,55 +289,72 @@ dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
     _wrap_ph /\ _xs_ph = atPath ph xs
   in
     case ph1 /\ ph2 of
-      -- ==> PointCursor
       Nil /\ Nil | j1 == j2 -> InjectPoint $ p1_top
-      -- ==> SpanCursor
-      Nil /\ Nil -> InjectSpanCursor $ if j1 <= j2 then SpanCursor ph j1 j2 else SpanCursor ph j2 j1
+      Nil /\ Nil -> if j1 <= j2 then InjectSpanCursor (SpanCursor ph j1 j2) EndSpanHandle else InjectSpanCursor (SpanCursor ph j2 j1) StartSpanHandle
       -- p1 is above p2
-      -- ==> ZipperCursor
       Nil /\ (i2' : _) ->
         let
           _wrap_ph2_top /\ xs_ph2_top = atPath ph2_top xs
         in
-          InjectZipperCursor $
-            ZipperCursor
-              (SpanCursor ph (SexpPointIndex (unwrap j1)) (SexpPointIndex (unwrap j1 + 1)))
-              ( if isSexpPointIndexBeforeSexpKidIndex j1 i2' then
-                  -- p1 before p2
-                  SpanCursor ph2 (SexpPointIndex (unwrap j2)) (SexpPointIndex (Array.length xs_ph2_top))
-                else
-                  -- p2 before p1
-                  SpanCursor ph2 (SexpPointIndex 0) (SexpPointIndex (unwrap j2))
+
+          if isSexpPointIndexBeforeSexpKidIndex j1 i2' then
+            -- p1 before p2
+            InjectZipperCursor
+              ( ZipperCursor
+                  (SpanCursor ph (SexpPointIndex (unwrap j1)) (SexpPointIndex (unwrap j1 + 1)))
+                  (SpanCursor ph2 (SexpPointIndex (unwrap j2)) (SexpPointIndex (Array.length xs_ph2_top)))
               )
+              OuterStartZipperHandle
+          else
+            -- p2 before p1
+            InjectZipperCursor
+              ( ZipperCursor
+                  (SpanCursor ph (SexpPointIndex (unwrap j1)) (SexpPointIndex (unwrap j1 + 1)))
+                  (SpanCursor ph2 (SexpPointIndex 0) (SexpPointIndex (unwrap j2)))
+              )
+              OuterEndZipperHandle
       -- p2 is above p1
-      -- ==> ZipperCursor
       (i1' : _) /\ Nil ->
         let
           _wrap_ph1_top /\ xs_ph1_top = atPath ph1_top xs
         in
-          InjectZipperCursor $
-            ZipperCursor
-              (SpanCursor ph (SexpPointIndex (unwrap j2)) (SexpPointIndex (unwrap j2 + 1)))
-              ( if isSexpPointIndexBeforeSexpKidIndex j2 i1' then
-                  -- p2 before p1
-                  SpanCursor ph1 (SexpPointIndex (unwrap j1)) (SexpPointIndex (Array.length xs_ph1_top))
-                else
-                  -- p1 before p2
-                  SpanCursor ph1 (SexpPointIndex 0) (SexpPointIndex (unwrap j1))
+          if isSexpPointIndexBeforeSexpKidIndex j2 i1' then
+            -- p2 before p1
+            InjectZipperCursor
+              ( ZipperCursor
+                  (SpanCursor ph (SexpPointIndex (unwrap j2)) (SexpPointIndex (unwrap j2 + 1)))
+                  (SpanCursor ph1 (SexpPointIndex (unwrap j1)) (SexpPointIndex (Array.length xs_ph1_top)))
               )
-      -- ==> Span
+              InnerEndZipperHandle
+
+          else
+            -- p1 before p2
+            InjectZipperCursor
+              ( ZipperCursor
+                  (SpanCursor ph (SexpPointIndex (unwrap j2)) (SexpPointIndex (unwrap j2 + 1)))
+                  (SpanCursor ph1 (SexpPointIndex 0) (SexpPointIndex (unwrap j1)))
+              )
+              InnerStartZipperHandle
       -- span around the kids that contain the endpoints
-      (i1'_ : _ph1') /\ (i2'_ : _ph2') ->
-        let
-          i1' /\ i2' = order i1'_ i2'_
-        in
-          InjectSpanCursor $ SpanCursor ph (SexpPointIndex (unwrap i1')) (SexpPointIndex (unwrap i2' + 1))
+      (i1' : _ph1') /\ (i2' : _ph2') ->
+        if i1' <= i2' then
+          InjectSpanCursor (SpanCursor ph (SexpPointIndex (unwrap i1')) (SexpPointIndex (unwrap i2' + 1))) StartSpanHandle
+        else
+          InjectSpanCursor (SpanCursor ph (SexpPointIndex (unwrap i2')) (SexpPointIndex (unwrap i1' + 1))) EndSpanHandle
 
 --------------------------------------------------------------------------------
--- dragFromZipper
+-- dragFromSpan
 --------------------------------------------------------------------------------
 
 data SpanHandle = StartSpanHandle | EndSpanHandle
+
+derive instance Generic SpanHandle _
+
+instance Show SpanHandle where
+  show x = genericShow x
+
+instance Eq SpanHandle where
+  eq x = genericEq x
 
 dragFromSpan :: SpanCursor -> SpanHandle -> Point -> Cursor
 dragFromSpan _s = todo "dragFromSpan" {}
@@ -349,7 +366,19 @@ dragFromSpan _s = todo "dragFromSpan" {}
 dragFromZipper :: ZipperCursor -> ZipperHandle -> Point -> Cursor
 dragFromZipper _z = todo "dragFromZipper" {}
 
-data ZipperHandle = StartZipperHandle | EndZipperHandle
+data ZipperHandle
+  = OuterStartZipperHandle
+  | OuterEndZipperHandle
+  | InnerStartZipperHandle
+  | InnerEndZipperHandle
+
+derive instance Generic ZipperHandle _
+
+instance Show ZipperHandle where
+  show x = genericShow x
+
+instance Eq ZipperHandle where
+  eq x = genericEq x
 
 --------------------------------------------------------------------------------
 -- utilities
