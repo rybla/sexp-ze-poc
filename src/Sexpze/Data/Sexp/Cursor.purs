@@ -4,13 +4,15 @@ module Sexpze.Data.Sexp.Cursor where
 import Prelude
 
 import Control.Plus (empty)
+import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
+import Data.Either (Either(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
-import Data.Maybe (Maybe, fromMaybe')
-import Data.Newtype (class Newtype, unwrap)
+import Data.Maybe (Maybe(..), fromMaybe')
+import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
@@ -116,8 +118,8 @@ instance Ord Point where
     EQ -> compare (Point ph1 j1) (Point ph2 j2)
     GT -> GT
 
-unconsPoint :: Point -> Maybe (SexpKidIndex /\ Point)
-unconsPoint (Point Nil _) = empty
+unconsPoint :: Point -> Either SexpPointIndex (SexpKidIndex /\ Point)
+unconsPoint (Point Nil j) = Left j
 unconsPoint (Point (i : ph) j) = pure (i /\ Point ph j)
 
 atPoint :: forall a. Point -> Sexp a -> (Sexp a -> Sexp a)
@@ -219,6 +221,66 @@ instance Eq Cursor where
   eq x = genericEq x
 
 --------------------------------------------------------------------------------
+-- pretty
+--------------------------------------------------------------------------------
+
+prettySexp :: forall a. Show a => Sexp a -> String
+prettySexp xs = Array.intercalate " " $ map prettySexp' xs
+
+prettySexp' :: forall a. Show a => Sexp' a -> String
+prettySexp' (Atom a) = show a
+prettySexp' (Group xs') = "(" <> prettySexp xs' <> ")"
+
+prettySexpWithCursor :: forall a. Show a => Cursor -> Sexp a -> String
+prettySexpWithCursor (InjectPoint p) xs = prettySexpWithPoint p xs
+prettySexpWithCursor (InjectSpanCursor s) xs = prettySexpWithSpanCursor s xs
+prettySexpWithCursor (InjectZipperCursor z) xs = prettySexpWithZipperCursor z xs
+
+prettySexpWithPoint :: forall a. Show a => Point -> Sexp a -> String
+prettySexpWithPoint p xs = case unconsPoint p of
+  Left j ->
+    xs
+      # mapWithSexpPointIndex (\j' -> if j == j' then "|" else " ") (const prettySexp')
+      # Array.fold
+  Right (i /\ p') ->
+    xs
+      # mapWithSexpPointIndex (\_ -> " ") (\i' x -> if unwrap i == i' then prettySexp'WithPoint p' x else prettySexp' x)
+      # Array.fold
+
+prettySexp'WithPoint :: forall a. Show a => Point -> Sexp' a -> String
+prettySexp'WithPoint (Point Nil _) x = prettySexp' x
+prettySexp'WithPoint (Point (_ : _) _) (Atom _) = bug "prettySexp'WithPoint" "Path into Atom"
+prettySexp'WithPoint p (Group xs') = "(" <> prettySexpWithPoint p xs' <> ")"
+
+prettySexpWithSpanCursor :: forall a. Show a => SpanCursor -> Sexp a -> String
+prettySexpWithSpanCursor s xs = prettySexpWithSpanCursor_helper prettySexp s xs
+
+-- | The first given function will handle the span itself.
+prettySexpWithSpanCursor_helper :: forall a. Show a => (Sexp a -> String) -> SpanCursor -> Sexp a -> String
+prettySexpWithSpanCursor_helper f (SpanCursor Nil j1 j2) xs =
+  let
+    { before, after: xs' } = xs # Array.splitAt (unwrap j1)
+    { before: middle, after } = xs' # Array.splitAt (unwrap j2 - unwrap j1)
+  in
+    (before # map prettySexp' # Array.intercalate " ")
+      <> (if Array.length before == 0 then "" else " ")
+      <> f middle
+      <> (if Array.length after == 0 then "" else " ")
+      <> (after # map prettySexp' # Array.intercalate " ")
+prettySexpWithSpanCursor_helper f (SpanCursor (i : ph) j1 j2) xs =
+  xs
+    # mapWithSexpKidIndex (\i' -> if i == i' then prettySexp'WithSpan_helper f (SpanCursor ph j1 j2) else prettySexp')
+    # Array.fold
+
+prettySexp'WithSpan_helper :: forall a. Show a => (Sexp a -> String) -> SpanCursor -> Sexp' a -> String
+prettySexp'WithSpan_helper _ _ (Atom _) = bug "prettySexp'WithSpan_helper" "Path into Atom"
+prettySexp'WithSpan_helper f s (Group xs) = "(" <> prettySexpWithSpanCursor_helper f s xs <> ")"
+
+prettySexpWithZipperCursor :: forall a. Show a => ZipperCursor -> Sexp a -> String
+prettySexpWithZipperCursor (ZipperCursor s1 s2) xs =
+  prettySexpWithSpanCursor_helper (prettySexpWithSpanCursor s2) s1 xs
+
+--------------------------------------------------------------------------------
 -- dragFromPoint
 --------------------------------------------------------------------------------
 
@@ -294,3 +356,11 @@ data ZipperHandle = StartZipperHandle | EndZipperHandle
 order :: forall a. Ord a => a -> a -> a /\ a
 order x y = if x <= y then x /\ y else y /\ x
 
+mapWithSexpPointIndex :: forall a b. (SexpPointIndex -> b) -> (Int -> Sexp' a -> b) -> Sexp a -> Array b
+mapWithSexpPointIndex f g xs = xs
+  # Array.mapWithIndex (\i a -> [ f (wrap i), g i a ])
+  # (_ `Array.snoc` [ f (wrap (Array.length xs)) ])
+  # Array.fold
+
+mapWithSexpKidIndex :: forall a b. (SexpKidIndex -> Sexp' a -> b) -> Sexp a -> Array b
+mapWithSexpKidIndex f = Array.mapWithIndex (\i -> f (wrap i))

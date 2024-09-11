@@ -185,3 +185,4 @@ node_modules
 output
 .purs-repl
 .psc-ide-port
+.spec-results
