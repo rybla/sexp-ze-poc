@@ -9,6 +9,7 @@ import Data.Either (Either(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
+import Data.List as List
 import Data.Maybe (fromMaybe')
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Show.Generic (genericShow)
@@ -139,6 +140,26 @@ orderPoints p1 p2 =
     o /\ case o of
       LT -> p1 /\ p2
       _ -> p2 /\ p1
+
+inbetweenPoints :: forall a. Array a -> Array SexpPointIndex
+inbetweenPoints xs = Array.range 0 (Array.length xs) <#> wrap
+
+mapSexpWithInbetweenPoints
+  :: forall n n' a a'
+   . (Array Point -> Sexp n' a' -> Sexp n' a')
+  -> (Path -> SexpKidIndex -> n -> Sexp n' a' -> n')
+  -> (Path -> SexpKidIndex -> a -> a')
+  -> Path
+  -> Sexp n a
+  -> Sexp n' a'
+mapSexpWithInbetweenPoints onList onGroup onAtom = go1
+  where
+  go1 :: Path -> Sexp n a -> Sexp n' a'
+  go1 ph xs = onList (xs # inbetweenPoints # map (Point ph)) (xs # Array.mapWithIndex (\i -> go2 ph (wrap i)))
+
+  go2 :: Path -> SexpKidIndex -> Sexp' n a -> Sexp' n' a'
+  go2 ph i (Atom a) = Atom (onAtom ph i a)
+  go2 ph i (Group n xs) = let xs' = go1 (ph `List.snoc` i) xs in Group (onGroup ph i n xs') xs'
 
 --------------------------------------------------------------------------------
 -- Span
@@ -388,7 +409,7 @@ instance Eq ZipperHandle where
 -- utilities
 --------------------------------------------------------------------------------
 
-order :: forall n a. Ord a => a -> a -> a /\ a
+order :: forall a. Ord a => a -> a -> a /\ a
 order x y = if x <= y then x /\ y else y /\ x
 
 mapWithSexpPointIndex :: forall n a b. (SexpPointIndex -> b) -> (Int -> Sexp' n a -> b) -> Sexp n a -> Array b
