@@ -7,21 +7,20 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 
-type Sexp a = Array (Sexp' a)
+type Sexp n a = Array (Sexp' n a)
 
-data Sexp' a
+data Sexp' n a
   = Atom a
-  | Group (Sexp a)
+  | Group n (Sexp n a)
 
-derive instance Generic (Sexp' a) _
+derive instance Generic (Sexp' n a) _
 
-instance Show a => Show (Sexp' a) where
+instance (Show n, Show a) => Show (Sexp' n a) where
   show x = genericShow x
 
-instance Eq a => Eq (Sexp' a) where
+instance (Eq n, Eq a) => Eq (Sexp' n a) where
   eq x y = genericEq x y
 
-toString :: forall a. Show a => Sexp' a -> String
-toString (Group xs) = "(" <> (xs # map show # Array.intercalate " ") <> ")"
+toString :: forall n a. Show a => Sexp' n a -> String
+toString (Group _ xs) = "(" <> (xs # map toString # Array.intercalate " ") <> ")"
 toString (Atom a) = show a
-

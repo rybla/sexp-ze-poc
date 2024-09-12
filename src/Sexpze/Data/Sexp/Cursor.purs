@@ -18,6 +18,10 @@ import Sexpze.Data.Sexp (Sexp, Sexp'(..))
 import Sexpze.Utility (bug, todo)
 
 --------------------------------------------------------------------------------
+-- tmp
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
 -- SexpKidIndex
 --------------------------------------------------------------------------------
 
@@ -29,7 +33,7 @@ derive newtype instance Show SexpKidIndex
 derive newtype instance Eq SexpKidIndex
 derive newtype instance Ord SexpKidIndex
 
-atSexpKidIndex :: forall a. SexpKidIndex -> Sexp a -> (Sexp' a -> Sexp a) /\ Sexp' a
+atSexpKidIndex :: forall n a. SexpKidIndex -> Sexp n a -> (Sexp' n a -> Sexp n a) /\ Sexp' n a
 atSexpKidIndex (SexpKidIndex i) xs =
   Tuple
     (\x -> xs # Array.updateAt i x # fromMaybe' (\_ -> bug "atSexpKidIndex" "index out of bounds"))
@@ -47,14 +51,14 @@ derive newtype instance Show SexpPointIndex
 derive newtype instance Eq SexpPointIndex
 derive newtype instance Ord SexpPointIndex
 
-atSexpPointIndex :: forall a. SexpPointIndex -> Sexp a -> (Sexp a -> Sexp a)
+atSexpPointIndex :: forall n a. SexpPointIndex -> Sexp n a -> (Sexp n a -> Sexp n a)
 atSexpPointIndex (SexpPointIndex i) xs =
   let
     { before, after } = Array.splitAt i xs
   in
     \ys -> before <> ys <> after
 
-atSexpPointIndexSpan :: forall a. SexpPointIndex -> SexpPointIndex -> Sexp a -> (Sexp a -> Sexp a) /\ Sexp a
+atSexpPointIndexSpan :: forall n a. SexpPointIndex -> SexpPointIndex -> Sexp n a -> (Sexp n a -> Sexp n a) /\ Sexp n a
 atSexpPointIndexSpan (SexpPointIndex i1) (SexpPointIndex i2) xs =
   Tuple
     ( \ys ->
@@ -76,13 +80,13 @@ isSexpPointIndexBeforeSexpKidIndex (SexpPointIndex i) (SexpKidIndex j) = i <= j
 
 type Path = List SexpKidIndex
 
-atPath :: forall a. Path -> Sexp a -> (Sexp a -> Sexp a) /\ Sexp a
+atPath :: forall n a. Path -> Sexp n a -> (Sexp n a -> Sexp n a) /\ Sexp n a
 atPath ph xs = case ph of
   Nil -> identity /\ xs
   i : ph' -> case xs # atSexpKidIndex i of
     _ /\ Atom _ -> bug "atPath" "Path into Atom"
-    w_i /\ Group xs_i ->
-      lmap ((w_i <<< Group) <<< _) $
+    w_i /\ Group n xs_i ->
+      lmap ((w_i <<< Group n) <<< _) $
         atPath ph' xs_i
 
 commonPathOfPoints :: Point -> Point -> Path /\ Point /\ Point
@@ -120,7 +124,7 @@ unconsPoint :: Point -> Either SexpPointIndex (SexpKidIndex /\ Point)
 unconsPoint (Point Nil j) = Left j
 unconsPoint (Point (i : ph) j) = pure (i /\ Point ph j)
 
-atPoint :: forall a. Point -> Sexp a -> (Sexp a -> Sexp a)
+atPoint :: forall n a. Point -> Sexp n a -> (Sexp n a -> Sexp n a)
 atPoint (Point ph i) xs =
   let
     w_ph /\ xs_ph = atPath ph xs
@@ -156,9 +160,9 @@ leftEndpoint_SpanCursor (SpanCursor p i1 _) = Point p i1
 rightEndpoint_SpanCursor :: SpanCursor -> Point
 rightEndpoint_SpanCursor (SpanCursor p _ i2) = Point p i2
 
--- type Span a = Sexp a
+-- type Span a = Sexp n a
 
-atSpanCursor :: forall a. SpanCursor -> Sexp a -> (Sexp a -> Sexp a) /\ Sexp a
+atSpanCursor :: forall n a. SpanCursor -> Sexp n a -> (Sexp n a -> Sexp n a) /\ Sexp n a
 atSpanCursor (SpanCursor ph p1 p2) xs =
   let
     w_ph /\ xs_ph = atPath ph xs
@@ -181,17 +185,17 @@ instance Eq ZipperCursor where
   eq x = genericEq x
 
 -- | The `Point` is at the hole of the zipper.
-data Zipper a = Zipper (Sexp a) Point
+data Zipper n a = Zipper (Sexp n a) Point
 
-derive instance Generic (Zipper a) _
+derive instance Generic (Zipper n a) _
 
-instance Show a => Show (Zipper a) where
+instance (Show n, Show a) => Show (Zipper n a) where
   show x = genericShow x
 
-instance Eq a => Eq (Zipper a) where
+instance (Eq n, Eq a) => Eq (Zipper n a) where
   eq x = genericEq x
 
-atZipperCursor :: forall a. ZipperCursor -> Sexp a -> ((Sexp a -> Sexp a) -> Sexp a) /\ Zipper a
+atZipperCursor :: forall n a. ZipperCursor -> Sexp n a -> ((Sexp n a -> Sexp n a) -> Sexp n a) /\ Zipper n a
 atZipperCursor (ZipperCursor s1 s2) xs =
   let
     w1 /\ xs1 = atSpanCursor s1 xs
@@ -222,19 +226,19 @@ instance Eq Cursor where
 -- pretty
 --------------------------------------------------------------------------------
 
-prettySexp :: forall a. Show a => Sexp a -> String
+prettySexp :: forall n a. Show a => Sexp n a -> String
 prettySexp xs = Array.intercalate " " $ map prettySexp' xs
 
-prettySexp' :: forall a. Show a => Sexp' a -> String
+prettySexp' :: forall n a. Show a => Sexp' n a -> String
 prettySexp' (Atom a) = show a
-prettySexp' (Group xs') = "(" <> prettySexp xs' <> ")"
+prettySexp' (Group _ xs') = "(" <> prettySexp xs' <> ")"
 
-prettySexpWithCursor :: forall a. Show a => Cursor -> Sexp a -> String
+prettySexpWithCursor :: forall n a. Show a => Cursor -> Sexp n a -> String
 prettySexpWithCursor (InjectPoint p) xs = prettySexpWithPoint p xs
-prettySexpWithCursor (InjectSpanCursor s h) xs = prettySexpWithSpanCursor s xs
-prettySexpWithCursor (InjectZipperCursor z h) xs = prettySexpWithZipperCursor z xs
+prettySexpWithCursor (InjectSpanCursor s _) xs = prettySexpWithSpanCursor s xs
+prettySexpWithCursor (InjectZipperCursor z _) xs = prettySexpWithZipperCursor z xs
 
-prettySexpWithPoint :: forall a. Show a => Point -> Sexp a -> String
+prettySexpWithPoint :: forall n a. Show a => Point -> Sexp n a -> String
 prettySexpWithPoint p xs = case unconsPoint p of
   Left j ->
     xs
@@ -245,16 +249,16 @@ prettySexpWithPoint p xs = case unconsPoint p of
       # mapWithSexpPointIndex (\_ -> " ") (\i' x -> if unwrap i == i' then prettySexp'WithPoint p' x else prettySexp' x)
       # Array.fold
 
-prettySexp'WithPoint :: forall a. Show a => Point -> Sexp' a -> String
+prettySexp'WithPoint :: forall n a. Show a => Point -> Sexp' n a -> String
 prettySexp'WithPoint (Point Nil _) x = prettySexp' x
 prettySexp'WithPoint (Point (_ : _) _) (Atom _) = bug "prettySexp'WithPoint" "Path into Atom"
-prettySexp'WithPoint p (Group xs') = "(" <> prettySexpWithPoint p xs' <> ")"
+prettySexp'WithPoint p (Group _ xs') = "(" <> prettySexpWithPoint p xs' <> ")"
 
-prettySexpWithSpanCursor :: forall a. Show a => SpanCursor -> Sexp a -> String
+prettySexpWithSpanCursor :: forall n a. Show a => SpanCursor -> Sexp n a -> String
 prettySexpWithSpanCursor s xs = prettySexpWithSpanCursor_helper prettySexp s xs
 
 -- | The first given function will handle the span itself.
-prettySexpWithSpanCursor_helper :: forall a. Show a => (Sexp a -> String) -> SpanCursor -> Sexp a -> String
+prettySexpWithSpanCursor_helper :: forall n a. Show a => (Sexp n a -> String) -> SpanCursor -> Sexp n a -> String
 prettySexpWithSpanCursor_helper f (SpanCursor Nil j1 j2) xs =
   let
     { before, after: xs' } = xs # Array.splitAt (unwrap j1)
@@ -270,11 +274,11 @@ prettySexpWithSpanCursor_helper f (SpanCursor (i : ph) j1 j2) xs =
     # mapWithSexpKidIndex (\i' -> if i == i' then prettySexp'WithSpan_helper f (SpanCursor ph j1 j2) else prettySexp')
     # Array.fold
 
-prettySexp'WithSpan_helper :: forall a. Show a => (Sexp a -> String) -> SpanCursor -> Sexp' a -> String
+prettySexp'WithSpan_helper :: forall n a. Show a => (Sexp n a -> String) -> SpanCursor -> Sexp' n a -> String
 prettySexp'WithSpan_helper _ _ (Atom _) = bug "prettySexp'WithSpan_helper" "Path into Atom"
-prettySexp'WithSpan_helper f s (Group xs) = "(" <> prettySexpWithSpanCursor_helper f s xs <> ")"
+prettySexp'WithSpan_helper f s (Group _ xs) = "(" <> prettySexpWithSpanCursor_helper f s xs <> ")"
 
-prettySexpWithZipperCursor :: forall a. Show a => ZipperCursor -> Sexp a -> String
+prettySexpWithZipperCursor :: forall n a. Show a => ZipperCursor -> Sexp n a -> String
 prettySexpWithZipperCursor (ZipperCursor s1 s2) xs =
   prettySexpWithSpanCursor_helper (prettySexpWithSpanCursor s2) s1 xs
 
@@ -282,7 +286,7 @@ prettySexpWithZipperCursor (ZipperCursor s1 s2) xs =
 -- dragFromPoint
 --------------------------------------------------------------------------------
 
-dragFromPoint :: forall a. Point -> Point -> Sexp a -> Cursor
+dragFromPoint :: forall n a. Point -> Point -> Sexp n a -> Cursor
 dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
   let
     ph /\ _p1@(Point ph1 j1) /\ _p2@(Point ph2 j2) = commonPathOfPoints p1_top p2_top
@@ -384,14 +388,14 @@ instance Eq ZipperHandle where
 -- utilities
 --------------------------------------------------------------------------------
 
-order :: forall a. Ord a => a -> a -> a /\ a
+order :: forall n a. Ord a => a -> a -> a /\ a
 order x y = if x <= y then x /\ y else y /\ x
 
-mapWithSexpPointIndex :: forall a b. (SexpPointIndex -> b) -> (Int -> Sexp' a -> b) -> Sexp a -> Array b
+mapWithSexpPointIndex :: forall n a b. (SexpPointIndex -> b) -> (Int -> Sexp' n a -> b) -> Sexp n a -> Array b
 mapWithSexpPointIndex f g xs = xs
   # Array.mapWithIndex (\i a -> [ f (wrap i), g i a ])
   # (_ `Array.snoc` [ f (wrap (Array.length xs)) ])
   # Array.fold
 
-mapWithSexpKidIndex :: forall a b. (SexpKidIndex -> Sexp' a -> b) -> Sexp a -> Array b
+mapWithSexpKidIndex :: forall n a b. (SexpKidIndex -> Sexp' n a -> b) -> Sexp n a -> Array b
 mapWithSexpKidIndex f = Array.mapWithIndex (\i -> f (wrap i))

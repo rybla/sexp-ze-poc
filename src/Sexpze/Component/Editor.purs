@@ -32,8 +32,28 @@ import Web.UIEvent.MouseEvent as MouseEvent
 -- types
 --------------------------------------------------------------------------------
 
-type Term = Sexp String
-type Term' = Sexp' String
+type Term = Sexp TermData String
+type Term' = Sexp' TermData String
+
+type TermData = {}
+
+--------------------------------------------------------------------------------
+-- PostTerm
+--------------------------------------------------------------------------------
+
+type PostTerm = Sexp PostTermData String
+type PostTerm' = Sexp' PostTermData String
+
+type PostTermData = {}
+
+-- renderPostTerm' :: PostTerm' -> Array HTML
+-- renderPostTerm' (Atom {} a) =
+--   [ HH.div [ HP.classes [ H.ClassName "Atom" ] ]
+--       [ HH.text a ]
+--   ]
+-- renderPostTerm' (Group {} t) = 
+--   [ 
+--   ]
 
 --------------------------------------------------------------------------------
 -- component
