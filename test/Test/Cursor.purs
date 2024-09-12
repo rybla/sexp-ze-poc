@@ -9,7 +9,7 @@ import Data.Newtype (wrap)
 import Effect.Exception (Error)
 import Effect.Exception as Exception
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..), SpanCursor(..), ZipperCursor(..), dragFromPoint, prettySexpWithCursor)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..), SpanCursor(..), SpanHandle(..), ZipperCursor(..), ZipperHandle(..), dragFromPoint, prettySexpWithCursor)
 import Sexpze.Utility (todo)
 import Test.Spec (Spec)
 import Test.Spec as Spec
@@ -36,11 +36,11 @@ spec_dragFromPoint = Spec.describe "dragFromPoint" do
     Spec.it "1-wide span" do
       shouldEqualCursor xs
         (dragFromPoint (point [] 0) (point [] 1) xs)
-        (InjectSpanCursor $ spanCursor [] 0 1)
+        (InjectSpanCursor (spanCursor [] 0 1) EndSpanHandle)
     Spec.it "1-deep zipper" do
       shouldEqualCursor xs
         (dragFromPoint (point [] 0) (Point (wrap 0 : Nil) (wrap 0)) xs)
-        (InjectZipperCursor $ zipperCursor [] 0 1 [ 0 ] 0 0)
+        (InjectZipperCursor (zipperCursor [] 0 1 [ 0 ] 0 0) InnerStartZipperHandle)
       pure unit
   Spec.describe "shallow" do
     let xs = [ atom "a", atom "b", atom "c" ]
@@ -52,53 +52,53 @@ spec_dragFromPoint = Spec.describe "dragFromPoint" do
     Spec.it "1-wide span" do
       shouldEqualCursor xs
         (dragFromPoint (point [] 0) (point [] 1) xs)
-        (InjectSpanCursor $ spanCursor [] 0 1)
+        (InjectSpanCursor (spanCursor [] 0 1) EndSpanHandle)
     Spec.it "2-wide span" do
       shouldEqualCursor xs
         (dragFromPoint (point [] 1) (Point Nil (wrap 3)) xs)
-        (InjectSpanCursor $ spanCursor [] 1 3)
+        (InjectSpanCursor (spanCursor [] 1 3) EndSpanHandle)
       pure unit
   Spec.describe "deeper" do
     let xs = [ atom "a", Group [ atom "b", atom "c" ], atom "d" ]
     Spec.it "point" do
       shouldEqualCursor xs
         (dragFromPoint (point [ 1 ] 0) (point [ 1 ] 0) xs)
-        (InjectPoint $ point [ 1 ] 0)
-    Spec.it "span from left to right" do
+        (InjectPoint (point [ 1 ] 0))
+    Spec.it "span from start to end" do
       shouldEqualCursor xs
         (dragFromPoint (point [ 1 ] 0) (point [ 1 ] 1) xs)
-        (InjectSpanCursor $ spanCursor [ 1 ] 0 1)
-    Spec.it "span from right to left" do
+        (InjectSpanCursor (spanCursor [ 1 ] 0 1) EndSpanHandle)
+    Spec.it "span from end to start" do
       shouldEqualCursor xs
         (dragFromPoint (point [ 1 ] 1) (point [ 1 ] 0) xs)
-        (InjectSpanCursor $ spanCursor [ 1 ] 0 1)
-    Spec.it "zipper from outer left to inner left" do
+        (InjectSpanCursor (spanCursor [ 1 ] 0 1) StartSpanHandle)
+    Spec.it "zipper from outer start to inner start" do
       shouldEqualCursor xs
         (dragFromPoint (point [] 1) (point [ 1 ] 0) xs)
-        (InjectZipperCursor $ zipperCursor [] 1 2 [ 1 ] 0 2)
-    Spec.it "zipper from inner left to outer left" do
+        (InjectZipperCursor (zipperCursor [] 1 2 [ 1 ] 0 2) InnerStartZipperHandle)
+    Spec.it "zipper from inner start to outer start" do
       shouldEqualCursor xs
         (dragFromPoint (point [ 1 ] 0) (point [] 1) xs)
-        (InjectZipperCursor $ zipperCursor [] 1 2 [ 1 ] 0 2)
+        (InjectZipperCursor (zipperCursor [] 1 2 [ 1 ] 0 2) OuterStartZipperHandle)
     pure unit
   Spec.describe "even deeper" do
     let xs = [ atom "a", Group [ atom "b", Group [ atom "c", atom "d", atom "e" ], atom "f" ], atom "g" ]
-    Spec.it "span from left to right" do
+    Spec.it "span from start to end" do
       shouldEqualCursor xs
         (dragFromPoint (point [ 1, 1 ] 1) (point [ 1, 1 ] 2) xs)
-        (InjectSpanCursor $ spanCursor [ 1, 1 ] 1 2)
-    Spec.it "span from right to left" do
+        (InjectSpanCursor (spanCursor [ 1, 1 ] 1 2) EndSpanHandle)
+    Spec.it "span from end to start" do
       shouldEqualCursor xs
         (dragFromPoint (point [ 1, 1 ] 2) (point [ 1, 1 ] 1) xs)
-        (InjectSpanCursor $ spanCursor [ 1, 1 ] 1 2)
-    Spec.it "zipper from outer left to inner left" do
+        (InjectSpanCursor (spanCursor [ 1, 1 ] 1 2) StartSpanHandle)
+    Spec.it "zipper from outer start to inner start" do
       shouldEqualCursor xs
         (dragFromPoint (point [ 1 ] 1) (point [ 1, 1 ] 1) xs)
-        (InjectZipperCursor $ zipperCursor [ 1 ] 1 2 [ 1 ] 1 3)
-    Spec.it "zipper from inner left to outer left" do
+        (InjectZipperCursor (zipperCursor [ 1 ] 1 2 [ 1 ] 1 3) InnerStartZipperHandle)
+    Spec.it "zipper from inner start to outer start" do
       shouldEqualCursor xs
         (dragFromPoint (point [ 1, 1 ] 1) (point [ 1 ] 1) xs)
-        (InjectZipperCursor $ zipperCursor [ 1 ] 1 2 [ 1 ] 1 3)
+        (InjectZipperCursor (zipperCursor [ 1 ] 1 2 [ 1 ] 1 3) OuterStartZipperHandle)
     pure unit
   pure unit
 

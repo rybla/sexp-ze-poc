@@ -304,7 +304,7 @@ dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
                   (SpanCursor ph (SexpPointIndex (unwrap j1)) (SexpPointIndex (unwrap j1 + 1)))
                   (SpanCursor ph2 (SexpPointIndex (unwrap j2)) (SexpPointIndex (Array.length xs_ph2_top)))
               )
-              OuterStartZipperHandle
+              InnerStartZipperHandle
           else
             -- p2 before p1
             InjectZipperCursor
@@ -312,7 +312,7 @@ dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
                   (SpanCursor ph (SexpPointIndex (unwrap j1)) (SexpPointIndex (unwrap j1 + 1)))
                   (SpanCursor ph2 (SexpPointIndex 0) (SexpPointIndex (unwrap j2)))
               )
-              OuterEndZipperHandle
+              InnerEndZipperHandle
       -- p2 is above p1
       (i1' : _) /\ Nil ->
         let
@@ -325,7 +325,7 @@ dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
                   (SpanCursor ph (SexpPointIndex (unwrap j2)) (SexpPointIndex (unwrap j2 + 1)))
                   (SpanCursor ph1 (SexpPointIndex (unwrap j1)) (SexpPointIndex (Array.length xs_ph1_top)))
               )
-              InnerEndZipperHandle
+              OuterStartZipperHandle
 
           else
             -- p1 before p2
@@ -334,7 +334,7 @@ dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
                   (SpanCursor ph (SexpPointIndex (unwrap j2)) (SexpPointIndex (unwrap j2 + 1)))
                   (SpanCursor ph1 (SexpPointIndex 0) (SexpPointIndex (unwrap j1)))
               )
-              InnerStartZipperHandle
+              OuterEndZipperHandle
       -- span around the kids that contain the endpoints
       (i1' : _ph1') /\ (i2' : _ph2') ->
         if i1' <= i2' then
