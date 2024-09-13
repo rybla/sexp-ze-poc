@@ -51,7 +51,7 @@ component = H.mkComponent { initialState, eval, render }
     HH.div []
       [ HH.slot (Proxy :: Proxy "editor") unit Editor.component
           ( Editor.Input
-              { term: [ Group {} [ Atom {} "a", Atom {} "b", Atom {} "c" ] ]
+              { term: [ Group {} [ Atom "a", Atom "b", Atom "c" ] ]
               , cursor: InjectPoint (Point mempty (wrap 0))
               }
           )

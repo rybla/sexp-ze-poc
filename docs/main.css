@@ -18,70 +18,20 @@ body {
   box-shadow: 0 0 0 0.2em black inset;
 }
 
-/* .Editor>.Term {} */
-
 /* Term */
 
 .Term {
   font-family: monospace;
+  display: inline-flex;
+}
+
+.PointHandle {
+  color: gray;
   user-select: none;
 }
 
-.Term.Atom {
-  color: rgb(31, 120, 255);
+.Atom {
+  color: blue;
   font-weight: bold;
-}
-
-.Term.List,
-.Term.Group {
-  display: flex;
-  flex-direction: row;
-  /* gap: 0.0em; */
-}
-
-/* PointHandle */
-
-.PointHandle {
-  display: inline-block;
-  cursor: pointer;
-  padding: 0 -0.2em;
-}
-
-.PointHandle.NoCursorStatus {
-  color: rgb(196, 196, 196);
-}
-
-.PointHandle.PointCursorStatus {
-  color: rgb(255, 75, 132);
-}
-
-.PointHandle.SpanStartCursorStatus {
-  color: rgb(255, 75, 132);
-}
-
-.PointHandle.SpanEndCursorStatus {
-  color: rgb(255, 75, 132);
-}
-
-.PointHandle.ZipperOuterStartCursorStatus {
-  color: rgb(255, 75, 132);
-}
-
-.PointHandle.ZipperOuterEndCursorStatus {
-  color: rgb(255, 75, 132);
-}
-
-.PointHandle.ZipperInnerStartCursorStatus {
-  color: rgb(255, 75, 132);
-}
-
-.PointHandle.ZipperInnerEndCursorStatus {
-  color: rgb(255, 75, 132);
-}
-
-
-/* Punc */
-
-.Punc {
-  font-weight: bold;
+  user-select: none;
 }

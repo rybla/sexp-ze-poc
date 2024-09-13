@@ -144,22 +144,40 @@ orderPoints p1 p2 =
 inbetweenPoints :: forall a. Array a -> Array SexpPointIndex
 inbetweenPoints xs = Array.range 0 (Array.length xs) <#> wrap
 
-mapSexpWithInbetweenPoints
-  :: forall n n' a a'
-   . (Array Point -> Sexp n' a' -> Sexp n' a')
-  -> (Path -> SexpKidIndex -> n -> Sexp n' a' -> n')
-  -> (Path -> SexpKidIndex -> a -> a')
+foldSexpWithInbetweenPoints
+  :: forall n a r
+   . { list :: Array Point -> Array r -> r
+     , group :: Path -> SexpKidIndex -> n -> r -> r
+     , atom :: Path -> SexpKidIndex -> a -> r
+     }
   -> Path
   -> Sexp n a
-  -> Sexp n' a'
-mapSexpWithInbetweenPoints onList onGroup onAtom = go1
+  -> r
+foldSexpWithInbetweenPoints on = go1
   where
-  go1 :: Path -> Sexp n a -> Sexp n' a'
-  go1 ph xs = onList (xs # inbetweenPoints # map (Point ph)) (xs # Array.mapWithIndex (\i -> go2 ph (wrap i)))
+  go1 :: Path -> Sexp n a -> r
+  go1 ph xs = on.list (xs # inbetweenPoints # map (Point ph)) (xs # Array.mapWithIndex (\i -> go2 ph (wrap i)))
 
-  go2 :: Path -> SexpKidIndex -> Sexp' n a -> Sexp' n' a'
-  go2 ph i (Atom a) = Atom (onAtom ph i a)
-  go2 ph i (Group n xs) = let xs' = go1 (ph `List.snoc` i) xs in Group (onGroup ph i n xs') xs'
+  go2 :: Path -> SexpKidIndex -> Sexp' n a -> r
+  go2 ph i (Atom a) = on.atom ph i a
+  go2 ph i (Group n xs) = let xs' = go1 (ph `List.snoc` i) xs in on.group ph i n xs'
+
+-- mapSexpWithInbetweenPoints
+--   :: forall n n' a a'
+--    . (Array Point -> Sexp n' a' -> Sexp n' a')
+--   -> (Path -> SexpKidIndex -> n -> Sexp n' a' -> n')
+--   -> (Path -> SexpKidIndex -> a -> a')
+--   -> Path
+--   -> Sexp n a
+--   -> Sexp n' a'
+-- mapSexpWithInbetweenPoints onList onGroup onAtom = go1
+--   where
+--   go1 :: Path -> Sexp n a -> Sexp n' a'
+--   go1 ph xs = onList (xs # inbetweenPoints # map (Point ph)) (xs # Array.mapWithIndex (\i -> go2 ph (wrap i)))
+
+--   go2 :: Path -> SexpKidIndex -> Sexp' n a -> Sexp' n' a'
+--   go2 ph i (Atom a) = Atom (onAtom ph i a)
+--   go2 ph i (Group n xs) = let xs' = go1 (ph `List.snoc` i) xs in Group (onGroup ph i n xs') xs'
 
 --------------------------------------------------------------------------------
 -- Span
@@ -267,7 +285,7 @@ prettySexpWithPoint p xs = case unconsPoint p of
       # Array.fold
   Right (i /\ p') ->
     xs
-      # mapWithSexpPointIndex (\_ -> " ") (\i' x -> if unwrap i == i' then prettySexp'WithPoint p' x else prettySexp' x)
+      # mapWithSexpPointIndex (\_ -> " ") (\i' x -> if i == i' then prettySexp'WithPoint p' x else prettySexp' x)
       # Array.fold
 
 prettySexp'WithPoint :: forall n a. Show a => Point -> Sexp' n a -> String
@@ -412,11 +430,11 @@ instance Eq ZipperHandle where
 order :: forall a. Ord a => a -> a -> a /\ a
 order x y = if x <= y then x /\ y else y /\ x
 
-mapWithSexpPointIndex :: forall n a b. (SexpPointIndex -> b) -> (Int -> Sexp' n a -> b) -> Sexp n a -> Array b
-mapWithSexpPointIndex f g xs = xs
-  # Array.mapWithIndex (\i a -> [ f (wrap i), g i a ])
-  # (_ `Array.snoc` [ f (wrap (Array.length xs)) ])
-  # Array.fold
+mapWithSexpPointIndex :: forall a b. (SexpPointIndex -> b) -> (SexpKidIndex -> a -> b) -> Array a -> Array b
+mapWithSexpPointIndex f g =
+  Array.fold
+    <<< Array.cons [ f (wrap 0) ]
+    <<< Array.mapWithIndex (\i a -> [ g (wrap i) a, f (wrap (i + 1)) ])
 
-mapWithSexpKidIndex :: forall n a b. (SexpKidIndex -> Sexp' n a -> b) -> Sexp n a -> Array b
-mapWithSexpKidIndex f = Array.mapWithIndex (\i -> f (wrap i))
+mapWithSexpKidIndex :: forall a b. (SexpKidIndex -> a -> b) -> Array a -> Array b
+mapWithSexpKidIndex f = Array.mapWithIndex (f <<< wrap)
