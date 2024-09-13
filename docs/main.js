@@ -7776,7 +7776,7 @@
         }
         ;
         if (v2 instanceof Group) {
-          return fold4([[renderPointHandle(new Point(v, wrap4(unwrap5(v1))))(["Paren", "OpenParen"])("(")], renderTerm(snoc(v)(v1))(v2.value1), [renderPointHandle(new Point(v, wrap4(unwrap5(v1) + 1 | 0)))(["Paren", "CloseParen"])(")")]]);
+          return fold4([[div2(fold4([[classes(["PointHandle", "Paren", "OpenParen"])], pointHandleProps_double(new Point(v, wrap4(unwrap5(v1))))(new Point(v, wrap4(unwrap5(v1) + 1 | 0)))]))([text5("(")])], renderTerm(snoc(v)(v1))(v2.value1), [div2(fold4([[classes(["PointHandle", "Paren", "CloseParen"])], pointHandleProps_double(new Point(v, wrap4(unwrap5(v1))))(new Point(v, wrap4(unwrap5(v1) + 1 | 0)))]))([text5(")")])]]);
         }
         ;
         throw new Error("Failed pattern match at Sexpze.Component.Editor (line 383, column 1 - line 383, column 59): " + [v.constructor.name, v1.constructor.name, v2.constructor.name]);
@@ -7865,7 +7865,7 @@
             return function(j$prime) {
               var $270 = eq3(v.value0.value0)(j$prime);
               if ($270) {
-                return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor"], function() {
+                return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor", "StartSpanHandle"], function() {
                   var $271 = eq22(sh)(StartSpanHandle.value);
                   if ($271) {
                     return ["active"];
@@ -7877,7 +7877,7 @@
               ;
               var $272 = eq3(v.value0.value1)(j$prime);
               if ($272) {
-                return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor"], function() {
+                return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor", "EndSpanHandle"], function() {
                   var $273 = eq22(sh)(EndSpanHandle.value);
                   if ($273) {
                     return ["active"];
@@ -7934,7 +7934,7 @@
           return function(j$prime) {
             var $288 = eq3(v.value0.value0)(j$prime);
             if ($288) {
-              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor"], function() {
+              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor", "OuterStartZipperHandle"], function() {
                 var $289 = eq32(zh)(OuterStartZipperHandle.value);
                 if ($289) {
                   return ["active"];
@@ -7946,7 +7946,7 @@
             ;
             var $290 = eq3(v.value0.value1)(j$prime);
             if ($290) {
-              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor"], function() {
+              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor", "OuterEndZipperHandle"], function() {
                 var $291 = eq32(zh)(OuterEndZipperHandle.value);
                 if ($291) {
                   return ["active"];
@@ -7962,7 +7962,7 @@
           return function(j$prime) {
             var $299 = eq3(v.value0.value0)(j$prime);
             if ($299) {
-              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor"], function() {
+              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor", "OuterStartZipperHandle"], function() {
                 var $300 = eq32(zh)(OuterStartZipperHandle.value);
                 if ($300) {
                   return ["active"];
@@ -7974,7 +7974,7 @@
             ;
             var $301 = eq3(v.value0.value1)(j$prime);
             if ($301) {
-              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor"], function() {
+              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor", "OuterEndZipperHandle"], function() {
                 var $302 = eq32(zh)(OuterEndZipperHandle.value);
                 if ($302) {
                   return ["active"];
@@ -7986,26 +7986,26 @@
             ;
             var $303 = eq3(v.value1.value0)(j$prime);
             if ($303) {
-              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor"], function() {
+              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor", "InnerStartZipperHandle"], function() {
                 var $304 = eq32(zh)(InnerStartZipperHandle.value);
                 if ($304) {
                   return ["active"];
                 }
                 ;
                 return [];
-              }()]))("{")];
+              }()]))("\u27E8")];
             }
             ;
             var $305 = eq3(v.value1.value1)(j$prime);
             if ($305) {
-              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor"], function() {
+              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor", "InnerEndZipperHandle"], function() {
                 var $306 = eq32(zh)(InnerEndZipperHandle.value);
                 if ($306) {
                   return ["active"];
                 }
                 ;
                 return [];
-              }()]))("}")];
+              }()]))("\u27E9")];
             }
             ;
             return [renderPointHandle(new Point(ph, j$prime))(["Space"])("\u2022")];
@@ -8018,26 +8018,26 @@
           return function(j$prime) {
             var $317 = eq3(v.value0)(j$prime);
             if ($317) {
-              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor"], function() {
+              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor", "InnerStartZipperHandle"], function() {
                 var $318 = eq32(zh)(InnerStartZipperHandle.value);
                 if ($318) {
                   return ["active"];
                 }
                 ;
                 return [];
-              }()]))("{")];
+              }()]))("\u27E8")];
             }
             ;
             var $319 = eq3(v.value1)(j$prime);
             if ($319) {
-              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor"], function() {
+              return [renderPointHandle(new Point(ph, j$prime))(fold4([["Cursor", "InnerEndZipperHandle"], function() {
                 var $320 = eq32(zh)(InnerEndZipperHandle.value);
                 if ($320) {
                   return ["active"];
                 }
                 ;
                 return [];
-              }()]))("}")];
+              }()]))("\u27E9")];
             }
             ;
             return [renderPointHandle(new Point(ph, j$prime))(["Space"])("\u2022")];

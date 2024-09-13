@@ -139,7 +139,7 @@ handleUserAction Copy = todo "handleUserAction" {}
 handleUserAction Paste = todo "handleUserAction" {}
 handleUserAction (StartDrag p) = do
   modify_ _ { cursor = InjectPoint p }
-handleUserAction (StartDrag_double p1 p1') = do
+handleUserAction (StartDrag_double p1 _p1') = do
   modify_ _ { cursor = InjectPoint p1 } -- TODO
 handleUserAction (EndDrag p2) = do
   { cursor, term } <- get
@@ -179,7 +179,7 @@ renderTermWithPoint p ph =
         Right j -> \j' ->
           if j == j' then
             [ renderPointHandle (Point ph j')
-                [ H.ClassName "Cursor", H.ClassName "active" ]
+                [ HH.ClassName "Cursor", HH.ClassName "active" ]
                 "|"
             ]
           else
@@ -224,16 +224,16 @@ renderTermWithSpanCursor s sh ph =
         Left (j1 /\ j2) -> \j' ->
           if j1 == j' then
             [ renderPointHandle (Point ph j')
-                ( [ [ H.ClassName "Cursor" ]
-                  , if sh == StartSpanHandle then [ H.ClassName "active" ] else []
+                ( [ [ HH.ClassName "Cursor", HH.ClassName "StartSpanHandle" ]
+                  , if sh == StartSpanHandle then [ HH.ClassName "active" ] else []
                   ] # Array.fold
                 )
                 "["
             ]
           else if j2 == j' then
             [ renderPointHandle (Point ph j')
-                ( [ [ H.ClassName "Cursor" ]
-                  , if sh == EndSpanHandle then [ H.ClassName "active" ] else []
+                ( [ [ HH.ClassName "Cursor", HH.ClassName "EndSpanHandle" ]
+                  , if sh == EndSpanHandle then [ HH.ClassName "active" ] else []
                   ] # Array.fold
                 )
                 "]"
@@ -267,16 +267,16 @@ renderTermWithZipperCursor zos zh ph =
         ( \((j1 /\ j2) /\ _i /\ _s') j' ->
             if j1 == j' then
               [ renderPointHandle (Point ph j')
-                  ( [ [ H.ClassName "Cursor" ]
-                    , if zh == OuterStartZipperHandle then [ H.ClassName "active" ] else []
+                  ( [ [ HH.ClassName "Cursor", HH.ClassName "OuterStartZipperHandle" ]
+                    , if zh == OuterStartZipperHandle then [ HH.ClassName "active" ] else []
                     ] # Array.fold
                   )
                   "{"
               ]
             else if j2 == j' then
               [ renderPointHandle (Point ph j')
-                  ( [ [ H.ClassName "Cursor" ]
-                    , if zh == OuterEndZipperHandle then [ H.ClassName "active" ] else []
+                  ( [ [ HH.ClassName "Cursor", HH.ClassName "OuterEndZipperHandle" ]
+                    , if zh == OuterEndZipperHandle then [ HH.ClassName "active" ] else []
                     ] # Array.fold
                   )
                   "}"
@@ -287,35 +287,35 @@ renderTermWithZipperCursor zos zh ph =
         ( \((j1 /\ j2) /\ (j1' /\ j2')) j' ->
             if j1 == j' then
               [ renderPointHandle (Point ph j')
-                  ( [ [ H.ClassName "Cursor" ]
-                    , if zh == OuterStartZipperHandle then [ H.ClassName "active" ] else []
+                  ( [ [ HH.ClassName "Cursor", HH.ClassName "OuterStartZipperHandle" ]
+                    , if zh == OuterStartZipperHandle then [ HH.ClassName "active" ] else []
                     ] # Array.fold
                   )
                   "{"
               ]
             else if j2 == j' then
               [ renderPointHandle (Point ph j')
-                  ( [ [ H.ClassName "Cursor" ]
-                    , if zh == OuterEndZipperHandle then [ H.ClassName "active" ] else []
+                  ( [ [ HH.ClassName "Cursor", HH.ClassName "OuterEndZipperHandle" ]
+                    , if zh == OuterEndZipperHandle then [ HH.ClassName "active" ] else []
                     ] # Array.fold
                   )
                   "}"
               ]
             else if j1' == j' then
               [ renderPointHandle (Point ph j')
-                  ( [ [ H.ClassName "Cursor" ]
-                    , if zh == InnerStartZipperHandle then [ H.ClassName "active" ] else []
+                  ( [ [ HH.ClassName "Cursor", HH.ClassName "InnerStartZipperHandle" ]
+                    , if zh == InnerStartZipperHandle then [ HH.ClassName "active" ] else []
                     ] # Array.fold
                   )
-                  "{"
+                  "⟨"
               ]
             else if j2' == j' then
               [ renderPointHandle (Point ph j')
-                  ( [ [ H.ClassName "Cursor" ]
-                    , if zh == InnerEndZipperHandle then [ H.ClassName "active" ] else []
+                  ( [ [ HH.ClassName "Cursor", HH.ClassName "InnerEndZipperHandle" ]
+                    , if zh == InnerEndZipperHandle then [ HH.ClassName "active" ] else []
                     ] # Array.fold
                   )
-                  "}"
+                  "⟩"
               ]
             else
               [ renderPointHandle (Point ph j') [ HH.ClassName "Space" ] "•" ]
@@ -326,19 +326,19 @@ renderTermWithZipperCursor zos zh ph =
         ( \(j1 /\ j2) j' ->
             if j1 == j' then
               [ renderPointHandle (Point ph j')
-                  ( [ [ H.ClassName "Cursor" ]
-                    , if zh == InnerStartZipperHandle then [ H.ClassName "active" ] else []
+                  ( [ [ HH.ClassName "Cursor", HH.ClassName "InnerStartZipperHandle" ]
+                    , if zh == InnerStartZipperHandle then [ HH.ClassName "active" ] else []
                     ] # Array.fold
                   )
-                  "{"
+                  "⟨"
               ]
             else if j2 == j' then
               [ renderPointHandle (Point ph j')
-                  ( [ [ H.ClassName "Cursor" ]
-                    , if zh == InnerEndZipperHandle then [ H.ClassName "active" ] else []
+                  ( [ [ HH.ClassName "Cursor", HH.ClassName "InnerEndZipperHandle" ]
+                    , if zh == InnerEndZipperHandle then [ HH.ClassName "active" ] else []
                     ] # Array.fold
                   )
-                  "}"
+                  "⟩"
               ]
             else
               [ renderPointHandle (Point ph j') [ HH.ClassName "Space" ] "•" ]
@@ -392,13 +392,27 @@ renderTerm' ph i (Atom a) =
   ]
 renderTerm' ph i (Group _n xs) =
   [ -- a Group's left paren is a Point handle for the Point right _before_ it
-    [ renderPointHandle (Point ph (wrap (unwrap i))) [ HH.ClassName "Paren", HH.ClassName "OpenParen" ] "(" ]
+    [ HH.div
+        ( [ [ HP.classes [ HH.ClassName "PointHandle", HH.ClassName "Paren", HH.ClassName "OpenParen" ] ]
+          , pointHandleProps_double (Point ph (wrap (unwrap i))) (Point ph (wrap (unwrap i + 1)))
+          ]
+            # Array.fold
+        )
+        [ HH.text "(" ]
+    ]
   , renderTerm (ph `List.snoc` i) xs
   , -- a Group's right paren is a Point handle for the Point right _after_ it
-    [ renderPointHandle (Point ph (wrap (unwrap i + 1))) [ HH.ClassName "Paren", HH.ClassName "CloseParen" ] ")" ]
+    [ HH.div
+        ( [ [ HP.classes [ HH.ClassName "PointHandle", HH.ClassName "Paren", HH.ClassName "CloseParen" ] ]
+          , pointHandleProps_double (Point ph (wrap (unwrap i))) (Point ph (wrap (unwrap i + 1)))
+          ]
+            # Array.fold
+        )
+        [ HH.text ")" ]
+    ]
   ] # Array.fold
 
-renderPointHandle :: Point -> Array H.ClassName -> String -> HTML
+renderPointHandle :: Point -> Array HH.ClassName -> String -> HTML
 renderPointHandle p cns s =
   HH.div
     ( [ [ HP.classes ([ HH.ClassName "PointHandle" ] <> cns) ]

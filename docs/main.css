@@ -25,13 +25,46 @@ body {
   display: inline-flex;
 }
 
+/* PointCursor */
+
 .PointHandle {
   user-select: none;
 }
 
+/* SpanCursor */
+
+.StartSpanHandle~* {
+  background-color: rgba(0, 0, 255, 0.2);
+}
+
+.EndSpanHandle,
+.EndSpanHandle~* {
+  background-color: transparent;
+}
+
+/* ZipperCursor */
+
+.OuterStartZipperHandle~* {
+  background-color: rgba(0, 0, 255, 0.2);
+}
+
+.InnerStartZipperHandle,
+.InnerStartZipperHandle~* {
+  background-color: transparent;
+}
+
+.InnerEndZipperHandle~* {
+  background-color: rgba(0, 0, 255, 0.2);
+}
+
+.OuterEndZipperHandle,
+.OuterEndZipperHandle~* {
+  background-color: transparent;
+}
+
 .Space {
   /* color: gray; */
-  color: white;
+  color: transparent;
 }
 
 .Cursor {
