@@ -6,9 +6,12 @@ import Sexpze.Data.Sexp.Cursor
 
 import Control.Monad.State (get, modify_)
 import Data.Array as Array
+import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
+import Data.List as List
 import Data.Newtype (unwrap, wrap)
 import Data.Show.Generic (genericShow)
+import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -147,14 +150,61 @@ handleUserAction InsertGroup = todo "handleUserAction" {}
 --------------------------------------------------------------------------------
 
 renderTermWithCursor :: Cursor -> Term -> Array HTML
-renderTermWithCursor (InjectPoint p) = renderTerm mempty
+renderTermWithCursor (InjectPoint p) = renderTermWithPoint p mempty
 renderTermWithCursor (InjectSpanCursor _ _) = renderTerm mempty
 renderTermWithCursor (InjectZipperCursor _ _) = renderTerm mempty
+
+-- renderTermWithPoint
+
+renderTermWithPoint :: Point -> Path -> Term -> Array HTML
+renderTermWithPoint p ph =
+  mapWithSexpPointIndex
+    ( case unconsPoint p of
+        Left j -> \j' ->
+          if j == j' then
+            [ renderPointHandle (Point ph j') [ H.ClassName "PointCursor" ] "|" ]
+          else
+            [ renderPointHandle (Point ph j') [] "•" ]
+        Right _ -> \j' -> [ renderPointHandle (Point ph j') [] "•" ]
+    )
+    ( case unconsPoint p of
+        Left _ -> renderTerm' ph
+        Right (i /\ p') -> \i' ->
+          if i == i' then
+            renderTerm'WithPoint p' ph i'
+          else
+            renderTerm' ph i'
+    )
+    >>> Array.fold
+
+renderTerm'WithPoint :: Point -> Path -> SexpKidIndex -> Term' -> Array HTML
+renderTerm'WithPoint _p ph i (Atom a) =
+  [ HH.div
+      ( [ [ HP.classes [ HH.ClassName "Atom" ] ]
+        , -- an Atom is a Point handle for the Point right _before_ it
+          pointHandleProps (Point ph (wrap (unwrap i)))
+        ] # Array.fold
+      )
+      [ HH.text a ]
+  ]
+renderTerm'WithPoint p ph i (Group _n xs) =
+  [ -- a Group's left paren is a Point handle for the Point right _before_ it
+    [ renderPointHandle (Point ph (wrap (unwrap i))) [ HH.ClassName "Paren", HH.ClassName "OpenParen" ] "(" ]
+  , renderTermWithPoint p (ph `List.snoc` i) xs
+  , -- a Group's right paren is a Point handle for the Point right _after_ it
+    [ renderPointHandle (Point ph (wrap (unwrap i + 1))) [ HH.ClassName "Paren", HH.ClassName "CloseParen" ] ")" ]
+  ] # Array.fold
+
+-- renderTermWithSpan
+
+-- renderTermWithZipper
+
+-- renderTerm
 
 renderTerm :: Path -> Term -> Array HTML
 renderTerm ph =
   mapWithSexpPointIndex
-    (\j -> [ renderPointHandle (Point ph j) "•" ])
+    (\j -> [ renderPointHandle (Point ph j) [] "•" ])
     (\i -> renderTerm' ph i)
     >>> Array.fold
 
@@ -170,16 +220,16 @@ renderTerm' ph i (Atom a) =
   ]
 renderTerm' ph i (Group _n xs) =
   [ -- a Group's left paren is a Point handle for the Point right _before_ it
-    [ renderPointHandle (Point ph (wrap (unwrap i))) "(" ]
-  , renderTerm ph xs
+    [ renderPointHandle (Point ph (wrap (unwrap i))) [ HH.ClassName "Paren", HH.ClassName "OpenParen" ] "(" ]
+  , renderTerm (ph `List.snoc` i) xs
   , -- a Group's right paren is a Point handle for the Point right _after_ it
-    [ renderPointHandle (Point ph (wrap (unwrap i + 1))) ")" ]
+    [ renderPointHandle (Point ph (wrap (unwrap i + 1))) [ HH.ClassName "Paren", HH.ClassName "CloseParen" ] ")" ]
   ] # Array.fold
 
-renderPointHandle :: Point -> String -> HTML
-renderPointHandle p s =
+renderPointHandle :: Point -> Array H.ClassName -> String -> HTML
+renderPointHandle p cns s =
   HH.div
-    ( [ [ HP.classes [ HH.ClassName "PointHandle" ] ]
+    ( [ [ HP.classes ([ HH.ClassName "PointHandle" ] <> cns) ]
       , pointHandleProps p
       ] # Array.fold
     )
