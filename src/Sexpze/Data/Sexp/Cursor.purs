@@ -6,7 +6,7 @@ import Prelude
 import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Either.Nested (type (\/), Either4, Either5, in1, in2, in3, in4, in5, (\/))
+import Data.Either.Nested (type (\/), Either5, in1, in2, in3, in4, in5)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
@@ -222,8 +222,8 @@ instance (Eq n, Eq a) => Eq (Zipper n a) where
   eq x = genericEq x
 
 getZipperHandle :: ZipperHandle -> ZipperCursor -> Point
-getZipperHandle OuterStartZipperHandle (ZipperCursor s1 s2) = getSpanHandle StartSpanHandle s1
-getZipperHandle OuterEndZipperHandle (ZipperCursor s1 s2) = getSpanHandle EndSpanHandle s1
+getZipperHandle OuterStartZipperHandle (ZipperCursor s1 _s2) = getSpanHandle StartSpanHandle s1
+getZipperHandle OuterEndZipperHandle (ZipperCursor s1 _s2) = getSpanHandle EndSpanHandle s1
 getZipperHandle InnerStartZipperHandle (ZipperCursor (SpanCursor ph _ _) s2) = getSpanHandle StartSpanHandle s2 # \(Point ph' j) -> Point (ph <> ph') j
 getZipperHandle InnerEndZipperHandle (ZipperCursor (SpanCursor ph _ _) s2) = getSpanHandle EndSpanHandle s2 # \(Point ph' j) -> Point (ph <> ph') j
 
@@ -255,6 +255,18 @@ atZipperCursor (ZipperCursor s1 s2) xs =
     Tuple
       (w1 <<< (_ $ xs2))
       (Zipper xs1 (getSpanHandle StartSpanHandle s2))
+
+-- innerZipperCursor :: ZipperCursor -> SpanCursor
+-- innerZipperCursor = todo "" 
+
+-- atZipperCursor_outer :: forall n a. ZipperCursor -> Sexp n a -> 
+
+-- atZipperCursor_inner :: forall n a. ZipperCursor -> Sexp n a -> Sexp n a
+-- atZipperCursor_inner (ZipperCursor s1 s2) xs = xs
+--   # atSpanCursor s1
+--   # snd
+--   # atSpanCursor s2
+--   # snd
 
 --------------------------------------------------------------------------------
 -- Cursor
