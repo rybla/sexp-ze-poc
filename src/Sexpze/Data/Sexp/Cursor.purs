@@ -369,7 +369,7 @@ dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
             -- p2 before p1
             InjectZipperCursor
               ( ZipperCursor
-                  (SpanCursor ph (SexpPointIndex (unwrap j1)) (SexpPointIndex (unwrap j1 + 1)))
+                  (SpanCursor ph (SexpPointIndex (unwrap j1 - 1)) (SexpPointIndex (unwrap j1)))
                   (SpanCursor ph2 (SexpPointIndex 0) (SexpPointIndex (unwrap j2)))
               )
               InnerEndZipperHandle
@@ -391,7 +391,7 @@ dragFromPoint p1_top@(Point ph1_top _i1_top) p2_top@(Point ph2_top _i2_top) xs =
             -- p1 before p2
             InjectZipperCursor
               ( ZipperCursor
-                  (SpanCursor ph (SexpPointIndex (unwrap j2)) (SexpPointIndex (unwrap j2 + 1)))
+                  (SpanCursor ph (SexpPointIndex (unwrap j2 - 1)) (SexpPointIndex (unwrap j2)))
                   (SpanCursor ph1 (SexpPointIndex 0) (SexpPointIndex (unwrap j1)))
               )
               OuterEndZipperHandle

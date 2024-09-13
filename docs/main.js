@@ -7557,7 +7557,7 @@
             return new InjectZipperCursor(new ZipperCursor(new SpanCursor(v2.value0, unwrap4(v2.value1.value1.value1), unwrap4(v2.value1.value1.value1) + 1 | 0), new SpanCursor(v2.value1.value0.value0, unwrap4(v2.value1.value0.value1), length3(v5.value1))), OuterStartZipperHandle.value);
           }
           ;
-          return new InjectZipperCursor(new ZipperCursor(new SpanCursor(v2.value0, unwrap4(v2.value1.value1.value1), unwrap4(v2.value1.value1.value1) + 1 | 0), new SpanCursor(v2.value1.value0.value0, 0, unwrap4(v2.value1.value0.value1))), OuterEndZipperHandle.value);
+          return new InjectZipperCursor(new ZipperCursor(new SpanCursor(v2.value0, unwrap4(v2.value1.value1.value1) - 1 | 0, unwrap4(v2.value1.value1.value1)), new SpanCursor(v2.value1.value0.value0, 0, unwrap4(v2.value1.value0.value1))), OuterEndZipperHandle.value);
         }
         ;
         if (v4.value0 instanceof Cons && v4.value1 instanceof Cons) {

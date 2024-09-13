@@ -8,7 +8,7 @@ import Data.List as List
 import Data.Newtype (wrap)
 import Effect.Exception (Error)
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..), SpanCursor(..), SpanHandle(..), ZipperCursor(..), ZipperHandle(..), dragFromPoint)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..), SpanCursor(..), SpanHandle(..), ZipperCursor(..), ZipperHandle(..), dragFromPoint, prettySexpWithCursor)
 import Test.Spec (Spec)
 import Test.Spec as Spec
 import Test.Spec.Assertions as Assertions
@@ -20,8 +20,12 @@ spec = Spec.describe "Cursor" do
 
 shouldEqualCursor :: forall m a. MonadThrow Error m => Show a => Sexp Unit a -> Cursor -> Cursor -> m Unit
 shouldEqualCursor xs c1 c2 = unless (c1 == c2) do
-  -- Assertions.fail (prettySexpWithCursor c1 xs <> " ≠ " <> prettySexpWithCursor c2 xs)
-  Assertions.fail (show c1 <> " ≠ " <> show c2)
+  if pretty then
+    Assertions.fail (prettySexpWithCursor c1 xs <> " ≠ " <> prettySexpWithCursor c2 xs)
+  else
+    Assertions.fail (show c1 <> " ≠ " <> show c2)
+  where
+  pretty = false
 
 spec_dragFromPoint :: Spec Unit
 spec_dragFromPoint = Spec.describe "dragFromPoint" do
@@ -99,6 +103,14 @@ spec_dragFromPoint = Spec.describe "dragFromPoint" do
       shouldEqualCursor xs
         (dragFromPoint (point [ 1, 1 ] 1) (point [ 1 ] 1) xs)
         (InjectZipperCursor (zipperCursor [ 1 ] 1 2 [ 1 ] 1 3) OuterStartZipperHandle)
+    Spec.it "zipper from inner end to outer end" do
+      shouldEqualCursor xs
+        (dragFromPoint (point [ 1, 1 ] 3) (point [] 2) xs)
+        (InjectZipperCursor (zipperCursor [] 1 2 [ 1, 1 ] 0 3) OuterEndZipperHandle)
+    Spec.it "zipper from outer end to inner end" do
+      shouldEqualCursor xs
+        (dragFromPoint (point [] 2) (point [ 1, 1 ] 3) xs)
+        (InjectZipperCursor (zipperCursor [] 1 2 [ 1, 1 ] 0 3) InnerEndZipperHandle)
     pure unit
   pure unit
 
