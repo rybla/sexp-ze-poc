@@ -26,12 +26,26 @@ body {
 }
 
 .PointHandle {
-  color: gray;
   user-select: none;
 }
 
+.Space {
+  /* color: gray; */
+  color: white;
+}
+
+.Cursor {
+  font-weight: bold;
+  color: red;
+}
+
+.Cursor.active {
+  /* background-color: red; */
+  /* color: black; */
+}
+
 .Atom {
-  color: blue;
+  color: green;
   font-weight: bold;
   user-select: none;
 }

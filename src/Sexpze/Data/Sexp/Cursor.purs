@@ -6,6 +6,7 @@ import Prelude
 import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
+import Data.Either.Nested (type (\/), Either4, Either5, in1, in2, in3, in4, in5, (\/))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
@@ -121,9 +122,9 @@ instance Ord Point where
     EQ -> compare (Point ph1 j1) (Point ph2 j2)
     GT -> GT
 
-unconsPoint :: Point -> Either SexpPointIndex (SexpKidIndex /\ Point)
-unconsPoint (Point Nil j) = Left j
-unconsPoint (Point (i : ph) j) = pure (i /\ Point ph j)
+unconsPoint :: Point -> (SexpKidIndex /\ Point) \/ SexpPointIndex
+unconsPoint (Point (i : ph) j) = Left (i /\ Point ph j)
+unconsPoint (Point Nil j) = Right j
 
 atPoint :: forall n a. Point -> Sexp n a -> (Sexp n a -> Sexp n a)
 atPoint (Point ph i) xs =
@@ -239,6 +240,25 @@ instance (Show n, Show a) => Show (Zipper n a) where
 instance (Eq n, Eq a) => Eq (Zipper n a) where
   eq x = genericEq x
 
+type ZipperOrSpanCursor = ZipperCursor \/ SpanCursor
+
+unconsZipperCursor
+  :: ZipperOrSpanCursor
+  -> Either5
+       (SexpKidIndex /\ ZipperOrSpanCursor)
+       ((SexpPointIndex /\ SexpPointIndex) /\ SexpKidIndex /\ ZipperOrSpanCursor)
+       ((SexpPointIndex /\ SexpPointIndex) /\ (SexpPointIndex /\ SexpPointIndex))
+       (SexpKidIndex /\ ZipperOrSpanCursor)
+       (SexpPointIndex /\ SexpPointIndex)
+unconsZipperCursor (Left (ZipperCursor s1 s2)) = case unconsSpanCursor s1 of
+  Right (i /\ s1') -> in1 (i /\ Left (ZipperCursor s1' s2))
+  Left (j1 /\ j2) -> case unconsSpanCursor s2 of
+    Right (i /\ s2') -> in2 ((j1 /\ j2) /\ i /\ Right s2')
+    Left (j1' /\ j2') -> in3 ((j1 /\ j2) /\ (j1' /\ j2'))
+unconsZipperCursor (Right s) = case unconsSpanCursor s of
+  Right (i /\ s') -> in4 (i /\ Right s')
+  Left (j1 /\ j2) -> in5 (j1 /\ j2)
+
 atZipperCursor :: forall n a. ZipperCursor -> Sexp n a -> ((Sexp n a -> Sexp n a) -> Sexp n a) /\ Zipper n a
 atZipperCursor (ZipperCursor s1 s2) xs =
   let
@@ -284,13 +304,13 @@ prettySexpWithCursor (InjectZipperCursor z _) xs = prettySexpWithZipperCursor z 
 
 prettySexpWithPoint :: forall n a. Show a => Point -> Sexp n a -> String
 prettySexpWithPoint p xs = case unconsPoint p of
-  Left j ->
-    xs
-      # mapWithSexpPointIndex (\j' -> if j == j' then "|" else " ") (const prettySexp')
-      # Array.fold
-  Right (i /\ p') ->
+  Left (i /\ p') ->
     xs
       # mapWithSexpPointIndex (\_ -> " ") (\i' x -> if i == i' then prettySexp'WithPoint p' x else prettySexp' x)
+      # Array.fold
+  Right j ->
+    xs
+      # mapWithSexpPointIndex (\j' -> if j == j' then "|" else " ") (const prettySexp')
       # Array.fold
 
 prettySexp'WithPoint :: forall n a. Show a => Point -> Sexp' n a -> String

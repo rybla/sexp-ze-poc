@@ -5,6 +5,7 @@ import Prelude
 import Control.Monad.State (get, modify_)
 import Data.Array as Array
 import Data.Either (Either(..))
+import Data.Either.Nested (either5)
 import Data.Generic.Rep (class Generic)
 import Data.List as List
 import Data.Newtype (unwrap, wrap)
@@ -16,7 +17,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), Path, Point(..), SexpKidIndex, SpanCursor, SpanHandle(..), dragFromPoint, mapWithSexpPointIndex, unconsPoint, unconsSpanCursor)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), Path, Point(..), SexpKidIndex, SpanCursor, SpanHandle(..), ZipperHandle(..), ZipperOrSpanCursor, dragFromPoint, mapWithSexpPointIndex, unconsPoint, unconsSpanCursor, unconsZipperCursor)
 import Sexpze.Utility (todo)
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.MouseEvent (MouseEvent)
@@ -151,8 +152,8 @@ handleUserAction InsertGroup = todo "handleUserAction" {}
 
 renderTermWithCursor :: Cursor -> Term -> Array HTML
 renderTermWithCursor (InjectPoint p) = renderTermWithPoint p mempty
-renderTermWithCursor (InjectSpanCursor s sh) = renderTermWithSpan s sh mempty
-renderTermWithCursor (InjectZipperCursor _ _) = renderTerm mempty
+renderTermWithCursor (InjectSpanCursor s sh) = renderTermWithSpanCursor s sh mempty
+renderTermWithCursor (InjectZipperCursor z zh) = renderTermWithZipperCursor (Left z) zh mempty
 
 --------------------------------------------------------------------------------
 -- renderTermWithPoint
@@ -162,20 +163,23 @@ renderTermWithPoint :: Point -> Path -> Term -> Array HTML
 renderTermWithPoint p ph =
   mapWithSexpPointIndex
     ( case unconsPoint p of
-        Left j -> \j' ->
+        Left _ -> \j' -> [ renderPointHandle (Point ph j') [ HH.ClassName "Space" ] "•" ]
+        Right j -> \j' ->
           if j == j' then
-            [ renderPointHandle (Point ph j') [ H.ClassName "PointCursor" ] "|" ]
+            [ renderPointHandle (Point ph j')
+                [ H.ClassName "Cursor", H.ClassName "active" ]
+                "|"
+            ]
           else
-            [ renderPointHandle (Point ph j') [] "•" ]
-        Right _ -> \j' -> [ renderPointHandle (Point ph j') [] "•" ]
+            [ renderPointHandle (Point ph j') [ HH.ClassName "Space" ] "•" ]
     )
     ( case unconsPoint p of
-        Left _ -> renderTerm' ph
-        Right (i /\ p') -> \i' ->
+        Left (i /\ p') -> \i' ->
           if i == i' then
             renderTerm'_helper (renderTermWithPoint p') ph i'
           else
             renderTerm' ph i'
+        Right _ -> renderTerm' ph
     )
     >>> Array.fold
 
@@ -198,49 +202,160 @@ renderTerm'_helper f ph i (Group _n xs) =
   ] # Array.fold
 
 --------------------------------------------------------------------------------
--- renderTermWithSpan
+-- renderTermWithSpanCursor
 --------------------------------------------------------------------------------
 
-renderTermWithSpan :: SpanCursor -> SpanHandle -> Path -> Term -> Array HTML
-renderTermWithSpan s sh ph =
+renderTermWithSpanCursor :: SpanCursor -> SpanHandle -> Path -> Term -> Array HTML
+renderTermWithSpanCursor s sh ph =
   mapWithSexpPointIndex
     ( case unconsSpanCursor s of
         Left (j1 /\ j2) -> \j' ->
           if j1 == j' then
             [ renderPointHandle (Point ph j')
-                ( [ [ H.ClassName "PointCursor" ]
+                ( [ [ H.ClassName "Cursor" ]
                   , if sh == StartSpanHandle then [ H.ClassName "active" ] else []
                   ] # Array.fold
                 )
-                "{"
+                "["
             ]
           else if j2 == j' then
             [ renderPointHandle (Point ph j')
-                ( [ [ H.ClassName "PointCursor" ]
+                ( [ [ H.ClassName "Cursor" ]
                   , if sh == EndSpanHandle then [ H.ClassName "active" ] else []
                   ] # Array.fold
                 )
-                "}"
+                "]"
             ]
           else
-            [ renderPointHandle (Point ph j') [] "•" ]
-        Right _ -> \j' -> [ renderPointHandle (Point ph j') [] "•" ]
+            [ renderPointHandle (Point ph j') [ HH.ClassName "Space" ] "•" ]
+        Right _ -> \j' -> [ renderPointHandle (Point ph j') [ HH.ClassName "Space" ] "•" ]
     )
     ( case unconsSpanCursor s of
         Left _ -> renderTerm' ph
         Right (i /\ s') -> \i' ->
           if i == i' then
-            -- renderTerm'_helper s' sh ph i'
-            todo "" {}
+            renderTerm'_helper (renderTermWithSpanCursor s' sh) ph i'
           else
             renderTerm' ph i'
     )
     >>> Array.fold
 
 --------------------------------------------------------------------------------
--- renderTermWithZipper
+-- renderTermWithZipperCursor
 --------------------------------------------------------------------------------
--- TODO
+
+renderTermWithZipperCursor :: ZipperOrSpanCursor -> ZipperHandle -> Path -> Term -> Array HTML
+renderTermWithZipperCursor zos zh ph =
+  mapWithSexpPointIndex
+    -- points
+    ( unconsZipperCursor zos # either5
+        ( \(_i /\ _zos') j ->
+            [ renderPointHandle (Point ph j) [ HH.ClassName "Space" ] "•" ]
+        )
+        ( \((j1 /\ j2) /\ _i /\ _s') j' ->
+            if j1 == j' then
+              [ renderPointHandle (Point ph j')
+                  ( [ [ H.ClassName "Cursor" ]
+                    , if zh == OuterStartZipperHandle then [ H.ClassName "active" ] else []
+                    ] # Array.fold
+                  )
+                  "{"
+              ]
+            else if j2 == j' then
+              [ renderPointHandle (Point ph j')
+                  ( [ [ H.ClassName "Cursor" ]
+                    , if zh == OuterEndZipperHandle then [ H.ClassName "active" ] else []
+                    ] # Array.fold
+                  )
+                  "}"
+              ]
+            else
+              [ renderPointHandle (Point ph j') [ HH.ClassName "Space" ] "•" ]
+        )
+        ( \((j1 /\ j2) /\ (j1' /\ j2')) j' ->
+            if j1 == j' then
+              [ renderPointHandle (Point ph j')
+                  ( [ [ H.ClassName "Cursor" ]
+                    , if zh == OuterStartZipperHandle then [ H.ClassName "active" ] else []
+                    ] # Array.fold
+                  )
+                  "{"
+              ]
+            else if j2 == j' then
+              [ renderPointHandle (Point ph j')
+                  ( [ [ H.ClassName "Cursor" ]
+                    , if zh == OuterEndZipperHandle then [ H.ClassName "active" ] else []
+                    ] # Array.fold
+                  )
+                  "}"
+              ]
+            else if j1' == j' then
+              [ renderPointHandle (Point ph j')
+                  ( [ [ H.ClassName "Cursor" ]
+                    , if zh == InnerStartZipperHandle then [ H.ClassName "active" ] else []
+                    ] # Array.fold
+                  )
+                  "{"
+              ]
+            else if j2' == j' then
+              [ renderPointHandle (Point ph j')
+                  ( [ [ H.ClassName "Cursor" ]
+                    , if zh == InnerEndZipperHandle then [ H.ClassName "active" ] else []
+                    ] # Array.fold
+                  )
+                  "}"
+              ]
+            else
+              [ renderPointHandle (Point ph j') [ HH.ClassName "Space" ] "•" ]
+        )
+        ( \(_i /\ _zos') j ->
+            [ renderPointHandle (Point ph j) [ HH.ClassName "Space" ] "•" ]
+        )
+        ( \(j1 /\ j2) j' ->
+            if j1 == j' then
+              [ renderPointHandle (Point ph j')
+                  ( [ [ H.ClassName "Cursor" ]
+                    , if zh == InnerStartZipperHandle then [ H.ClassName "active" ] else []
+                    ] # Array.fold
+                  )
+                  "{"
+              ]
+            else if j2 == j' then
+              [ renderPointHandle (Point ph j')
+                  ( [ [ H.ClassName "Cursor" ]
+                    , if zh == InnerEndZipperHandle then [ H.ClassName "active" ] else []
+                    ] # Array.fold
+                  )
+                  "}"
+              ]
+            else
+              [ renderPointHandle (Point ph j') [ HH.ClassName "Space" ] "•" ]
+        )
+    )
+    -- kids
+    ( unconsZipperCursor zos # either5
+        ( \(i /\ zos') -> \i' ->
+            if i == i' then
+              renderTerm'_helper (renderTermWithZipperCursor zos' zh) ph i'
+            else
+              renderTerm' ph i'
+        )
+        ( \((_j1 /\ _j2) /\ i /\ zos') -> \i' ->
+            if i == i' then
+              renderTerm'_helper (renderTermWithZipperCursor zos' zh) ph i'
+            else
+              renderTerm' ph i'
+        )
+        (\((_j1 /\ _j2) /\ (_j1' /\ _j2')) -> renderTerm' ph)
+        ( \(i /\ zos') -> \i' ->
+            if i == i' then
+              renderTerm'_helper (renderTermWithZipperCursor zos' zh) ph i'
+            else
+              renderTerm' ph i'
+        )
+        (\(_j1 /\ _j2) -> renderTerm' ph)
+    )
+    >>> Array.fold
 
 --------------------------------------------------------------------------------
 -- renderTerm
@@ -249,7 +364,7 @@ renderTermWithSpan s sh ph =
 renderTerm :: Path -> Term -> Array HTML
 renderTerm ph =
   mapWithSexpPointIndex
-    (\j -> [ renderPointHandle (Point ph j) [] "•" ])
+    (\j -> [ renderPointHandle (Point ph j) [ HH.ClassName "Space" ] "•" ])
     (\i -> renderTerm' ph i)
     >>> Array.fold
 
