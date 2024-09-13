@@ -15,7 +15,7 @@ import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
-import Sexpze.Data.Sexp (Sexp, Sexp'(..))
+import Sexpze.Data.Sexp (Sexp'(..), Sexp)
 import Sexpze.Utility (bug, todo)
 
 --------------------------------------------------------------------------------
@@ -198,6 +198,11 @@ leftEndpoint_SpanCursor (SpanCursor p i1 _) = Point p i1
 
 rightEndpoint_SpanCursor :: SpanCursor -> Point
 rightEndpoint_SpanCursor (SpanCursor p _ i2) = Point p i2
+
+unconsSpanCursor :: SpanCursor -> Either (SexpPointIndex /\ SexpPointIndex) (SexpKidIndex /\ SpanCursor)
+unconsSpanCursor (SpanCursor ph j1 j2) = case ph of
+  Nil -> Left (j1 /\ j2)
+  i : ph' -> Right (i /\ SpanCursor ph' j1 j2)
 
 -- type Span a = Sexp n a
 

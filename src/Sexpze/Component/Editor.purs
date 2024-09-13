@@ -1,8 +1,6 @@
 module Sexpze.Component.Editor where
 
 import Prelude
-import Sexpze.Data.Sexp
-import Sexpze.Data.Sexp.Cursor
 
 import Control.Monad.State (get, modify_)
 import Data.Array as Array
@@ -17,6 +15,8 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Sexpze.Data.Sexp (Sexp, Sexp'(..))
+import Sexpze.Data.Sexp.Cursor (Cursor(..), Path, Point(..), SexpKidIndex, SpanCursor, SpanHandle(..), dragFromPoint, mapWithSexpPointIndex, unconsPoint, unconsSpanCursor)
 import Sexpze.Utility (todo)
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.MouseEvent (MouseEvent)
@@ -146,15 +146,17 @@ handleUserAction (InsertAtom _) = todo "handleUserAction" {}
 handleUserAction InsertGroup = todo "handleUserAction" {}
 
 --------------------------------------------------------------------------------
--- rendering
+-- renderTermWithCursor
 --------------------------------------------------------------------------------
 
 renderTermWithCursor :: Cursor -> Term -> Array HTML
 renderTermWithCursor (InjectPoint p) = renderTermWithPoint p mempty
-renderTermWithCursor (InjectSpanCursor _ _) = renderTerm mempty
+renderTermWithCursor (InjectSpanCursor s sh) = renderTermWithSpan s sh mempty
 renderTermWithCursor (InjectZipperCursor _ _) = renderTerm mempty
 
+--------------------------------------------------------------------------------
 -- renderTermWithPoint
+--------------------------------------------------------------------------------
 
 renderTermWithPoint :: Point -> Path -> Term -> Array HTML
 renderTermWithPoint p ph =
@@ -171,14 +173,14 @@ renderTermWithPoint p ph =
         Left _ -> renderTerm' ph
         Right (i /\ p') -> \i' ->
           if i == i' then
-            renderTerm'WithPoint p' ph i'
+            renderTerm'_helper (renderTermWithPoint p') ph i'
           else
             renderTerm' ph i'
     )
     >>> Array.fold
 
-renderTerm'WithPoint :: Point -> Path -> SexpKidIndex -> Term' -> Array HTML
-renderTerm'WithPoint _p ph i (Atom a) =
+renderTerm'_helper :: (Path -> Term -> Array HTML) -> Path -> SexpKidIndex -> Term' -> Array HTML
+renderTerm'_helper _ ph i (Atom a) =
   [ HH.div
       ( [ [ HP.classes [ HH.ClassName "Atom" ] ]
         , -- an Atom is a Point handle for the Point right _before_ it
@@ -187,19 +189,62 @@ renderTerm'WithPoint _p ph i (Atom a) =
       )
       [ HH.text a ]
   ]
-renderTerm'WithPoint p ph i (Group _n xs) =
+renderTerm'_helper f ph i (Group _n xs) =
   [ -- a Group's left paren is a Point handle for the Point right _before_ it
     [ renderPointHandle (Point ph (wrap (unwrap i))) [ HH.ClassName "Paren", HH.ClassName "OpenParen" ] "(" ]
-  , renderTermWithPoint p (ph `List.snoc` i) xs
+  , f (ph `List.snoc` i) xs
   , -- a Group's right paren is a Point handle for the Point right _after_ it
     [ renderPointHandle (Point ph (wrap (unwrap i + 1))) [ HH.ClassName "Paren", HH.ClassName "CloseParen" ] ")" ]
   ] # Array.fold
 
+--------------------------------------------------------------------------------
 -- renderTermWithSpan
+--------------------------------------------------------------------------------
 
+renderTermWithSpan :: SpanCursor -> SpanHandle -> Path -> Term -> Array HTML
+renderTermWithSpan s sh ph =
+  mapWithSexpPointIndex
+    ( case unconsSpanCursor s of
+        Left (j1 /\ j2) -> \j' ->
+          if j1 == j' then
+            [ renderPointHandle (Point ph j')
+                ( [ [ H.ClassName "PointCursor" ]
+                  , if sh == StartSpanHandle then [ H.ClassName "active" ] else []
+                  ] # Array.fold
+                )
+                "{"
+            ]
+          else if j2 == j' then
+            [ renderPointHandle (Point ph j')
+                ( [ [ H.ClassName "PointCursor" ]
+                  , if sh == EndSpanHandle then [ H.ClassName "active" ] else []
+                  ] # Array.fold
+                )
+                "}"
+            ]
+          else
+            [ renderPointHandle (Point ph j') [] "•" ]
+        Right _ -> \j' -> [ renderPointHandle (Point ph j') [] "•" ]
+    )
+    ( case unconsSpanCursor s of
+        Left _ -> renderTerm' ph
+        Right (i /\ s') -> \i' ->
+          if i == i' then
+            -- renderTerm'_helper s' sh ph i'
+            todo "" {}
+          else
+            renderTerm' ph i'
+    )
+    >>> Array.fold
+
+--------------------------------------------------------------------------------
 -- renderTermWithZipper
+--------------------------------------------------------------------------------
+-- TODO
 
+--------------------------------------------------------------------------------
 -- renderTerm
+--------------------------------------------------------------------------------
 
 renderTerm :: Path -> Term -> Array HTML
 renderTerm ph =
