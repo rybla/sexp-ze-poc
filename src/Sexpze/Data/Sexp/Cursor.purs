@@ -163,23 +163,6 @@ foldSexpWithInbetweenPoints on = go1
   go2 ph i (Atom a) = on.atom ph i a
   go2 ph i (Group n xs) = let xs' = go1 (ph `List.snoc` i) xs in on.group ph i n xs'
 
--- mapSexpWithInbetweenPoints
---   :: forall n n' a a'
---    . (Array Point -> Sexp n' a' -> Sexp n' a')
---   -> (Path -> SexpKidIndex -> n -> Sexp n' a' -> n')
---   -> (Path -> SexpKidIndex -> a -> a')
---   -> Path
---   -> Sexp n a
---   -> Sexp n' a'
--- mapSexpWithInbetweenPoints onList onGroup onAtom = go1
---   where
---   go1 :: Path -> Sexp n a -> Sexp n' a'
---   go1 ph xs = onList (xs # inbetweenPoints # map (Point ph)) (xs # Array.mapWithIndex (\i -> go2 ph (wrap i)))
-
---   go2 :: Path -> SexpKidIndex -> Sexp' n a -> Sexp' n' a'
---   go2 ph i (Atom a) = Atom (onAtom ph i a)
---   go2 ph i (Group n xs) = let xs' = go1 (ph `List.snoc` i) xs in Group (onGroup ph i n xs') xs'
-
 --------------------------------------------------------------------------------
 -- Span
 --------------------------------------------------------------------------------
@@ -194,11 +177,9 @@ instance Show SpanCursor where
 instance Eq SpanCursor where
   eq x = genericEq x
 
-leftEndpoint_SpanCursor :: SpanCursor -> Point
-leftEndpoint_SpanCursor (SpanCursor p i1 _) = Point p i1
-
-rightEndpoint_SpanCursor :: SpanCursor -> Point
-rightEndpoint_SpanCursor (SpanCursor p _ i2) = Point p i2
+getSpanHandle :: SpanHandle -> SpanCursor -> Point
+getSpanHandle StartSpanHandle (SpanCursor p i1 _) = Point p i1
+getSpanHandle EndSpanHandle (SpanCursor p _ i2) = Point p i2
 
 unconsSpanCursor :: SpanCursor -> Either (SexpPointIndex /\ SexpPointIndex) (SexpKidIndex /\ SpanCursor)
 unconsSpanCursor (SpanCursor ph j1 j2) = case ph of
@@ -240,6 +221,12 @@ instance (Show n, Show a) => Show (Zipper n a) where
 instance (Eq n, Eq a) => Eq (Zipper n a) where
   eq x = genericEq x
 
+getZipperHandle :: ZipperHandle -> ZipperCursor -> Point
+getZipperHandle OuterStartZipperHandle (ZipperCursor s1 s2) = getSpanHandle StartSpanHandle s1
+getZipperHandle OuterEndZipperHandle (ZipperCursor s1 s2) = getSpanHandle EndSpanHandle s1
+getZipperHandle InnerStartZipperHandle (ZipperCursor (SpanCursor ph _ _) s2) = getSpanHandle StartSpanHandle s2 # \(Point ph' j) -> Point (ph <> ph') j
+getZipperHandle InnerEndZipperHandle (ZipperCursor (SpanCursor ph _ _) s2) = getSpanHandle EndSpanHandle s2 # \(Point ph' j) -> Point (ph <> ph') j
+
 type ZipperOrSpanCursor = ZipperCursor \/ SpanCursor
 
 unconsZipperCursor
@@ -267,7 +254,7 @@ atZipperCursor (ZipperCursor s1 s2) xs =
   in
     Tuple
       (w1 <<< (_ $ xs2))
-      (Zipper xs1 (leftEndpoint_SpanCursor s2))
+      (Zipper xs1 (getSpanHandle StartSpanHandle s2))
 
 --------------------------------------------------------------------------------
 -- Cursor
@@ -285,6 +272,11 @@ instance Show Cursor where
 
 instance Eq Cursor where
   eq x = genericEq x
+
+activePointOfCursor :: Cursor -> Point
+activePointOfCursor (InjectPoint p) = p
+activePointOfCursor (InjectSpanCursor s sh) = getSpanHandle sh s
+activePointOfCursor (InjectZipperCursor z zh) = getZipperHandle zh z
 
 --------------------------------------------------------------------------------
 -- pretty

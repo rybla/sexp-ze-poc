@@ -17,7 +17,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), Path, Point(..), SexpKidIndex, SpanCursor, SpanHandle(..), ZipperHandle(..), ZipperOrSpanCursor, dragFromPoint, mapWithSexpPointIndex, unconsPoint, unconsSpanCursor, unconsZipperCursor)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), Path, Point(..), SexpKidIndex, SpanCursor, SpanHandle(..), ZipperHandle(..), ZipperOrSpanCursor, dragFromPoint, mapWithSexpPointIndex, orderPoints, unconsPoint, unconsSpanCursor, unconsZipperCursor)
 import Sexpze.Utility (todo)
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.MouseEvent (MouseEvent)
@@ -118,7 +118,9 @@ data UserAction
   | Copy
   | Paste
   | StartDrag Point
+  | StartDrag_double Point Point
   | EndDrag Point
+  | EndDrag_double Point Point
   | InsertAtom String
   | InsertGroup
 
@@ -137,11 +139,21 @@ handleUserAction Copy = todo "handleUserAction" {}
 handleUserAction Paste = todo "handleUserAction" {}
 handleUserAction (StartDrag p) = do
   modify_ _ { cursor = InjectPoint p }
+handleUserAction (StartDrag_double p1 p1') = do
+  modify_ _ { cursor = InjectPoint p1 } -- TODO
 handleUserAction (EndDrag p2) = do
   { cursor, term } <- get
   case cursor of
     InjectPoint p1 -> do
       modify_ _ { cursor = dragFromPoint p1 p2 term }
+    _ -> pure unit -- TODO
+handleUserAction (EndDrag_double p2 p2') = do
+  { cursor, term } <- get
+  case cursor of
+    InjectPoint p1 -> do
+      case orderPoints p1 p2' of
+        LT /\ _ -> modify_ _ { cursor = dragFromPoint p1 p2' term }
+        _ -> modify_ _ { cursor = dragFromPoint p1 p2 term }
     _ -> pure unit -- TODO
 handleUserAction (InsertAtom _) = todo "handleUserAction" {}
 handleUserAction InsertGroup = todo "handleUserAction" {}
@@ -373,7 +385,7 @@ renderTerm' ph i (Atom a) =
   [ HH.div
       ( [ [ HP.classes [ HH.ClassName "Atom" ] ]
         , -- an Atom is a Point handle for the Point right _before_ it
-          pointHandleProps (Point ph (wrap (unwrap i)))
+          pointHandleProps_double (Point ph (wrap (unwrap i))) (Point ph (wrap (unwrap i + 1)))
         ] # Array.fold
       )
       [ HH.text a ]
@@ -399,4 +411,10 @@ pointHandleProps :: forall r. Point -> Array (HH.IProp (onMouseDown :: MouseEven
 pointHandleProps p =
   [ HE.onMouseDown (\event -> UserAction_Action (StartDrag p) $ MouseActionConfig { event })
   , HE.onMouseUp (\event -> UserAction_Action (EndDrag p) $ MouseActionConfig { event })
+  ]
+
+pointHandleProps_double :: forall r. Point -> Point -> Array (HH.IProp (onMouseDown :: MouseEvent, onMouseUp :: MouseEvent | r) Action)
+pointHandleProps_double p1 p2 =
+  [ HE.onMouseDown (\event -> UserAction_Action (StartDrag_double p1 p2) $ MouseActionConfig { event })
+  , HE.onMouseUp (\event -> UserAction_Action (EndDrag_double p1 p2) $ MouseActionConfig { event })
   ]
