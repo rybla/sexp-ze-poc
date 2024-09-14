@@ -3,15 +3,12 @@ module Sexpze.Component.App where
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Data.Newtype (wrap)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.Query.Event as HQE
 import Sexpze.Component.Editor as Editor
-import Sexpze.Data.Sexp (Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), Point(..))
 import Type.Proxy (Proxy(..))
 import Web.HTML as Web.HTML
 import Web.HTML.HTMLDocument as HTMLDocument
@@ -44,16 +41,17 @@ component = H.mkComponent { initialState, eval, render }
     KeyboardAction ke -> do
       H.tell (Proxy :: Proxy "editor") unit $ Editor.KeyboardEvent_Query ke
 
-    EditorOutput out -> do
+    EditorOutput _out -> do
       pure unit -- TODO
 
   render _state =
     HH.div []
-      [ HH.slot (Proxy :: Proxy "editor") unit Editor.component
-          ( Editor.Input
-              { term: [ Group {} [ Atom "a", Atom "b", Atom "c" ] ]
-              , cursor: InjectPoint (Point mempty (wrap 0))
-              }
-          )
-          EditorOutput
-      ]
+      -- [ HH.slot (Proxy :: Proxy "editor") unit Editor.component
+      --     ( Editor.Input
+      --         { term: [ Group {} [ Atom "a", Atom "b", Atom "c" ] ]
+      --         , cursor: InjectPoint (Point mempty (wrap 0))
+      --         }
+      --     )
+      --     EditorOutput
+      -- ]
+      []
