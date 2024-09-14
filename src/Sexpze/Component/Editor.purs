@@ -11,19 +11,23 @@ import Data.Foldable (traverse_)
 import Data.Generic.Rep (class Generic)
 import Data.List as List
 import Data.Maybe (Maybe(..))
-import Data.Newtype as Newtype
+import Data.Newtype as NT
 import Data.Show.Generic (genericShow)
+import Data.String as String
 import Data.Tuple (fst, snd)
 import Data.Tuple.Nested ((/\))
+import Debug as Debug
 import Effect.Aff (Aff)
+import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp, Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), Path, Point(..), SexpKidIndex, SpanCursor(..), SpanHandle(..), Zipper(..), ZipperCursor(..), ZipperHandle(..), ZipperOrSpanCursor, atPoint, atSpanCursor, atZipperCursor, dragFromPoint, getSpanHandle, getZipperHandle, mapWithSexpPointIndex, orderPoints, unconsPoint, unconsSpanCursor, unconsZipperCursor)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), Path, Point(..), SexpKidIndex, SpanCursor(..), SpanHandle(..), Zipper(..), ZipperCursor(..), ZipperHandle(..), ZipperOrSpanCursor, atPoint, atSpanCursor, atZipperCursor, dragFromPoint, getSpanHandle, getZipperHandle, mapWithSexpPointIndex, nestPaths, orderPoints, unconsPoint, unconsSpanCursor, unconsZipperCursor)
 import Sexpze.Utility (todo)
+import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.KeyboardEvent as KeyboardEvent
 import Web.UIEvent.MouseEvent (MouseEvent)
@@ -75,9 +79,10 @@ component = H.mkComponent { initialState, eval, render }
   handleQuery = case _ of
     KeyboardEvent_Query event a -> do
       Console.log $ "[KeyboardEvent_Query] " <> show { key: KeyboardEvent.key event }
-      event
-        # parseKeyboardEvent
-        # traverse_ handleUserAction
+      let actions = event # parseKeyboardEvent
+      when (not (Array.null actions)) do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+      actions # traverse_ handleUserAction
       pure (Just a)
 
   handleAction :: Action -> HM Unit
@@ -89,8 +94,7 @@ component = H.mkComponent { initialState, eval, render }
   render state =
     HH.div
       [ HP.classes [ HH.ClassName "Editor" ] ]
-      [ HH.div []
-          [ HH.div [ HP.classes [ HH.ClassName "Term" ] ] (renderTermWithCursor state.cursor state.term) ]
+      [ HH.div [ HP.classes [ HH.ClassName "Term" ] ] (renderTermWithCursor state.cursor state.term)
       ]
 
 parseKeyboardEvent :: KeyboardEvent -> Array UserAction
@@ -99,13 +103,13 @@ parseKeyboardEvent event =
   else if cmd && key == "x" then [ Copy, Delete ]
   else if cmd && key == "v" then [ Paste empty ]
   else if key == "Backspace" then [ Delete ]
-  else if key == "(" || key == ")" then [ Paste (pure (ZipperClipboard (Zipper [ Group {} [] ] (Point mempty (Newtype.wrap 0))))) ]
-  else
-    [ Paste (pure (SpanClipboard [ Atom key ])) ]
+  else if key == "(" || key == ")" then [ Paste (pure (ZipperClipboard (Zipper [ Group {} [] ] (Point mempty (NT.wrap 0))))) ]
+  else if String.length key == 1 then [ Paste (pure (SpanClipboard [ Atom key ])) ]
+  else Debug.trace (show { key }) \_ -> []
   where
   key = event # KeyboardEvent.key
   shift = event # KeyboardEvent.shiftKey
-  cmd = event # KeyboardEvent.ctrlKey || KeyboardEvent.metaKey
+  cmd = (event # KeyboardEvent.ctrlKey) || (event # KeyboardEvent.metaKey)
 
 --------------------------------------------------------------------------------
 -- State
@@ -174,10 +178,10 @@ handleUserAction Delete = do
   state <- get
   case state.cursor of
     InjectPoint (Point ph j) -> do
-      unless (j == Newtype.wrap 0) do
+      unless (j == NT.wrap 0) do
         modify_ _
-          { term = state.term # atSpanCursor (SpanCursor ph (Newtype.wrap (Newtype.unwrap j - 1)) j) # fst # (_ $ [])
-          , cursor = InjectPoint $ Point ph (Newtype.wrap (Newtype.unwrap j - 1))
+          { term = state.term # atSpanCursor (SpanCursor ph (NT.wrap (NT.unwrap j - 1)) j) # fst # (_ $ [])
+          , cursor = InjectPoint $ Point ph (NT.wrap (NT.unwrap j - 1))
           }
     InjectSpanCursor s _ -> do
       modify_ _
@@ -209,29 +213,32 @@ handleUserAction (Paste mb_clipboard_) = do
     -- cursor ends up as a point at end of pasted span
     InjectPoint p@(Point ph j) /\ Just (SpanClipboard xs_cb) -> modify_ _
       { term = state.term # atPoint p # (\f -> f xs_cb)
-      , cursor = InjectPoint $ Point ph (Newtype.wrap (Newtype.unwrap j + Array.length xs_cb))
+      , cursor = InjectPoint $ Point ph (NT.wrap (NT.unwrap j + Array.length xs_cb))
       }
     -- splice into point cursor with zipper cursor
-    InjectPoint p /\ Just (ZipperClipboard (Zipper xs_cb p_cb)) -> modify_ _
+    -- cursor ends up at InnerStartZipperHandle
+    InjectPoint p@(Point ph j) /\ Just (ZipperClipboard (Zipper xs_cb p_cb@(Point ph_cb j_cb))) -> modify_ _
       { term = state.term # atPoint p # (_ $ xs_cb # atPoint p_cb # (_ $ []))
-      , cursor = todo "handleUserAction.Paste" {}
+      , cursor = InjectPoint $ Point ((ph `List.snoc` NT.wrap (NT.unwrap j)) `nestPaths` ph_cb) j_cb
       }
     -- replace span cursor with span clipboard
-    InjectSpanCursor s _ /\ Just (SpanClipboard xs_cb) -> modify_ _
+    -- cursor ends up at EndSpanHandle
+    InjectSpanCursor s@(SpanCursor ph j1 _) _ /\ Just (SpanClipboard xs_cb) -> modify_ _
       { term = state.term # atSpanCursor s # snd # const xs_cb
-      , cursor = todo "handleUserAction.Paste" {}
+      , cursor = InjectPoint $ Point ph (NT.wrap (NT.unwrap j1 + Array.length xs_cb))
       }
     -- wrap span cursor with zipper clibpoard
-    InjectSpanCursor sc _ /\ Just (ZipperClipboard (Zipper xs_cb p_cb)) -> modify_ _
-      { term = state.term # atSpanCursor sc # \(sc /\ xs_sc) -> xs_cb # atPoint p_cb # (_ $ xs_sc)
-      , cursor = todo "handleUserAction.Paste" {}
+    -- cursr ends up at InnerStartZipperHandle
+    InjectSpanCursor sc@(SpanCursor ph j1 _) _ /\ Just (ZipperClipboard (Zipper xs_cb p_cb@(Point ph_cb j_cb))) -> modify_ _
+      { term = state.term # atSpanCursor sc # \(_sc /\ xs_sc) -> xs_cb # atPoint p_cb # (_ $ xs_sc)
+      , cursor = InjectPoint $ Point (ph <> List.singleton (NT.wrap (NT.unwrap j1)) `nestPaths` ph_cb) j_cb
       }
     -- can't paste at a zipper cursor with a span clibboard
     InjectZipperCursor _zc _ /\ Just (SpanClipboard _x_cb) -> pure unit
     -- replace zipper crsor with zipper clibpoard
-    InjectZipperCursor zc _ /\ Just (ZipperClipboard (Zipper xs_cb p_cb)) -> modify_ _
-      { term = state.term # atZipperCursor zc # \(wrap_zc /\ (Zipper _xs_zc _p_zc)) -> wrap_zc \xs_zc -> xs_cb # atPoint p_cb # (_ $ xs_zc)
-      , cursor = todo "handleUserAction.Paste" {}
+    InjectZipperCursor zc@(ZipperCursor (SpanCursor ph1_zc _ _) _) _ /\ Just (ZipperClipboard (Zipper xs_cb p_cb@(Point ph_cb j_cb))) -> modify_ _
+      { term = state.term # atZipperCursor zc # fst # \wrap_zc -> wrap_zc \xs_zc -> xs_cb # atPoint p_cb # (_ $ xs_zc)
+      , cursor = InjectPoint $ Point (ph1_zc `nestPaths` ph_cb) j_cb
       }
 handleUserAction (StartDrag p) = do
   modify_ _ { cursor = InjectPoint p }
@@ -294,17 +301,17 @@ renderTerm'_helper _ ph i (Atom a) =
   [ HH.div
       ( [ [ HP.classes [ HH.ClassName "Atom" ] ]
         , -- an Atom is a Point handle for the Point right _before_ it
-          pointHandleProps (Point ph (Newtype.wrap (Newtype.unwrap i)))
+          pointHandleProps (Point ph (NT.wrap (NT.unwrap i)))
         ] # Array.fold
       )
       [ HH.text a ]
   ]
 renderTerm'_helper f ph i (Group _n xs) =
   [ -- a Group's left paren is a Point handle for the Point right _before_ it
-    [ renderPointHandle (Point ph (Newtype.wrap (Newtype.unwrap i))) [ HH.ClassName "Paren", HH.ClassName "OpenParen" ] "(" ]
+    [ renderPointHandle (Point ph (NT.wrap (NT.unwrap i))) [ HH.ClassName "Paren", HH.ClassName "OpenParen" ] "(" ]
   , f (ph `List.snoc` i) xs
   , -- a Group's right paren is a Point handle for the Point right _after_ it
-    [ renderPointHandle (Point ph (Newtype.wrap (Newtype.unwrap i + 1))) [ HH.ClassName "Paren", HH.ClassName "CloseParen" ] ")" ]
+    [ renderPointHandle (Point ph (NT.wrap (NT.unwrap i + 1))) [ HH.ClassName "Paren", HH.ClassName "CloseParen" ] ")" ]
   ] # Array.fold
 
 --------------------------------------------------------------------------------
@@ -395,6 +402,14 @@ renderTermWithZipperCursor zos zh ph =
                   )
                   "}"
               ]
+            else if j1' == j' && j2' == j' then
+              [ renderPointHandle (Point ph j')
+                  ( [ [ HH.ClassName "Cursor", HH.ClassName "InnerStartZipperHandle" ]
+                    , if zh == InnerStartZipperHandle then [ HH.ClassName "active" ] else []
+                    ] # Array.fold
+                  )
+                  "X"
+              ]
             else if j1' == j' then
               [ renderPointHandle (Point ph j')
                   ( [ [ HH.ClassName "Cursor", HH.ClassName "InnerStartZipperHandle" ]
@@ -418,7 +433,15 @@ renderTermWithZipperCursor zos zh ph =
             [ renderPointHandle (Point ph j) [ HH.ClassName "Space" ] "•" ]
         )
         ( \(j1 /\ j2) j' ->
-            if j1 == j' then
+            if j1 == j' && j2 == j' then
+              [ renderPointHandle (Point ph j')
+                  ( [ [ HH.ClassName "Cursor", HH.ClassName "InnerStartZipperHandle" ]
+                    , if zh == InnerStartZipperHandle then [ HH.ClassName "active" ] else []
+                    ] # Array.fold
+                  )
+                  "X"
+              ]
+            else if j1 == j' then
               [ renderPointHandle (Point ph j')
                   ( [ [ HH.ClassName "Cursor", HH.ClassName "InnerStartZipperHandle" ]
                     , if zh == InnerStartZipperHandle then [ HH.ClassName "active" ] else []
@@ -479,7 +502,7 @@ renderTerm' ph i (Atom a) =
   [ HH.div
       ( [ [ HP.classes [ HH.ClassName "Atom" ] ]
         , -- an Atom is a Point handle for the Point right _before_ it
-          pointHandleProps_double (Point ph (Newtype.wrap (Newtype.unwrap i))) (Point ph (Newtype.wrap (Newtype.unwrap i + 1)))
+          pointHandleProps_double (Point ph (NT.wrap (NT.unwrap i))) (Point ph (NT.wrap (NT.unwrap i + 1)))
         ] # Array.fold
       )
       [ HH.text a ]
@@ -487,8 +510,8 @@ renderTerm' ph i (Atom a) =
 renderTerm' ph i (Group _n xs) =
   [ -- a Group's left paren is a Point handle for the Point right _before_ it
     [ HH.div
-        ( [ [ HP.classes [ HH.ClassName "PointHandle", HH.ClassName "Paren", HH.ClassName "OpenParen" ] ]
-          , pointHandleProps_double (Point ph (Newtype.wrap (Newtype.unwrap i))) (Point ph (Newtype.wrap (Newtype.unwrap i + 1)))
+        ( [ [ HP.classes [ HH.ClassName "Point", HH.ClassName "Paren", HH.ClassName "OpenParen" ] ]
+          , pointHandleProps_double (Point ph (NT.wrap (NT.unwrap i))) (Point ph (NT.wrap (NT.unwrap i + 1)))
           ]
             # Array.fold
         )
@@ -497,8 +520,8 @@ renderTerm' ph i (Group _n xs) =
   , renderTerm (ph `List.snoc` i) xs
   , -- a Group's right paren is a Point handle for the Point right _after_ it
     [ HH.div
-        ( [ [ HP.classes [ HH.ClassName "PointHandle", HH.ClassName "Paren", HH.ClassName "CloseParen" ] ]
-          , pointHandleProps_double (Point ph (Newtype.wrap (Newtype.unwrap i))) (Point ph (Newtype.wrap (Newtype.unwrap i + 1)))
+        ( [ [ HP.classes [ HH.ClassName "Point", HH.ClassName "Paren", HH.ClassName "CloseParen" ] ]
+          , pointHandleProps_double (Point ph (NT.wrap (NT.unwrap i))) (Point ph (NT.wrap (NT.unwrap i + 1)))
           ]
             # Array.fold
         )
@@ -509,7 +532,7 @@ renderTerm' ph i (Group _n xs) =
 renderPointHandle :: Point -> Array HH.ClassName -> String -> HTML
 renderPointHandle p cns s =
   HH.div
-    ( [ [ HP.classes ([ HH.ClassName "PointHandle" ] <> cns) ]
+    ( [ [ HP.classes ([ HH.ClassName "Point" ] <> cns) ]
       , pointHandleProps p
       ] # Array.fold
     )

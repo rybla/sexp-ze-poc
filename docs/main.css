@@ -22,13 +22,35 @@ body {
 
 .Term {
   font-family: monospace;
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
 }
 
 /* PointCursor */
 
-.PointHandle {
+.Point {
   user-select: none;
+}
+
+.Point.Space {
+  /* color: gray; */
+  color: transparent;
+}
+
+.Point.Space:hover {
+  color: red;
+}
+
+/* Cursor */
+
+.Cursor {
+  font-weight: bold;
+  color: red;
+}
+
+.Cursor.active {
+  /* background-color: red; */
+  /* color: black; */
 }
 
 /* SpanCursor */
@@ -60,21 +82,6 @@ body {
 .OuterEndZipperHandle,
 .OuterEndZipperHandle~* {
   background-color: transparent;
-}
-
-.Space {
-  /* color: gray; */
-  color: transparent;
-}
-
-.Cursor {
-  font-weight: bold;
-  color: red;
-}
-
-.Cursor.active {
-  /* background-color: red; */
-  /* color: black; */
 }
 
 .Atom {

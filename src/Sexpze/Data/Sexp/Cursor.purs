@@ -13,6 +13,7 @@ import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (fromMaybe')
 import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Newtype as Newtype
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
@@ -81,6 +82,13 @@ isSexpPointIndexBeforeSexpKidIndex (SexpPointIndex i) (SexpKidIndex j) = i <= j
 --------------------------------------------------------------------------------
 
 type Path = List SexpKidIndex
+
+nestPaths :: Path -> Path -> Path
+nestPaths ph Nil = ph
+nestPaths Nil ph = ph
+nestPaths (i1 : ph1) (i2 : ph2) = case ph1 of
+  Nil -> Newtype.over2 SexpKidIndex add i1 i2 : ph2
+  _ : _ -> i1 : nestPaths ph1 ph2
 
 atPath :: forall n a. Path -> Sexp n a -> (Sexp n a -> Sexp n a) /\ Sexp n a
 atPath ph xs = case ph of
