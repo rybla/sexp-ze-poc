@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Plus (empty)
 import Data.Array as Array
-import Data.Bifunctor (bimap, lmap)
+import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Either.Nested (type (\/), Either5, in1, in2, in3, in4, in5)
 import Data.Eq.Generic (genericEq)
@@ -13,13 +13,12 @@ import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), fromMaybe')
 import Data.Newtype (class Newtype, over2, unwrap)
-import Data.Newtype as Newtype
 import Data.Ordering (invert)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..), snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
-import Sexpze.Utility (bug, todo)
+import Sexpze.Utility (bug)
 
 --------------------------------------------------------------------------------
 -- KidIndex
@@ -38,23 +37,14 @@ modifySexpAt (KidIndex i) f (Sexp n e's) = Sexp n (e's # Array.modifyAt i f # fr
 modifySpanAt :: forall n a. KidIndex -> (Sexp' n a -> Sexp' n a) -> Span n a -> Span n a
 modifySpanAt (KidIndex i) f (Span e's) = Span (e's # Array.modifyAt i f # fromMaybe' (\_ -> bug "modifySpanAt" "KidIndex out of bounds"))
 
-getSexpKid :: forall n a. KidIndex -> Sexp n a -> Sexp' n a
-getSexpKid (KidIndex i) (Sexp _ e's) = e's Array.!! i # fromMaybe' (\_ -> bug "getSexpKid" "KidIndex out of bounds")
+getKid :: forall n a. KidIndex -> Span n a -> Sexp' n a
+getKid (KidIndex i) (Span e's) = e's Array.!! i # fromMaybe' (\_ -> bug "getSexpKid" "KidIndex out of bounds")
 
-getSpanKid :: forall n a. KidIndex -> Span n a -> Sexp' n a
-getSpanKid (KidIndex i) (Span e's) = e's Array.!! i # fromMaybe' (\_ -> bug "getSexpKid" "KidIndex out of bounds")
-
-atSexpKidIndex :: forall n a. KidIndex -> Sexp n a -> (Sexp' n a -> Sexp n a) /\ Sexp' n a
-atSexpKidIndex i e =
-  Tuple
-    (\e' -> e # modifySexpAt i (const e'))
-    (e # getSexpKid i)
-
-atSpanKidIndex :: forall n a. KidIndex -> Span n a -> (Sexp' n a -> Span n a) /\ Sexp' n a
-atSpanKidIndex i e =
+atKidIndex :: forall n a. KidIndex -> Span n a -> (Sexp' n a -> Span n a) /\ Sexp' n a
+atKidIndex i e =
   Tuple
     (\e' -> e # modifySpanAt i (const e'))
-    (e # getSpanKid i)
+    (e # getKid i)
 
 --------------------------------------------------------------------------------
 -- PointIndex
@@ -79,12 +69,12 @@ comparePointIndexToKidIndex' j i = compareKidIndexToPointIndex' i j # not
 comparePointIndexToKidIndex :: PointIndex -> KidIndex -> Ordering
 comparePointIndexToKidIndex j i = compareKidIndexToPointIndex i j # invert
 
-atPointIndex :: forall n a. PointIndex -> Sexp n a -> (Sexp n a -> Sexp n a)
-atPointIndex i (Sexp n es) (Sexp _ es') =
+atPointIndex :: forall n a. PointIndex -> Span n a -> (Span n a -> Span n a)
+atPointIndex i (Span es) (Span es') =
   let
     { before, after } = es # Array.splitAt (unwrap i)
   in
-    Sexp n (before <> es' <> after)
+    Span (before <> es' <> after)
 
 --------------------------------------------------------------------------------
 -- Path
@@ -115,20 +105,15 @@ consPath i (Path is) = Path (i : is)
 snocPath :: Path -> KidIndex -> Path
 snocPath (Path is) i = Path (is `List.snoc` i)
 
-atPath :: forall n a. Path -> Sexp n a -> (Sexp n a -> Sexp n a) /\ Sexp n a
+atPath :: forall n a. Path -> Span n a -> (Span n a -> Span n a) /\ Span n a
 atPath ph e = case unconsPath ph of
   Nothing -> identity /\ e
-  Just (i /\ ph') -> case e # atSexpKidIndex i of
-    _ /\ Atom _ -> bug "atPath" "Path into Atom"
-    wrap_i /\ Group e_i -> lmap ((wrap_i <<< Group) <<< _) $ atPath ph' e_i
-
-atSpanPath :: forall n a. Path -> Span n a -> (Span n a -> Span n a) /\ Span n a
-atSpanPath ph e = case unconsPath ph of
-  Nothing -> identity /\ e
-  Just (i /\ ph') -> case e # atSpanKidIndex i of
-    _ /\ Atom _ -> bug "atSpanPath" "Path into Atom"
-    -- wrap_i /\ Group e_i -> lmap ((wrap_i <<< Group <<< ?a) <<< _) $ atSpanPath ph' (e_i # toSpan)
-    wrap_i /\ Group e_i -> todo "" {}
+  Just (i /\ ph') -> case e # atKidIndex i of
+    w_i /\ e_i ->
+      let
+        w_e'_i /\ e'_i = inSexp' e_i
+      in
+        lmap ((w_i <<< w_e'_i) <<< _) $ atPath ph' e'_i
 
 commonPath :: Path -> Path -> Path -> Path /\ (Path /\ Path)
 commonPath ph ph1 ph2 = case unconsPath ph1 /\ unconsPath ph2 of
@@ -175,11 +160,11 @@ unconsPointCursor (PointCursor ph j) = case unconsPath ph of
   Just (i /\ ph') -> Left (i /\ PointCursor ph' j)
   Nothing -> Right j
 
-atPointCursor :: forall n a. (Sexp n a -> Sexp n a) -> PointCursor -> Sexp n a -> (Sexp n a -> Sexp n a)
+atPointCursor :: forall n a. (Span n a -> Span n a) -> PointCursor -> Span n a -> (Span n a -> Span n a)
 atPointCursor w p e = case unconsPointCursor p of
   Left (i /\ p') ->
     let
-      w' /\ e' = e # atSexpKidIndex i
+      w' /\ e' = e # atKidIndex i
       w'' /\ e'' = e' # inSexp'
     in
       atPointCursor (w <<< w' <<< w'') p' e''
@@ -224,8 +209,21 @@ instance (Show n, Show a) => Show (Span n a) where
 instance (Eq n, Eq a) => Eq (Span n a) where
   eq x = genericEq x
 
+data SpanHandle = Start | End
+
+derive instance Generic SpanHandle _
+
+instance Show SpanHandle where
+  show x = genericShow x
+
+instance Eq SpanHandle where
+  eq x = genericEq x
+
 toSpan :: forall n a. Sexp n a -> Span n a
 toSpan (Sexp _ es) = Span es
+
+fromSpan :: forall n a. n -> Span n a -> Sexp n a
+fromSpan n (Span es) = (Sexp n es)
 
 -- | safe constructor. checks:
 -- |   - p1 <= p2
@@ -261,15 +259,9 @@ atSpanPointIndexSpan i1 i2 (Span es) =
       (\(Span es') -> Span (before <> es' <> after))
       (Span middle)
 
-atSpanCursor :: forall n a. SpanCursor -> Sexp n a -> (Span n a -> Sexp n a) /\ Span n a
+atSpanCursor :: forall n a. SpanCursor -> Span n a -> (Span n a -> Span n a) /\ Span n a
 atSpanCursor (SpanCursor ph j1 j2) =
   atPath ph >>> \(w /\ e') ->
-    lmap (w <<< _)
-      $ atPointIndexSpan j1 j2 e'
-
-atSpanCursor' :: forall n a. SpanCursor -> Span n a -> (Span n a -> Span n a) /\ Span n a
-atSpanCursor' (SpanCursor ph j1 j2) =
-  atSpanPath ph >>> \(w /\ e') ->
     lmap (w <<< _)
       $ atSpanPointIndexSpan j1 j2 e'
 
@@ -292,7 +284,7 @@ instance Eq ZipperCursor where
 zipperCursor :: SpanCursor -> SpanCursor -> ZipperCursor
 zipperCursor = ZipperCursor -- TODO
 
-data Zipper n a = Zipper PointCursor (Span n a)
+data Zipper n a = Zipper (Span n a) PointCursor
 
 derive instance Generic (Zipper n a) _
 
@@ -300,6 +292,16 @@ instance (Show n, Show a) => Show (Zipper n a) where
   show x = genericShow x
 
 instance (Eq n, Eq a) => Eq (Zipper n a) where
+  eq x = genericEq x
+
+data ZipperHandle = Inner SpanHandle | Outer SpanHandle
+
+derive instance Generic ZipperHandle _
+
+instance Show ZipperHandle where
+  show x = genericShow x
+
+instance Eq ZipperHandle where
   eq x = genericEq x
 
 unconsZipperCursor
@@ -322,25 +324,42 @@ unconsZipperCursor (Right s) | Left (i /\ s') <- unconsSpanCursor s = in4 (i /\ 
 unconsZipperCursor (Right s) | Right (j1 /\ j2) <- unconsSpanCursor s = in5 (j1 /\ j2)
 unconsZipperCursor _ = bug "unconsZipperCursor" "impossible"
 
-atZipperCursor :: forall n a. ZipperCursor -> Sexp n a -> ((Span n a -> Span n a) -> Sexp n a) /\ Zipper n a
+atSpanHandle :: SpanHandle -> SpanCursor -> PointCursor
+atSpanHandle Start (SpanCursor ph p1 _p2) = PointCursor ph p1
+atSpanHandle End (SpanCursor ph _p1 p2) = PointCursor ph p2
+
+atZipperCursor :: forall n a. ZipperCursor -> Span n a -> ((Span n a -> Span n a) -> Span n a) /\ Zipper n a
 atZipperCursor (ZipperCursor s1 s2) e =
   let
     w1 /\ e1 = e # atSpanCursor s1
-    w2 /\ e2 = e1 # atSpanCursor' s2
+    _w2 /\ e2 = e1 # atSpanCursor s2
   in
-    -- Tuple
-    --   ?a
-    --   (Zipper ?a ?A)
-    todo "" {}
+    Tuple
+      (w1 <<< (_ $ e2))
+      (Zipper e2 (atSpanHandle Start s2))
 
 --------------------------------------------------------------------------------
 -- Cursor
 --------------------------------------------------------------------------------
 
+data Cursor
+  = InjectPointCursor PointCursor
+  | InjectSpanCursor SpanCursor SpanHandle
+  | InjectZipperCursor ZipperCursor ZipperHandle
+
+derive instance Generic Cursor _
+
+instance Show Cursor where
+  show x = genericShow x
+
+instance Eq Cursor where
+  eq x = genericEq x
+
 --------------------------------------------------------------------------------
 -- misc
 --------------------------------------------------------------------------------
 
-inSexp' :: forall n a. Sexp' n a -> (Sexp n a -> Sexp' n a) /\ Sexp n a
+inSexp' :: forall n a. Sexp' n a -> (Span n a -> Sexp' n a) /\ Span n a
 inSexp' (Atom _) = bug "inSexp'" "can't go in an Atom"
-inSexp' (Group e) = Group /\ e
+inSexp' (Group (Sexp n e)) = (Group <<< fromSpan n) /\ Span e
+
