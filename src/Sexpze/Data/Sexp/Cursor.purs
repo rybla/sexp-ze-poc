@@ -35,14 +35,26 @@ derive newtype instance Ord KidIndex
 modifySexpAt :: forall n a. KidIndex -> (Sexp' n a -> Sexp' n a) -> Sexp n a -> Sexp n a
 modifySexpAt (KidIndex i) f (Sexp n e's) = Sexp n (e's # Array.modifyAt i f # fromMaybe' (\_ -> bug "modifySexpAt" "KidIndex out of bounds"))
 
+modifySpanAt :: forall n a. KidIndex -> (Sexp' n a -> Sexp' n a) -> Span n a -> Span n a
+modifySpanAt (KidIndex i) f (Span e's) = Span (e's # Array.modifyAt i f # fromMaybe' (\_ -> bug "modifySpanAt" "KidIndex out of bounds"))
+
 getSexpKid :: forall n a. KidIndex -> Sexp n a -> Sexp' n a
 getSexpKid (KidIndex i) (Sexp _ e's) = e's Array.!! i # fromMaybe' (\_ -> bug "getSexpKid" "KidIndex out of bounds")
 
-atKidIndex :: forall n a. KidIndex -> Sexp n a -> (Sexp' n a -> Sexp n a) /\ Sexp' n a
-atKidIndex i e =
+getSpanKid :: forall n a. KidIndex -> Span n a -> Sexp' n a
+getSpanKid (KidIndex i) (Span e's) = e's Array.!! i # fromMaybe' (\_ -> bug "getSexpKid" "KidIndex out of bounds")
+
+atSexpKidIndex :: forall n a. KidIndex -> Sexp n a -> (Sexp' n a -> Sexp n a) /\ Sexp' n a
+atSexpKidIndex i e =
   Tuple
     (\e' -> e # modifySexpAt i (const e'))
     (e # getSexpKid i)
+
+atSpanKidIndex :: forall n a. KidIndex -> Span n a -> (Sexp' n a -> Span n a) /\ Sexp' n a
+atSpanKidIndex i e =
+  Tuple
+    (\e' -> e # modifySpanAt i (const e'))
+    (e # getSpanKid i)
 
 --------------------------------------------------------------------------------
 -- PointIndex
@@ -106,9 +118,17 @@ snocPath (Path is) i = Path (is `List.snoc` i)
 atPath :: forall n a. Path -> Sexp n a -> (Sexp n a -> Sexp n a) /\ Sexp n a
 atPath ph e = case unconsPath ph of
   Nothing -> identity /\ e
-  Just (i /\ ph') -> case e # atKidIndex i of
+  Just (i /\ ph') -> case e # atSexpKidIndex i of
     _ /\ Atom _ -> bug "atPath" "Path into Atom"
     wrap_i /\ Group e_i -> lmap ((wrap_i <<< Group) <<< _) $ atPath ph' e_i
+
+atSpanPath :: forall n a. Path -> Span n a -> (Span n a -> Span n a) /\ Span n a
+atSpanPath ph e = case unconsPath ph of
+  Nothing -> identity /\ e
+  Just (i /\ ph') -> case e # atSpanKidIndex i of
+    _ /\ Atom _ -> bug "atSpanPath" "Path into Atom"
+    -- wrap_i /\ Group e_i -> lmap ((wrap_i <<< Group <<< ?a) <<< _) $ atSpanPath ph' (e_i # toSpan)
+    wrap_i /\ Group e_i -> todo "" {}
 
 commonPath :: Path -> Path -> Path -> Path /\ (Path /\ Path)
 commonPath ph ph1 ph2 = case unconsPath ph1 /\ unconsPath ph2 of
@@ -159,7 +179,7 @@ atPointCursor :: forall n a. (Sexp n a -> Sexp n a) -> PointCursor -> Sexp n a -
 atPointCursor w p e = case unconsPointCursor p of
   Left (i /\ p') ->
     let
-      w' /\ e' = e # atKidIndex i
+      w' /\ e' = e # atSexpKidIndex i
       w'' /\ e'' = e' # inSexp'
     in
       atPointCursor (w <<< w' <<< w'') p' e''
@@ -194,6 +214,19 @@ instance Show SpanCursor where
 instance Eq SpanCursor where
   eq x = genericEq x
 
+data Span n a = Span (Array (Sexp' n a))
+
+derive instance Generic (Span n a) _
+
+instance (Show n, Show a) => Show (Span n a) where
+  show x = genericShow x
+
+instance (Eq n, Eq a) => Eq (Span n a) where
+  eq x = genericEq x
+
+toSpan :: forall n a. Sexp n a -> Span n a
+toSpan (Sexp _ es) = Span es
+
 -- | safe constructor. checks:
 -- |   - p1 <= p2
 spanCursor :: Path -> PointIndex -> PointIndex -> SpanCursor
@@ -208,12 +241,6 @@ unconsSpanCursor (SpanCursor ph j1 j2) = case unconsPath ph of
   Just (i /\ ph') -> Left (i /\ SpanCursor ph' j1 j2)
   Nothing -> Right (j1 /\ j2)
 
---------------------------------------------------------------------------------
--- Span
---------------------------------------------------------------------------------
-
-data Span n a = Span (Array (Sexp' n a))
-
 atPointIndexSpan :: forall n a. PointIndex -> PointIndex -> Sexp n a -> (Span n a -> Sexp n a) /\ Span n a
 atPointIndexSpan i1 i2 (Sexp n es) =
   let
@@ -224,11 +251,27 @@ atPointIndexSpan i1 i2 (Sexp n es) =
       (\(Span es') -> Sexp n (before <> es' <> after))
       (Span middle)
 
+atSpanPointIndexSpan :: forall n a. PointIndex -> PointIndex -> Span n a -> (Span n a -> Span n a) /\ Span n a
+atSpanPointIndexSpan i1 i2 (Span es) =
+  let
+    { before, after: after_ } = es # Array.splitAt (unwrap i1)
+    { before: middle, after } = after_ # Array.splitAt (unwrap i2 - unwrap i1)
+  in
+    Tuple
+      (\(Span es') -> Span (before <> es' <> after))
+      (Span middle)
+
 atSpanCursor :: forall n a. SpanCursor -> Sexp n a -> (Span n a -> Sexp n a) /\ Span n a
 atSpanCursor (SpanCursor ph j1 j2) =
   atPath ph >>> \(w /\ e') ->
     lmap (w <<< _)
       $ atPointIndexSpan j1 j2 e'
+
+atSpanCursor' :: forall n a. SpanCursor -> Span n a -> (Span n a -> Span n a) /\ Span n a
+atSpanCursor' (SpanCursor ph j1 j2) =
+  atSpanPath ph >>> \(w /\ e') ->
+    lmap (w <<< _)
+      $ atSpanPointIndexSpan j1 j2 e'
 
 --------------------------------------------------------------------------------
 -- ZipperCursor
@@ -249,10 +292,18 @@ instance Eq ZipperCursor where
 zipperCursor :: SpanCursor -> SpanCursor -> ZipperCursor
 zipperCursor = ZipperCursor -- TODO
 
-type ZipperOrSpanCursor = ZipperCursor \/ SpanCursor
+data Zipper n a = Zipper PointCursor (Span n a)
+
+derive instance Generic (Zipper n a) _
+
+instance (Show n, Show a) => Show (Zipper n a) where
+  show x = genericShow x
+
+instance (Eq n, Eq a) => Eq (Zipper n a) where
+  eq x = genericEq x
 
 unconsZipperCursor
-  :: ZipperOrSpanCursor
+  :: ZipperCursor \/ SpanCursor
   -> Either5
        -- midst of outer path
        (KidIndex /\ ZipperCursor)
@@ -271,11 +322,16 @@ unconsZipperCursor (Right s) | Left (i /\ s') <- unconsSpanCursor s = in4 (i /\ 
 unconsZipperCursor (Right s) | Right (j1 /\ j2) <- unconsSpanCursor s = in5 (j1 /\ j2)
 unconsZipperCursor _ = bug "unconsZipperCursor" "impossible"
 
---------------------------------------------------------------------------------
--- Zipper
---------------------------------------------------------------------------------
-
-data Zipper n a = Zipper PointCursor (Span n a)
+atZipperCursor :: forall n a. ZipperCursor -> Sexp n a -> ((Span n a -> Span n a) -> Sexp n a) /\ Zipper n a
+atZipperCursor (ZipperCursor s1 s2) e =
+  let
+    w1 /\ e1 = e # atSpanCursor s1
+    w2 /\ e2 = e1 # atSpanCursor' s2
+  in
+    -- Tuple
+    --   ?a
+    --   (Zipper ?a ?A)
+    todo "" {}
 
 --------------------------------------------------------------------------------
 -- Cursor
