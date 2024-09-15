@@ -4,9 +4,9 @@ import Prelude
 
 import Control.Plus (empty)
 import Data.Array as Array
-import Data.Bifunctor (lmap)
+import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..))
-import Data.Either.Nested (type (\/))
+import Data.Either.Nested (type (\/), Either5, in1, in2, in3, in4, in5)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
@@ -184,12 +184,51 @@ comparePointCursors (PointCursor ph1 j1) (PointCursor ph2 j2) =
 -- SpanCursor
 --------------------------------------------------------------------------------
 
-data SpanCursor = SpanCursor Path PointCursor PointCursor
+data SpanCursor = SpanCursor Path PointIndex PointIndex
+
+derive instance Generic SpanCursor _
+
+instance Show SpanCursor where
+  show x = genericShow x
+
+instance Eq SpanCursor where
+  eq x = genericEq x
 
 -- | safe constructor. checks:
 -- |   - p1 <= p2
-spanCursor :: Path -> PointCursor -> PointCursor -> SpanCursor
+spanCursor :: Path -> PointIndex -> PointIndex -> SpanCursor
 spanCursor = SpanCursor -- TODO
+
+unconsSpanCursor
+  :: SpanCursor
+  -> Either
+       (KidIndex /\ SpanCursor)
+       (PointIndex /\ PointIndex)
+unconsSpanCursor (SpanCursor ph j1 j2) = case unconsPath ph of
+  Just (i /\ ph') -> Left (i /\ SpanCursor ph' j1 j2)
+  Nothing -> Right (j1 /\ j2)
+
+--------------------------------------------------------------------------------
+-- Span
+--------------------------------------------------------------------------------
+
+data Span n a = Span (Array (Sexp' n a))
+
+atPointIndexSpan :: forall n a. PointIndex -> PointIndex -> Sexp n a -> (Span n a -> Sexp n a) /\ Span n a
+atPointIndexSpan i1 i2 (Sexp n es) =
+  let
+    { before, after: after_ } = es # Array.splitAt (unwrap i1)
+    { before: middle, after } = after_ # Array.splitAt (unwrap i2 - unwrap i1)
+  in
+    Tuple
+      (\(Span es') -> Sexp n (before <> es' <> after))
+      (Span middle)
+
+atSpanCursor :: forall n a. SpanCursor -> Sexp n a -> (Span n a -> Sexp n a) /\ Span n a
+atSpanCursor (SpanCursor ph j1 j2) =
+  atPath ph >>> \(w /\ e') ->
+    lmap (w <<< _)
+      $ atPointIndexSpan j1 j2 e'
 
 --------------------------------------------------------------------------------
 -- ZipperCursor
@@ -197,10 +236,46 @@ spanCursor = SpanCursor -- TODO
 
 data ZipperCursor = ZipperCursor SpanCursor SpanCursor
 
+derive instance Generic ZipperCursor _
+
+instance Show ZipperCursor where
+  show x = genericShow x
+
+instance Eq ZipperCursor where
+  eq x = genericEq x
+
 -- | safe constructor. checks:
 -- |   - s2 is non-empty
 zipperCursor :: SpanCursor -> SpanCursor -> ZipperCursor
 zipperCursor = ZipperCursor -- TODO
+
+type ZipperOrSpanCursor = ZipperCursor \/ SpanCursor
+
+unconsZipperCursor
+  :: ZipperOrSpanCursor
+  -> Either5
+       -- midst of outer path
+       (KidIndex /\ ZipperCursor)
+       -- end of outer path; midst of inner path
+       ((PointIndex /\ PointIndex) /\ KidIndex /\ SpanCursor)
+       -- end of outer path; end of inner path since it's empty
+       ((PointIndex /\ PointIndex) /\ (PointIndex /\ PointIndex))
+       -- midst of inner path
+       (KidIndex /\ SpanCursor)
+       -- end of inner path
+       (PointIndex /\ PointIndex)
+unconsZipperCursor (Left (ZipperCursor s1 s2)) | Left (i1 /\ s1') <- unconsSpanCursor s1 = in1 (i1 /\ ZipperCursor s1' s2)
+unconsZipperCursor (Left (ZipperCursor s1 s2)) | Right (j1_start /\ j1_end) <- unconsSpanCursor s1, Left (i2 /\ s2') <- unconsSpanCursor s2 = in2 ((j1_start /\ j1_end) /\ i2 /\ s2')
+unconsZipperCursor (Left (ZipperCursor s1 s2)) | Right (j1_start /\ j1_end) <- unconsSpanCursor s1, Right (j2_start /\ j2_end) <- unconsSpanCursor s2 = in3 ((j1_start /\ j1_end) /\ (j2_start /\ j2_end))
+unconsZipperCursor (Right s) | Left (i /\ s') <- unconsSpanCursor s = in4 (i /\ s')
+unconsZipperCursor (Right s) | Right (j1 /\ j2) <- unconsSpanCursor s = in5 (j1 /\ j2)
+unconsZipperCursor _ = bug "unconsZipperCursor" "impossible"
+
+--------------------------------------------------------------------------------
+-- Zipper
+--------------------------------------------------------------------------------
+
+data Zipper n a = Zipper PointCursor (Span n a)
 
 --------------------------------------------------------------------------------
 -- Cursor
