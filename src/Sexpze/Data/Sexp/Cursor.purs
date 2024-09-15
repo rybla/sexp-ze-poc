@@ -12,13 +12,13 @@ import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), fromMaybe')
-import Data.Newtype (class Newtype, over2, unwrap)
+import Data.Newtype (class Newtype, over2, unwrap, wrap)
 import Data.Ordering (invert)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..), snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
-import Sexpze.Utility (bug)
+import Sexpze.Utility (bug, todo)
 
 --------------------------------------------------------------------------------
 -- KidIndex
@@ -186,10 +186,52 @@ comparePointCursors (PointCursor ph1 j1) (PointCursor ph2 j2) =
       Just (i1 /\ _) /\ Just (i2 /\ _) -> compare i1 i2
 
 --------------------------------------------------------------------------------
+-- PointDist
+--------------------------------------------------------------------------------
+
+newtype PointDist = PointDist Int
+
+derive instance Newtype PointDist _
+
+derive newtype instance Show PointDist
+derive newtype instance Eq PointDist
+
+newtype PointDistNeg = PointDistNeg Int
+
+derive instance Newtype PointDistNeg _
+
+derive newtype instance Show PointDistNeg
+derive newtype instance Eq PointDistNeg
+
+shiftPointCursorByPointDist :: PointDist -> PointCursor -> PointCursor
+shiftPointCursorByPointDist d (PointCursor ph j) = PointCursor ph (wrap (unwrap j + unwrap d))
+
+shiftPointCursorByPointDistNeg :: PointDistNeg -> PointCursor -> PointCursor
+shiftPointCursorByPointDistNeg d (PointCursor ph j) = PointCursor ph (wrap (unwrap j - unwrap d))
+
+getPointDistFromPointIndex :: forall n a. PointIndex -> Span n a -> PointDist
+getPointDistFromPointIndex j _ = wrap (unwrap j)
+
+getPointDistNegFromPointIndex :: forall n a. PointIndex -> Span n a -> PointDistNeg
+getPointDistNegFromPointIndex j (Span es) = wrap (Array.length es - unwrap j)
+
+getPointIndexFromPointDist :: forall n a. PointDist -> Span n a -> PointIndex
+getPointIndexFromPointDist d _ = wrap (unwrap d)
+
+getPointIndexFromPointDistNeg :: forall n a. PointDistNeg -> Span n a -> PointIndex
+getPointIndexFromPointDistNeg d (Span es) = wrap (Array.length es - unwrap d)
+
+getSpanCursorBetweenPointIndices :: forall n a. Path -> PointIndex -> PointIndex -> Span n a -> SpanCursor
+getSpanCursorBetweenPointIndices ph j1 j2 s = SpanCursor ph (getPointDistFromPointIndex j1 s) (getPointDistNegFromPointIndex j2 s)
+
+pointDistBetweenPointIndices :: PointIndex -> PointIndex -> PointDist
+pointDistBetweenPointIndices j1 j2 = wrap (unwrap j2 - unwrap j1)
+
+--------------------------------------------------------------------------------
 -- SpanCursor
 --------------------------------------------------------------------------------
 
-data SpanCursor = SpanCursor Path PointIndex PointIndex
+data SpanCursor = SpanCursor Path PointDist PointDistNeg
 
 derive instance Generic SpanCursor _
 
@@ -227,14 +269,14 @@ fromSpan n (Span es) = (Sexp n es)
 
 -- | safe constructor. checks:
 -- |   - p1 <= p2
-spanCursor :: Path -> PointIndex -> PointIndex -> SpanCursor
+spanCursor :: Path -> PointDist -> PointDistNeg -> SpanCursor
 spanCursor = SpanCursor -- TODO
 
 unconsSpanCursor
   :: SpanCursor
   -> Either
        (KidIndex /\ SpanCursor)
-       (PointIndex /\ PointIndex)
+       (PointDist /\ PointDistNeg)
 unconsSpanCursor (SpanCursor ph j1 j2) = case unconsPath ph of
   Just (i /\ ph') -> Left (i /\ SpanCursor ph' j1 j2)
   Nothing -> Right (j1 /\ j2)
@@ -249,11 +291,11 @@ atPointIndexSpan i1 i2 (Sexp n es) =
       (\(Span es') -> Sexp n (before <> es' <> after))
       (Span middle)
 
-atSpanPointIndexSpan :: forall n a. PointIndex -> PointIndex -> Span n a -> (Span n a -> Span n a) /\ Span n a
-atSpanPointIndexSpan i1 i2 (Span es) =
+atSpanPointIndexSpan :: forall n a. PointDist -> PointDistNeg -> Span n a -> (Span n a -> Span n a) /\ Span n a
+atSpanPointIndexSpan d1 d2 (Span es) =
   let
-    { before, after: after_ } = es # Array.splitAt (unwrap i1)
-    { before: middle, after } = after_ # Array.splitAt (unwrap i2 - unwrap i1)
+    { before, after: after_ } = es # Array.splitAt (unwrap d1)
+    { before: middle, after } = after_ # Array.splitAt (Array.length es - unwrap d2)
   in
     Tuple
       (\(Span es') -> Span (before <> es' <> after))
@@ -310,13 +352,13 @@ unconsZipperCursor
        -- midst of outer path
        (KidIndex /\ ZipperCursor)
        -- end of outer path; midst of inner path
-       ((PointIndex /\ PointIndex) /\ KidIndex /\ SpanCursor)
+       ((PointDist /\ PointDistNeg) /\ KidIndex /\ SpanCursor)
        -- end of outer path; end of inner path since it's empty
-       ((PointIndex /\ PointIndex) /\ (PointIndex /\ PointIndex))
+       ((PointDist /\ PointDistNeg) /\ (PointDist /\ PointDistNeg))
        -- midst of inner path
        (KidIndex /\ SpanCursor)
        -- end of inner path
-       (PointIndex /\ PointIndex)
+       (PointDist /\ PointDistNeg)
 unconsZipperCursor (Left (ZipperCursor s1 s2)) | Left (i1 /\ s1') <- unconsSpanCursor s1 = in1 (i1 /\ ZipperCursor s1' s2)
 unconsZipperCursor (Left (ZipperCursor s1 s2)) | Right (j1_start /\ j1_end) <- unconsSpanCursor s1, Left (i2 /\ s2') <- unconsSpanCursor s2 = in2 ((j1_start /\ j1_end) /\ i2 /\ s2')
 unconsZipperCursor (Left (ZipperCursor s1 s2)) | Right (j1_start /\ j1_end) <- unconsSpanCursor s1, Right (j2_start /\ j2_end) <- unconsSpanCursor s2 = in3 ((j1_start /\ j1_end) /\ (j2_start /\ j2_end))
@@ -324,28 +366,21 @@ unconsZipperCursor (Right s) | Left (i /\ s') <- unconsSpanCursor s = in4 (i /\ 
 unconsZipperCursor (Right s) | Right (j1 /\ j2) <- unconsSpanCursor s = in5 (j1 /\ j2)
 unconsZipperCursor _ = bug "unconsZipperCursor" "impossible"
 
-atSpanHandle :: SpanHandle -> SpanCursor -> PointCursor
-atSpanHandle Start (SpanCursor ph p1 _p2) = PointCursor ph p1
-atSpanHandle End (SpanCursor ph _p1 p2) = PointCursor ph p2
-
 atZipperCursor :: forall n a. ZipperCursor -> Span n a -> ((Span n a -> Span n a) -> Span n a) /\ Zipper n a
-atZipperCursor (ZipperCursor s1 s2) e =
+atZipperCursor (ZipperCursor s1 s2@(SpanCursor ph2 d2 _)) e =
   let
     w1 /\ e1 = e # atSpanCursor s1
     _w2 /\ e2 = e1 # atSpanCursor s2
   in
     Tuple
       (w1 <<< (_ $ e2))
-      (Zipper e2 (atSpanHandle Start s2))
+      (Zipper e2 (shiftPointCursorByPointDist d2 (PointCursor ph2 (wrap 0))))
 
 --------------------------------------------------------------------------------
 -- Cursor
 --------------------------------------------------------------------------------
 
-data Cursor
-  = InjectPointCursor PointCursor
-  | InjectSpanCursor SpanCursor SpanHandle
-  | InjectZipperCursor ZipperCursor ZipperHandle
+data Cursor = Cursor ZipperCursor ZipperHandle
 
 derive instance Generic Cursor _
 
