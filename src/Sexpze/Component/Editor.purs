@@ -170,20 +170,7 @@ renderTermState state =
 renderTermSpanWithCursor :: ZipperCursor \/ SpanCursor -> ZipperHandle -> Path -> TermSpan -> Array HTML
 renderTermSpanWithCursor c h ph = renderTermWithCursor c h ph <<< fromSpan defaultNodeData
 
-mapWithPointIndex :: forall a r. (PointIndex -> r) -> (KidIndex -> a -> r) -> Array a -> Array r
-mapWithPointIndex f_point f_kid xs =
-  [ [ f_point (wrap 0) ] ] <> (xs # Array.mapWithIndex \i x -> [ f_kid (wrap i) x, f_point (wrap (i + 1)) ])
-    # Array.fold
-
-renderPoint :: PointCursor -> HTML
-renderPoint p = renderAnchor p [ HP.classes [ HH.ClassName "Anchor", HH.ClassName "Point" ] ] [ HH.text "•" ]
-
-renderZipperHandle :: ZipperHandle -> ZipperHandle -> PointCursor -> HTML
-renderZipperHandle h h'@(Outer Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "OuterStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "{" ]
-renderZipperHandle h h'@(Outer End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "OuterEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "}" ]
-renderZipperHandle h h'@(Inner Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "{" ]
-renderZipperHandle h h'@(Inner End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "}" ]
-
+-- TODO: take into account NodeData somehow
 renderTermWithCursor :: ZipperCursor \/ SpanCursor -> ZipperHandle -> Path -> Term -> Array HTML
 renderTermWithCursor c h ph (Sexp _n es) =
   let
@@ -224,7 +211,6 @@ renderTermWithCursor c h ph (Sexp _n es) =
                 j2_inner = shiftPointIndexByPointDistNeg (d2_outer + d2_inner) (lastPointIndexOfSpan e)
               in
                 es
-                  # map renderTerm'
                   # mapWithPointIndex
                       ( \j' ->
                           -- Inner Start overrides Outer Start
@@ -240,7 +226,7 @@ renderTermWithCursor c h ph (Sexp _n es) =
                           else
                             [ renderPoint (PointCursor ph j') ]
                       )
-                      (\_i' htmls -> htmls)
+                      (renderTerm' ph)
                   # Array.fold
           )
           ( \(_i /\ c') ->
@@ -265,7 +251,7 @@ renderTermWithCursor c h ph (Sexp _n es) =
                           else
                             [ renderPoint (PointCursor ph j') ]
                       )
-                      (\_i' -> renderTerm')
+                      (renderTerm' ph)
                   # Array.fold
           )
 
@@ -279,9 +265,56 @@ renderTerm'WithCursor _c _h ph i (Atom a) =
       [ HH.text a.label ]
   ]
 renderTerm'WithCursor c h ph i (Group e) =
-  renderTermWithCursor c h (ph `snocPath` i) e
+  -- renderTermWithCursor c h (ph `snocPath` i) e
+  [ [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "LeftParen" ] ] [ HH.text "(" ] ]
+  , renderTermWithCursor c h (ph `snocPath` i) e
+  , [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "RightParen" ] ] [ HH.text ")" ] ]
+  ] # Array.fold
+
+mapWithPointIndex :: forall a r. (PointIndex -> r) -> (KidIndex -> a -> r) -> Array a -> Array r
+mapWithPointIndex f_point f_kid xs =
+  [ [ f_point (wrap 0) ] ] <> (xs # Array.mapWithIndex \i x -> [ f_kid (wrap i) x, f_point (wrap (i + 1)) ])
+    # Array.fold
 
 --------------------------------------------------------------------------------
+
+-- TODO: take into account `n : NodeData` somehow
+renderTerm :: Path -> Term -> Array HTML
+renderTerm ph (Sexp _n es) =
+  es
+    # mapWithPointIndex
+        (\j' -> [ renderPoint (PointCursor ph j') ])
+        (\i' -> renderTerm' ph i')
+    # Array.fold
+
+renderTermSpan :: Path -> TermSpan -> Array HTML
+renderTermSpan ph = renderTerm ph <<< fromSpan defaultNodeData
+
+renderTerm' :: Path -> KidIndex -> Term' -> Array HTML
+renderTerm' ph i (Group e) =
+  [ [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "LeftParen" ] ] [ HH.text "(" ] ]
+  , renderTerm (ph `snocPath` i) e
+  , [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "RightParen" ] ] [ HH.text ")" ] ]
+  ] # Array.fold
+renderTerm' ph i (Atom a) =
+  [ HH.div
+      [ HP.classes [ HH.ClassName "Atom" ]
+      , HE.onMouseUp \_event -> UserAction_Action $ StartDrag_TwoSided (PointCursor ph (pointIndexRightBeforeKidIndex i))
+      , HE.onMouseDown \_event -> UserAction_Action $ StartDrag_TwoSided (PointCursor ph (pointIndexRightAfterKidIndex i))
+      ]
+      [ HH.text a.label ]
+  ]
+
+--------------------------------------------------------------------------------
+
+renderPoint :: PointCursor -> HTML
+renderPoint p = renderAnchor p [ HP.classes [ HH.ClassName "Anchor", HH.ClassName "Point" ] ] [ HH.text "•" ]
+
+renderZipperHandle :: ZipperHandle -> ZipperHandle -> PointCursor -> HTML
+renderZipperHandle h h'@(Outer Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "OuterStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "[" ]
+renderZipperHandle h h'@(Outer End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "OuterEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "]" ]
+renderZipperHandle h h'@(Inner Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "{" ]
+renderZipperHandle h h'@(Inner End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "}" ]
 
 renderAnchor :: PointCursor -> Array (HH.IProp HTML.Indexed.HTMLdiv Action) -> Array HTML -> HTML
 renderAnchor p props =
@@ -290,24 +323,6 @@ renderAnchor p props =
       , HE.onMouseUp \_event -> UserAction_Action $ UserAction_Core $ EndDrag p
       ] <> props
     )
-
---------------------------------------------------------------------------------
-
--- TODO: take into account `n : NodeData` somehow
-renderTerm :: Term -> Array HTML
-renderTerm (Sexp _n es) = renderTerm' `Array.foldMap` es
-
-renderTermSpan :: TermSpan -> Array HTML
-renderTermSpan = renderTerm <<< fromSpan defaultNodeData
-
-renderTerm' :: Term' -> Array HTML
-renderTerm' (Group e) =
-  [ [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "LeftParen" ] ] [ HH.text "(" ] ]
-  , renderTerm e
-  , [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "RightParen" ] ] [ HH.text ")" ] ]
-  ] # Array.fold
-renderTerm' (Atom a) =
-  [ HH.div [ HP.classes [ HH.ClassName "Atom" ] ] [ HH.text a.label ] ]
 
 --------------------------------------------------------------------------------
 -- component

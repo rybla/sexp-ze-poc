@@ -91,10 +91,10 @@
   };
   var applySecond = function(dictApply) {
     var apply1 = apply(dictApply);
-    var map23 = map(dictApply.Functor0());
+    var map21 = map(dictApply.Functor0());
     return function(a2) {
       return function(b2) {
-        return apply1(map23($$const(identity2))(a2))(b2);
+        return apply1(map21($$const(identity2))(a2))(b2);
       };
     };
   };
@@ -1765,10 +1765,10 @@
   var $$try = function(dictMonadError) {
     var catchError1 = catchError(dictMonadError);
     var Monad0 = dictMonadError.MonadThrow0().Monad0();
-    var map23 = map(Monad0.Bind1().Apply0().Functor0());
+    var map21 = map(Monad0.Bind1().Apply0().Functor0());
     var pure14 = pure(Monad0.Applicative0());
     return function(a2) {
-      return catchError1(map23(Right.create)(a2))(function($52) {
+      return catchError1(map21(Right.create)(a2))(function($52) {
         return pure14(Left.create($52));
       });
     };
@@ -2288,9 +2288,9 @@
     return dict.foldMap;
   };
   var fold = function(dictFoldable) {
-    var foldMap22 = foldMap(dictFoldable);
+    var foldMap2 = foldMap(dictFoldable);
     return function(dictMonoid) {
-      return foldMap22(dictMonoid)(identity5);
+      return foldMap2(dictMonoid)(identity5);
     };
   };
 
@@ -2317,7 +2317,7 @@
       };
     }
     return function(apply2) {
-      return function(map23) {
+      return function(map21) {
         return function(pure14) {
           return function(f) {
             return function(array) {
@@ -2326,14 +2326,14 @@
                   case 0:
                     return pure14([]);
                   case 1:
-                    return map23(array1)(f(array[bot]));
+                    return map21(array1)(f(array[bot]));
                   case 2:
-                    return apply2(map23(array2)(f(array[bot])))(f(array[bot + 1]));
+                    return apply2(map21(array2)(f(array[bot])))(f(array[bot + 1]));
                   case 3:
-                    return apply2(apply2(map23(array3)(f(array[bot])))(f(array[bot + 1])))(f(array[bot + 2]));
+                    return apply2(apply2(map21(array3)(f(array[bot])))(f(array[bot + 1])))(f(array[bot + 2]));
                   default:
                     var pivot = bot + Math.floor((top2 - bot) / 4) * 2;
-                    return apply2(map23(concat2)(go2(bot, pivot)))(go2(pivot, top2));
+                    return apply2(map21(concat2)(go2(bot, pivot)))(go2(pivot, top2));
                 }
               }
               return go2(0, array.length);
@@ -4204,7 +4204,6 @@
 
   // output/Data.Array/index.js
   var fromJust4 = /* @__PURE__ */ fromJust();
-  var foldMap12 = /* @__PURE__ */ foldMap(foldableArray);
   var fold1 = /* @__PURE__ */ fold(foldableArray);
   var updateAt = /* @__PURE__ */ function() {
     return runFn5(_updateAt)(Just.create)(Nothing.value);
@@ -4241,9 +4240,6 @@
         return maybe(Nothing.value)(go2)(index2(xs)(i2));
       };
     };
-  };
-  var foldMap2 = function(dictMonoid) {
-    return foldMap12(dictMonoid);
   };
   var fold2 = function(dictMonoid) {
     return fold1(dictMonoid);
@@ -8620,15 +8616,13 @@
 
   // output/Sexpze.Component.Editor/index.js
   var showRecord2 = /* @__PURE__ */ showRecord()();
-  var fold3 = /* @__PURE__ */ fold2(monoidArray);
-  var foldMap3 = /* @__PURE__ */ foldMap2(monoidArray);
   var append7 = /* @__PURE__ */ append(semigroupArray);
+  var fold3 = /* @__PURE__ */ fold2(monoidArray);
   var eq3 = /* @__PURE__ */ eq(eqZipperHandle);
   var wrap4 = /* @__PURE__ */ wrap();
   var eq13 = /* @__PURE__ */ eq(eqPointIndex);
   var add12 = /* @__PURE__ */ add(semiringPointDistNeg);
   var add23 = /* @__PURE__ */ add(semiringPointDist);
-  var map20 = /* @__PURE__ */ map(functorArray);
   var bind5 = /* @__PURE__ */ bind(bindHalogenM);
   var get2 = /* @__PURE__ */ get(monadStateHalogenM);
   var modify_3 = /* @__PURE__ */ modify_2(monadStateHalogenM);
@@ -8758,20 +8752,6 @@
     };
     return UserAction_Action2;
   }();
-  var renderTerm$prime = function(v) {
-    if (v instanceof Group) {
-      return fold3([[div2([classes(["Punc", "Paren", "LeftParen"])])([text5("(")])], renderTerm(v.value0), [div2([classes(["Punc", "Paren", "RightParen"])])([text5(")")])]]);
-    }
-    ;
-    if (v instanceof Atom) {
-      return [div2([classes(["Atom"])])([text5(v.value0.label)])];
-    }
-    ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 303, column 1 - line 303, column 35): " + [v.constructor.name]);
-  };
-  var renderTerm = function(v) {
-    return foldMap3(renderTerm$prime)(v.value1);
-  };
   var renderAnchor = function(p2) {
     return function(props) {
       return div2(append7([onMouseDown(function(_event) {
@@ -8789,30 +8769,30 @@
       return function(v2) {
         if (v1 instanceof Outer && v1.value0 instanceof Start) {
           return renderAnchor(v2)([classes(fold3([["Anchor", "ZipperHandle", "OuterStart"], function() {
-            var $183 = eq3(v)(v1);
-            if ($183) {
+            var $177 = eq3(v)(v1);
+            if ($177) {
               return ["active"];
             }
             ;
             return [];
-          }()]))])([text5("{")]);
+          }()]))])([text5("[")]);
         }
         ;
         if (v1 instanceof Outer && v1.value0 instanceof End) {
           return renderAnchor(v2)([classes(fold3([["Anchor", "ZipperHandle", "OuterEnd"], function() {
-            var $185 = eq3(v)(v1);
-            if ($185) {
+            var $179 = eq3(v)(v1);
+            if ($179) {
               return ["active"];
             }
             ;
             return [];
-          }()]))])([text5("}")]);
+          }()]))])([text5("]")]);
         }
         ;
         if (v1 instanceof Inner && v1.value0 instanceof Start) {
           return renderAnchor(v2)([classes(fold3([["Anchor", "ZipperHandle", "InnerStart"], function() {
-            var $187 = eq3(v)(v1);
-            if ($187) {
+            var $181 = eq3(v)(v1);
+            if ($181) {
               return ["active"];
             }
             ;
@@ -8822,8 +8802,8 @@
         ;
         if (v1 instanceof Inner && v1.value0 instanceof End) {
           return renderAnchor(v2)([classes(fold3([["Anchor", "ZipperHandle", "InnerEnd"], function() {
-            var $189 = eq3(v)(v1);
-            if ($189) {
+            var $183 = eq3(v)(v1);
+            if ($183) {
               return ["active"];
             }
             ;
@@ -8831,7 +8811,7 @@
           }()]))])([text5("}")]);
         }
         ;
-        throw new Error("Failed pattern match at Sexpze.Component.Editor (line 181, column 1 - line 181, column 74): " + [v.constructor.name, v1.constructor.name, v2.constructor.name]);
+        throw new Error("Failed pattern match at Sexpze.Component.Editor (line 313, column 1 - line 313, column 74): " + [v.constructor.name, v1.constructor.name, v2.constructor.name]);
       };
     };
   };
@@ -8844,6 +8824,34 @@
           };
         })(xs)));
       };
+    };
+  };
+  var renderTerm$prime = function(v) {
+    return function(v1) {
+      return function(v2) {
+        if (v2 instanceof Group) {
+          return fold3([[div2([classes(["Punc", "Paren", "LeftParen"])])([text5("(")])], renderTerm(snocPath(v)(v1))(v2.value0), [div2([classes(["Punc", "Paren", "RightParen"])])([text5(")")])]]);
+        }
+        ;
+        if (v2 instanceof Atom) {
+          return [div2([classes(["Atom"]), onMouseUp(function(_event) {
+            return new UserAction_Action(new StartDrag_TwoSided(new PointCursor(v, pointIndexRightBeforeKidIndex(v1))));
+          }), onMouseDown(function(_event) {
+            return new UserAction_Action(new StartDrag_TwoSided(new PointCursor(v, pointIndexRightAfterKidIndex(v1))));
+          })])([text5(v2.value0.label)])];
+        }
+        ;
+        throw new Error("Failed pattern match at Sexpze.Component.Editor (line 293, column 1 - line 293, column 55): " + [v.constructor.name, v1.constructor.name, v2.constructor.name]);
+      };
+    };
+  };
+  var renderTerm = function(ph) {
+    return function(v) {
+      return fold3(mapWithPointIndex(function(j$prime) {
+        return [renderPoint(new PointCursor(ph, j$prime))];
+      })(function(i$prime) {
+        return renderTerm$prime(ph)(i$prime);
+      })(v.value1));
     };
   };
   var renderTermWithCursor = function(c) {
@@ -8860,13 +8868,13 @@
             var j2_outer = shiftPointIndexByPointDistNeg(v1.value0.value1)(lastPointIndexOfSpan(v.value1));
             var j1_outer = shiftPointIndexByPointDist(v1.value0.value0)(wrap4(0));
             return fold3(mapWithPointIndex(function(j$prime) {
-              var $199 = eq13(j$prime)(j1_outer);
-              if ($199) {
+              var $202 = eq13(j$prime)(j1_outer);
+              if ($202) {
                 return [renderZipperHandle(h)(new Outer(Start.value))(new PointCursor(ph, j1_outer))];
               }
               ;
-              var $200 = eq13(j$prime)(j2_outer);
-              if ($200) {
+              var $203 = eq13(j$prime)(j2_outer);
+              if ($203) {
                 return [renderZipperHandle(h)(new Outer(End.value))(new PointCursor(ph, j2_outer))];
               }
               ;
@@ -8880,32 +8888,28 @@
             var j1_outer = shiftPointIndexByPointDist(v1.value0.value0)(wrap4(0));
             var j1_inner = shiftPointIndexByPointDist(add23(v1.value0.value0)(v1.value1.value0))(wrap4(0));
             return fold3(mapWithPointIndex(function(j$prime) {
-              var $208 = eq13(j$prime)(j1_inner);
-              if ($208) {
+              var $211 = eq13(j$prime)(j1_inner);
+              if ($211) {
                 return [renderZipperHandle(h)(new Inner(Start.value))(new PointCursor(ph, j1_inner))];
               }
               ;
-              var $209 = eq13(j$prime)(j1_outer);
-              if ($209) {
+              var $212 = eq13(j$prime)(j1_outer);
+              if ($212) {
                 return [renderZipperHandle(h)(new Outer(Start.value))(new PointCursor(ph, j1_outer))];
               }
               ;
-              var $210 = eq13(j$prime)(j2_outer);
-              if ($210) {
+              var $213 = eq13(j$prime)(j2_outer);
+              if ($213) {
                 return [renderZipperHandle(h)(new Outer(End.value))(new PointCursor(ph, j2_outer))];
               }
               ;
-              var $211 = eq13(j$prime)(j2_inner);
-              if ($211) {
+              var $214 = eq13(j$prime)(j2_inner);
+              if ($214) {
                 return [renderZipperHandle(h)(new Inner(End.value))(new PointCursor(ph, j2_inner))];
               }
               ;
               return [renderPoint(new PointCursor(ph, j$prime))];
-            })(function(_i$prime) {
-              return function(htmls) {
-                return htmls;
-              };
-            })(map20(renderTerm$prime)(v.value1)));
+            })(renderTerm$prime(ph))(v.value1));
           })(function(v1) {
             return fold3(mapWithPointIndex(function(j$prime) {
               return [renderPoint(new PointCursor(ph, j$prime))];
@@ -8916,20 +8920,18 @@
             var j2_inner = shiftPointIndexByPointDistNeg(v1.value1)(lastPointIndexOfSpan(v.value1));
             var j1_inner = shiftPointIndexByPointDist(v1.value0)(wrap4(0));
             return fold3(mapWithPointIndex(function(j$prime) {
-              var $222 = eq13(j$prime)(j1_inner);
-              if ($222) {
+              var $225 = eq13(j$prime)(j1_inner);
+              if ($225) {
                 return [renderZipperHandle(h)(new Inner(Start.value))(new PointCursor(ph, j1_inner))];
               }
               ;
-              var $223 = eq13(j$prime)(j2_inner);
-              if ($223) {
+              var $226 = eq13(j$prime)(j2_inner);
+              if ($226) {
                 return [renderZipperHandle(h)(new Inner(End.value))(new PointCursor(ph, j2_inner))];
               }
               ;
               return [renderPoint(new PointCursor(ph, j$prime))];
-            })(function(_i$prime) {
-              return renderTerm$prime;
-            })(v.value1));
+            })(renderTerm$prime(ph))(v.value1));
           })(unconsZipperCursor(c));
         };
       };
@@ -8949,10 +8951,10 @@
             }
             ;
             if (v4 instanceof Group) {
-              return renderTermWithCursor(v)(v1)(snocPath(v2)(v3))(v4.value0);
+              return fold3([[div2([classes(["Punc", "Paren", "LeftParen"])])([text5("(")])], renderTermWithCursor(v)(v1)(snocPath(v2)(v3))(v4.value0), [div2([classes(["Punc", "Paren", "RightParen"])])([text5(")")])]]);
             }
             ;
-            throw new Error("Failed pattern match at Sexpze.Component.Editor (line 272, column 1 - line 272, column 111): " + [v.constructor.name, v1.constructor.name, v2.constructor.name, v3.constructor.name, v4.constructor.name]);
+            throw new Error("Failed pattern match at Sexpze.Component.Editor (line 258, column 1 - line 258, column 111): " + [v.constructor.name, v1.constructor.name, v2.constructor.name, v3.constructor.name, v4.constructor.name]);
           };
         };
       };
@@ -8963,28 +8965,28 @@
       return bind5(get2)(function(state3) {
         var v1 = deleteAtCursor(state3.termState.cursor)(state3.termState.term);
         return modify_3(function(v2) {
-          var $240 = {};
-          for (var $241 in v2) {
-            if ({}.hasOwnProperty.call(v2, $241)) {
-              $240[$241] = v2[$241];
+          var $243 = {};
+          for (var $244 in v2) {
+            if ({}.hasOwnProperty.call(v2, $244)) {
+              $243[$244] = v2[$244];
             }
             ;
           }
           ;
-          $240.termState = function() {
-            var $237 = {};
-            for (var $238 in v2.termState) {
-              if ({}.hasOwnProperty.call(v2.termState, $238)) {
-                $237[$238] = v2["termState"][$238];
+          $243.termState = function() {
+            var $240 = {};
+            for (var $241 in v2.termState) {
+              if ({}.hasOwnProperty.call(v2.termState, $241)) {
+                $240[$241] = v2["termState"][$241];
               }
               ;
             }
             ;
-            $237.cursor = v1.value0;
-            $237.term = v1.value1;
-            return $237;
+            $240.cursor = v1.value0;
+            $240.term = v1.value1;
+            return $240;
           }();
-          return $240;
+          return $243;
         });
       });
     }
@@ -9001,27 +9003,27 @@
       return bind5(get2)(function(state3) {
         var cursor = new Cursor(new ZipperCursor(fromPointCursorToZeroWidthSpanCursor(v.value0)(state3.termState.term), emptySpanCursor), new Inner(Start.value));
         return discard5(modify_3(function(v1) {
-          var $249 = {};
-          for (var $250 in v1) {
-            if ({}.hasOwnProperty.call(v1, $250)) {
-              $249[$250] = v1[$250];
+          var $252 = {};
+          for (var $253 in v1) {
+            if ({}.hasOwnProperty.call(v1, $253)) {
+              $252[$253] = v1[$253];
             }
             ;
           }
           ;
-          $249.termState = function() {
-            var $246 = {};
-            for (var $247 in v1.termState) {
-              if ({}.hasOwnProperty.call(v1.termState, $247)) {
-                $246[$247] = v1["termState"][$247];
+          $252.termState = function() {
+            var $249 = {};
+            for (var $250 in v1.termState) {
+              if ({}.hasOwnProperty.call(v1.termState, $250)) {
+                $249[$250] = v1["termState"][$250];
               }
               ;
             }
             ;
-            $246.cursor = cursor;
-            return $246;
+            $249.cursor = cursor;
+            return $249;
           }();
-          return $249;
+          return $252;
         }))(function() {
           return logShow3({
             cursor
@@ -9045,8 +9047,8 @@
       return bind5(get2)(function(state3) {
         var p2 = shiftPointCursorByPointDist(wrap4(1))(v.value0);
         var p3 = getCursorHandle(state3.termState.cursor)(state3.termState.term);
-        var $256 = lessThan2(v.value0)(p3);
-        if ($256) {
+        var $259 = lessThan2(v.value0)(p3);
+        if ($259) {
           return pure10([new EndDrag(v.value0)]);
         }
         ;
@@ -9066,33 +9068,33 @@
     var shift = shiftKey(event);
     var key2 = key(event);
     var cmd = ctrlKey(event) || metaKey(event);
-    var $259 = cmd && key2 === "c";
-    if ($259) {
+    var $262 = cmd && key2 === "c";
+    if ($262) {
       return [new UserAction_Core(Copy.value)];
     }
     ;
-    var $260 = cmd && key2 === "x";
-    if ($260) {
+    var $263 = cmd && key2 === "x";
+    if ($263) {
       return [new UserAction_Core(Copy.value), new UserAction_Core(Delete.value)];
     }
     ;
-    var $261 = cmd && key2 === "v";
-    if ($261) {
+    var $264 = cmd && key2 === "v";
+    if ($264) {
       return [new UserAction_Core(new Paste(empty8))];
     }
     ;
-    var $262 = key2 === "Backspace";
-    if ($262) {
+    var $265 = key2 === "Backspace";
+    if ($265) {
       return [new UserAction_Core(Delete.value)];
     }
     ;
-    var $263 = key2 === "(" || key2 === ")";
-    if ($263) {
+    var $266 = key2 === "(" || key2 === ")";
+    if ($266) {
       return [new UserAction_Core(new Paste(pure13(new Zipper([new Group(new Sexp(defaultNodeData, []))], new PointCursor(consPath(wrap4(0))(mempty3), wrap4(0))))))];
     }
     ;
-    var $264 = length7(key2) === 1;
-    if ($264) {
+    var $267 = length7(key2) === 1;
+    if ($267) {
       return [new UserAction_Core(new Paste(pure13(new Zipper([new Atom({
         label: key2
       })], new PointCursor(mempty3, wrap4(1))))))];
@@ -9107,10 +9109,10 @@
   var renderTermSpanWithCursor = function(c) {
     return function(h) {
       return function(ph) {
-        var $276 = renderTermWithCursor(c)(h)(ph);
-        var $277 = fromSpan(defaultNodeData);
-        return function($278) {
-          return $276($277($278));
+        var $280 = renderTermWithCursor(c)(h)(ph);
+        var $281 = fromSpan(defaultNodeData);
+        return function($282) {
+          return $280($281($282));
         };
       };
     };
@@ -9151,7 +9153,7 @@
         });
       }
       ;
-      throw new Error("Failed pattern match at Sexpze.Component.Editor (line 337, column 3 - line 337, column 36): " + [v.constructor.name]);
+      throw new Error("Failed pattern match at Sexpze.Component.Editor (line 352, column 3 - line 352, column 36): " + [v.constructor.name]);
     };
     var $$eval = mkEval({
       receive: defaultEval.receive,
@@ -9177,7 +9179,7 @@
   var bind6 = /* @__PURE__ */ bind(bindHalogenM);
   var liftEffect8 = /* @__PURE__ */ liftEffect(/* @__PURE__ */ monadEffectHalogenM(monadEffectAff));
   var bind15 = /* @__PURE__ */ bind(bindEffect);
-  var map21 = /* @__PURE__ */ map(functorMaybe);
+  var map20 = /* @__PURE__ */ map(functorMaybe);
   var tell3 = /* @__PURE__ */ tell2()(editorIsSymbol)(ordUnit);
   var pure11 = /* @__PURE__ */ pure(applicativeHalogenM);
   var Initialize3 = /* @__PURE__ */ function() {
@@ -9234,7 +9236,7 @@
         return bind6(liftEffect8(bind15(windowImpl)(document)))(function(document2) {
           return subscribe$prime(function(v1) {
             return eventListener2(keyup)(toEventTarget(document2))(function() {
-              var $20 = map21(KeyboardAction.create);
+              var $20 = map20(KeyboardAction.create);
               return function($21) {
                 return $20(fromEvent($21));
               };

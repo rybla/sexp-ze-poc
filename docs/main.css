@@ -22,6 +22,10 @@ body {
   flex-wrap: wrap;
 }
 
+.TermState>div {
+  user-select: none;
+}
+
 .Punc {}
 
 .Punc.Paren {}
@@ -33,7 +37,6 @@ body {
 .Atom {
   color: green;
   font-weight: bold;
-  user-select: none;
 }
 
 /* Anchor */
