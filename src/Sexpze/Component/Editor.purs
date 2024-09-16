@@ -26,6 +26,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
+import Sexpze.Data.Sexp.Cursor.Drag (dragFromCursor)
 import Sexpze.Utility (unimplemented)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
@@ -144,8 +145,13 @@ handleUserAction_Core Delete = do
   modify_ _ { termState { cursor = cursor, term = term } }
 handleUserAction_Core Copy = unimplemented "handleUserAction_Core" {}
 handleUserAction_Core (Paste _) = unimplemented "handleUserAction_Core.Paste" {}
-handleUserAction_Core (StartDrag _) = unimplemented "handleUserAction_Core.StartDrag" {}
-handleUserAction_Core (EndDrag _) = unimplemented "handleUserAction_Core.EndDrag" {}
+handleUserAction_Core (StartDrag p) = do
+  state <- get
+  let cursor = Cursor (ZipperCursor (fromPointCursorToZeroWidthSpanCursor p state.termState.term) emptySpanCursor) (Inner Start)
+  modify_ _ { termState { cursor = cursor } }
+  Console.logShow { cursor }
+handleUserAction_Core (EndDrag p) = do
+  pure unit
 
 --------------------------------------------------------------------------------
 -- rendering
@@ -214,10 +220,8 @@ renderTermWithCursor c h ph (Sexp _n es) =
               let
                 j1_outer = shiftPointIndexByPointDist d1_outer (wrap 0)
                 j2_outer = shiftPointIndexByPointDistNeg d2_outer (lastPointIndexOfSpan e)
-                -- TODO: could abstract out this calc to Cursor somwhere
-                e_inner = atSpanCursor (SpanCursor mempty (d1_outer + d1_inner) (d2_outer + d2_inner)) e # snd
-                j1_inner = shiftPointIndexByPointDist d1_inner (wrap 0)
-                j2_inner = shiftPointIndexByPointDistNeg d2_inner (lastPointIndexOfSpan e_inner)
+                j1_inner = shiftPointIndexByPointDist (d1_outer + d1_inner) (wrap 0)
+                j2_inner = shiftPointIndexByPointDistNeg (d2_outer + d2_inner) (lastPointIndexOfSpan e)
               in
                 es
                   # map renderTerm'
@@ -242,7 +246,7 @@ renderTermWithCursor c h ph (Sexp _n es) =
           ( \(_i /\ c') ->
               es
                 # mapWithPointIndex
-                    (\j' -> [ renderAnchor (PointCursor ph j') [] [ HH.text "•" ] ])
+                    (\j' -> [ renderPoint (PointCursor ph j') ])
                     (\i' -> renderTerm'WithCursor (Right c') h ph i')
                 # Array.fold
           )
@@ -252,7 +256,6 @@ renderTermWithCursor c h ph (Sexp _n es) =
                 j2_inner = shiftPointIndexByPointDistNeg d2_inner (lastPointIndexOfSpan e)
               in
                 es
-                  # map renderTerm'
                   # mapWithPointIndex
                       ( \j' ->
                           if j' == j1_inner then
@@ -262,7 +265,7 @@ renderTermWithCursor c h ph (Sexp _n es) =
                           else
                             [ renderPoint (PointCursor ph j') ]
                       )
-                      (\_i' htmls -> htmls)
+                      (\_i' -> renderTerm')
                   # Array.fold
           )
 

@@ -85,14 +85,14 @@ dragFromPointCursor p1_top p2_top e_top =
             (Outer Start)
       _ -> bug "dragFromPointCursor" "impossible"
 
-dragFromSpanCursor :: forall n a. SpanCursor -> SpanCursor -> Span n a -> Cursor
+dragFromSpanCursor :: forall n a. SpanCursor -> PointCursor -> Span n a -> Cursor
 dragFromSpanCursor = todo "dragFromSpan" {}
 
-dragFromZipperCursor :: forall n a. ZipperCursor -> ZipperCursor -> Span n a -> Cursor
+dragFromZipperCursor :: forall n a. ZipperCursor -> PointCursor -> Span n a -> Cursor
 dragFromZipperCursor = todo "dragFromZipper" {}
 
-dragFromCursor :: forall n a. Cursor -> Cursor -> Span n a -> Cursor
-dragFromCursor = todo "dragFrom" {}
+dragFromCursor :: forall n a. Cursor -> PointCursor -> Span n a -> Cursor
+dragFromCursor c p = todo "" {}
 
 --------------------------------------------------------------------------------
 -- misc
