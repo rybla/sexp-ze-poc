@@ -57,12 +57,14 @@ derive newtype instance Show PointIndex
 derive newtype instance Eq PointIndex
 derive newtype instance Ord PointIndex
 
+-- | true ==> LT; false ==> GT
 compareKidIndexToPointIndex' :: KidIndex -> PointIndex -> Boolean
 compareKidIndexToPointIndex' i j = unwrap i < unwrap j
 
 compareKidIndexToPointIndex :: KidIndex -> PointIndex -> Ordering
 compareKidIndexToPointIndex i j = if compareKidIndexToPointIndex' i j then LT else GT
 
+-- | true ==> LT; false ==> GT
 comparePointIndexToKidIndex' :: PointIndex -> KidIndex -> Boolean
 comparePointIndexToKidIndex' j i = compareKidIndexToPointIndex' i j # not
 
@@ -209,6 +211,12 @@ shiftPointCursorByPointDist d (PointCursor ph j) = PointCursor ph (wrap (unwrap 
 shiftPointCursorByPointDistNeg :: PointDistNeg -> PointCursor -> PointCursor
 shiftPointCursorByPointDistNeg d (PointCursor ph j) = PointCursor ph (wrap (unwrap j - unwrap d))
 
+shiftPointIndexByPointDist :: forall n a. PointDist -> PointIndex -> PointIndex
+shiftPointIndexByPointDist d j = wrap (unwrap j + unwrap d)
+
+shiftPointIndexByPointDistNeg :: forall n a. PointDistNeg -> PointIndex -> PointIndex
+shiftPointIndexByPointDistNeg d j = wrap (unwrap j - unwrap d)
+
 getPointDistFromPointIndex :: forall n a. PointIndex -> Span n a -> PointDist
 getPointDistFromPointIndex j _ = wrap (unwrap j)
 
@@ -266,6 +274,12 @@ toSpan (Sexp _ es) = Span es
 
 fromSpan :: forall n a. n -> Span n a -> Sexp n a
 fromSpan n (Span es) = (Sexp n es)
+
+firstPointIndexOfSpan :: forall n a. Span n a -> PointIndex
+firstPointIndexOfSpan _ = wrap 0
+
+lastPointIndexOfSpan :: forall n a. Span n a -> PointIndex
+lastPointIndexOfSpan (Span es) = wrap (Array.length es)
 
 -- | safe constructor. checks:
 -- |   - p1 <= p2
