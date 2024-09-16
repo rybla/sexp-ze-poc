@@ -18,6 +18,7 @@ import Data.Newtype (class Newtype, wrap)
 import Data.Newtype as NT
 import Data.Show.Generic (genericShow)
 import Data.String as String
+import Data.Traversable (traverse)
 import Data.Tuple (fst, snd)
 import Data.Tuple.Nested ((/\))
 import Debug as Debug
@@ -55,9 +56,13 @@ defaultNodeData = {}
 --------------------------------------------------------------------------------
 
 type State =
+  { termState :: TermState
+  , mb_clipboard :: Maybe Clipboard
+  }
+
+type TermState =
   { term :: TermSpan
   , cursor :: Cursor
-  , mb_clipboard :: Maybe Clipboard
   }
 
 newtype Clipboard = Clipboard TermZipper
@@ -73,8 +78,7 @@ derive newtype instance Eq Clipboard
 data Query a = KeyboardEvent_Query KeyboardEvent a
 
 newtype Input = Input
-  { term :: TermSpan
-  , cursor :: Cursor
+  { termState :: TermState
   }
 
 data Output = Updated Term
@@ -100,8 +104,8 @@ data Action
 --------------------------------------------------------------------------------
 
 data UserAction
-  = StartDrag_double PointCursor PointCursor
-  | EndDrag_double PointCursor PointCursor
+  = StartDrag_TwoSided PointCursor PointCursor
+  | EndDrag_TwoSided PointCursor PointCursor
   | UserAction_Core UserAction_Core
 
 derive instance Generic UserAction _
@@ -122,10 +126,13 @@ instance Show UserAction_Core where
   show x = genericShow x
 
 handleUserAction :: UserAction -> HM Unit
-handleUserAction = elaborateUserAction >=> handleUserAction_Core
+handleUserAction = elaborateUserAction >=> traverse_ handleUserAction_Core
 
-elaborateUserAction :: UserAction -> HM UserAction_Core
-elaborateUserAction action = todo "elaborateUserAction" { action }
+elaborateUserAction :: UserAction -> HM (Array UserAction_Core)
+elaborateUserAction (StartDrag_TwoSided p1 p2) = do
+  todo "" {}
+elaborateUserAction (EndDrag_TwoSided _ _) = todo "" {}
+elaborateUserAction (UserAction_Core action) = todo "elaborateUserAction" { action }
 
 handleUserAction_Core :: UserAction_Core -> HM Unit
 handleUserAction_Core action = todo "handleUserAction_Core" { action }
@@ -134,8 +141,14 @@ handleUserAction_Core action = todo "handleUserAction_Core" { action }
 -- rendering
 --------------------------------------------------------------------------------
 
+renderTermState :: TermState -> HTML
+renderTermState state =
+  HH.div
+    [ HP.classes [ HH.ClassName "TermState" ] ]
+    (renderTermWithCursor state.term state.cursor)
+
 renderTermWithCursor :: TermSpan -> Cursor -> Array HTML
-renderTermWithCursor term cursor = todo "renderTermWithCursor" { term, cursor }
+renderTermWithCursor = todo "" {}
 
 --------------------------------------------------------------------------------
 -- component
@@ -146,8 +159,7 @@ component = H.mkComponent { initialState, eval, render }
   where
   initialState :: Input -> State
   initialState (Input input) =
-    { term: input.term
-    , cursor: input.cursor
+    { termState: input.termState
     , mb_clipboard: empty
     }
 
@@ -172,8 +184,7 @@ component = H.mkComponent { initialState, eval, render }
   render state =
     HH.div
       [ HP.classes [ HH.ClassName "Editor" ] ]
-      [ HH.div [ HP.classes [ HH.ClassName "Term" ] ] (renderTermWithCursor state.term state.cursor)
-      ]
+      [ renderTermState state.termState ]
 
 parseKeyboardEvent :: KeyboardEvent -> Array UserAction
 parseKeyboardEvent event =

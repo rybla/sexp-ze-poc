@@ -404,6 +404,9 @@ instance Show Cursor where
 instance Eq Cursor where
   eq x = genericEq x
 
+getCursorHandle :: Cursor -> PointCursor
+getCursorHandle (Cursor z h) = todo "" {}
+
 --------------------------------------------------------------------------------
 -- misc
 --------------------------------------------------------------------------------
