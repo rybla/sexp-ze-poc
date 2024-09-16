@@ -1,0 +1,91 @@
+/* html */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* body {
+  background-color: black;
+  color: white;
+} */
+
+/* Editor */
+
+.Editor {
+  padding: 1em;
+  box-shadow: 0 0 0 0.2em black inset;
+}
+
+/* Term */
+
+.Term {
+  font-family: monospace;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* PointCursor */
+
+.Point {
+  user-select: none;
+}
+
+.Point.Space {
+  /* color: gray; */
+  color: transparent;
+}
+
+.Point.Space:hover {
+  color: red;
+}
+
+/* Cursor */
+
+.Cursor {
+  font-weight: bold;
+  color: red;
+}
+
+.Cursor.active {
+  /* background-color: red; */
+  /* color: black; */
+}
+
+/* SpanCursor */
+
+.StartSpanHandle~* {
+  background-color: rgba(0, 0, 255, 0.2);
+}
+
+.EndSpanHandle,
+.EndSpanHandle~* {
+  background-color: transparent;
+}
+
+/* ZipperCursor */
+
+.OuterStartZipperHandle~* {
+  background-color: rgba(0, 0, 255, 0.2);
+}
+
+.InnerStartZipperHandle,
+.InnerStartZipperHandle~* {
+  background-color: transparent;
+}
+
+.InnerEndZipperHandle~* {
+  background-color: rgba(0, 0, 255, 0.2);
+}
+
+.OuterEndZipperHandle,
+.OuterEndZipperHandle~* {
+  background-color: transparent;
+}
+
+.Atom {
+  color: green;
+  font-weight: bold;
+  user-select: none;
+}

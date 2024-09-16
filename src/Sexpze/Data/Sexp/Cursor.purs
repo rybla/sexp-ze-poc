@@ -354,6 +354,12 @@ instance Eq ZipperCursor where
 zipperCursor :: SpanCursor -> SpanCursor -> ZipperCursor
 zipperCursor = ZipperCursor -- TODO
 
+emptyZipperCursor :: ZipperCursor
+emptyZipperCursor = ZipperCursor emptySpanCursor emptySpanCursor
+
+emptySpanCursor :: SpanCursor
+emptySpanCursor = SpanCursor mempty zero zero
+
 data Zipper n a = Zipper (Span n a) PointCursor
 
 derive instance Generic (Zipper n a) _

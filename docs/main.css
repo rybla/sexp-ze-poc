@@ -6,11 +6,6 @@ body {
   padding: 0;
 }
 
-/* body {
-  background-color: black;
-  color: white;
-} */
-
 /* Editor */
 
 .Editor {
@@ -20,69 +15,20 @@ body {
 
 /* Term */
 
-.Term {
+.TermState {
   font-family: monospace;
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
 }
 
-/* PointCursor */
+.Punc {}
 
-.Point {
-  user-select: none;
-}
+.Punc.Paren {}
 
-.Point.Space {
-  /* color: gray; */
-  color: transparent;
-}
+.Punc.Paren.LeftParen {}
 
-.Point.Space:hover {
-  color: red;
-}
-
-/* Cursor */
-
-.Cursor {
-  font-weight: bold;
-  color: red;
-}
-
-.Cursor.active {
-  /* background-color: red; */
-  /* color: black; */
-}
-
-/* SpanCursor */
-
-.StartSpanHandle~* {
-  background-color: rgba(0, 0, 255, 0.2);
-}
-
-.EndSpanHandle,
-.EndSpanHandle~* {
-  background-color: transparent;
-}
-
-/* ZipperCursor */
-
-.OuterStartZipperHandle~* {
-  background-color: rgba(0, 0, 255, 0.2);
-}
-
-.InnerStartZipperHandle,
-.InnerStartZipperHandle~* {
-  background-color: transparent;
-}
-
-.InnerEndZipperHandle~* {
-  background-color: rgba(0, 0, 255, 0.2);
-}
-
-.OuterEndZipperHandle,
-.OuterEndZipperHandle~* {
-  background-color: transparent;
-}
+.Punc.Paren.rightParen {}
 
 .Atom {
   color: green;

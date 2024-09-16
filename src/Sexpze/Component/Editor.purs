@@ -177,7 +177,7 @@ renderTerm' :: Term' -> Array HTML
 renderTerm' (Group e) =
   [ [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "LeftParen" ] ] [ HH.text "(" ] ]
   , renderTerm e
-  , [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "LeftParen" ] ] [ HH.text ")" ] ]
+  , [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "RightParen" ] ] [ HH.text ")" ] ]
   ] # Array.fold
 renderTerm' (Atom a) =
   [ HH.div [ HP.classes [ HH.ClassName "Atom" ] ] [ HH.text a.label ] ]
