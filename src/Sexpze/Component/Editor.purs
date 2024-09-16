@@ -7,19 +7,12 @@ import Sexpze.Data.Sexp.Cursor.Drag
 import Control.Monad.State (get, modify_)
 import Control.Plus (empty)
 import Data.Array as Array
-import Data.Either (Either(..))
-import Data.Either.Nested (either5)
 import Data.Foldable (traverse_)
 import Data.Generic.Rep (class Generic)
-import Data.List as List
 import Data.Maybe (Maybe(..))
-import Data.Monoid (mempty)
 import Data.Newtype (class Newtype, wrap)
-import Data.Newtype as NT
 import Data.Show.Generic (genericShow)
 import Data.String as String
-import Data.Traversable (traverse)
-import Data.Tuple (fst, snd)
 import Data.Tuple.Nested ((/\))
 import Debug as Debug
 import Effect.Aff (Aff)
@@ -27,14 +20,12 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Halogen as H
 import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
 import Sexpze.Utility (todo)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.KeyboardEvent as KeyboardEvent
-import Web.UIEvent.MouseEvent (MouseEvent)
 
 --------------------------------------------------------------------------------
 -- types
