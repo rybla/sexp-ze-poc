@@ -2,17 +2,20 @@ module Sexpze.Component.Editor where
 
 import Prelude
 import Sexpze.Data.Sexp.Cursor
-import Sexpze.Data.Sexp.Cursor.Drag
 
 import Control.Monad.State (get, modify_)
 import Control.Plus (empty)
+import DOM.HTML.Indexed as HTML.Indexed
 import Data.Array as Array
+import Data.Either (Either(..))
+import Data.Either.Nested (type (\/), either5)
 import Data.Foldable (traverse_)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, wrap)
 import Data.Show.Generic (genericShow)
 import Data.String as String
+import Data.Tuple (snd)
 import Data.Tuple.Nested ((/\))
 import Debug as Debug
 import Effect.Aff (Aff)
@@ -20,9 +23,10 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
-import Sexpze.Utility (todo)
+import Sexpze.Utility (unimplemented)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.KeyboardEvent as KeyboardEvent
@@ -138,10 +142,10 @@ handleUserAction_Core Delete = do
   state <- get
   let cursor /\ term = deleteAtCursor state.termState.cursor state.termState.term
   modify_ _ { termState { cursor = cursor, term = term } }
-handleUserAction_Core Copy = todo "handleUserAction_Core" {}
-handleUserAction_Core (Paste _) = todo "handleUserAction_Core" {}
-handleUserAction_Core (StartDrag _) = todo "handleUserAction_Core" {}
-handleUserAction_Core (EndDrag _) = todo "handleUserAction_Core" {}
+handleUserAction_Core Copy = unimplemented "handleUserAction_Core" {}
+handleUserAction_Core (Paste _) = unimplemented "handleUserAction_Core.Paste" {}
+handleUserAction_Core (StartDrag _) = unimplemented "handleUserAction_Core.StartDrag" {}
+handleUserAction_Core (EndDrag _) = unimplemented "handleUserAction_Core.EndDrag" {}
 
 --------------------------------------------------------------------------------
 -- rendering
@@ -149,13 +153,142 @@ handleUserAction_Core (EndDrag _) = todo "handleUserAction_Core" {}
 
 renderTermState :: TermState -> HTML
 renderTermState state =
-  HH.div
-    [ HP.classes [ HH.ClassName "TermState" ] ]
-    -- (renderTermSpanWithCursor state.term state.cursor)
-    (renderTermSpan state.term)
+  let
+    Cursor c h = state.cursor
+  in
+    HH.div
+      [ HP.classes [ HH.ClassName "TermState" ] ]
+      -- (renderTermSpan state.term)
+      (renderTermSpanWithCursor (Left c) h mempty state.term)
 
-renderTermSpanWithCursor :: TermSpan -> Cursor -> Array HTML
-renderTermSpanWithCursor = todo "" {}
+renderTermSpanWithCursor :: ZipperCursor \/ SpanCursor -> ZipperHandle -> Path -> TermSpan -> Array HTML
+renderTermSpanWithCursor c h ph = renderTermWithCursor c h ph <<< fromSpan defaultNodeData
+
+mapWithPointIndex :: forall a r. (PointIndex -> r) -> (KidIndex -> a -> r) -> Array a -> Array r
+mapWithPointIndex f_point f_kid xs =
+  [ [ f_point (wrap 0) ] ] <> (xs # Array.mapWithIndex \i x -> [ f_kid (wrap i) x, f_point (wrap (i + 1)) ])
+    # Array.fold
+
+renderPoint :: PointCursor -> HTML
+renderPoint p = renderAnchor p [ HP.classes [ HH.ClassName "Anchor", HH.ClassName "Point" ] ] [ HH.text "•" ]
+
+renderZipperHandle :: ZipperHandle -> ZipperHandle -> PointCursor -> HTML
+renderZipperHandle h h'@(Outer Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "OuterStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "{" ]
+renderZipperHandle h h'@(Outer End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "OuterEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "}" ]
+renderZipperHandle h h'@(Inner Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "{" ]
+renderZipperHandle h h'@(Inner End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "}" ]
+
+renderTermWithCursor :: ZipperCursor \/ SpanCursor -> ZipperHandle -> Path -> Term -> Array HTML
+renderTermWithCursor c h ph (Sexp _n es) =
+  let
+    e = Span es
+  in
+    unconsZipperCursor c
+      # either5
+          ( \(_i /\ c') ->
+              es
+                # mapWithPointIndex
+                    (\j' -> [ renderPoint (PointCursor ph j') ])
+                    (\i' -> renderTerm'WithCursor (Left c') h ph i')
+                # Array.fold
+          )
+          ( \((d1_outer /\ d2_inner) /\ (_i /\ c')) ->
+              let
+                j1_outer = shiftPointIndexByPointDist d1_outer (wrap 0)
+                j2_outer = shiftPointIndexByPointDistNeg d2_inner (lastPointIndexOfSpan e)
+              in
+                es
+                  # mapWithPointIndex
+                      ( \j' ->
+                          if j' == j1_outer then
+                            [ renderZipperHandle h (Outer Start) (PointCursor ph j1_outer) ]
+                          else if j' == j2_outer then
+                            [ renderZipperHandle h (Outer End) (PointCursor ph j2_outer) ]
+                          else
+                            [ renderPoint (PointCursor ph j') ]
+                      )
+                      (\i' -> renderTerm'WithCursor (Right c') h ph i')
+                  # Array.fold
+          )
+          ( \((d1_outer /\ d2_outer) /\ (d1_inner /\ d2_inner)) ->
+              let
+                j1_outer = shiftPointIndexByPointDist d1_outer (wrap 0)
+                j2_outer = shiftPointIndexByPointDistNeg d2_outer (lastPointIndexOfSpan e)
+                -- TODO: could abstract out this calc to Cursor somwhere
+                e_inner = atSpanCursor (SpanCursor mempty (d1_outer + d1_inner) (d2_outer + d2_inner)) e # snd
+                j1_inner = shiftPointIndexByPointDist d1_inner (wrap 0)
+                j2_inner = shiftPointIndexByPointDistNeg d2_inner (lastPointIndexOfSpan e_inner)
+              in
+                es
+                  # map renderTerm'
+                  # mapWithPointIndex
+                      ( \j' ->
+                          -- Inner Start overrides Outer Start
+                          if j' == j1_inner then
+                            [ renderZipperHandle h (Inner Start) (PointCursor ph j1_inner) ]
+                          else if j' == j1_outer then
+                            [ renderZipperHandle h (Outer Start) (PointCursor ph j1_outer) ]
+                          -- Outer End override s Inner End
+                          else if j' == j2_outer then
+                            [ renderZipperHandle h (Outer End) (PointCursor ph j2_outer) ]
+                          else if j' == j2_inner then
+                            [ renderZipperHandle h (Inner End) (PointCursor ph j2_inner) ]
+                          else
+                            [ renderPoint (PointCursor ph j') ]
+                      )
+                      (\_i' htmls -> htmls)
+                  # Array.fold
+          )
+          ( \(_i /\ c') ->
+              es
+                # mapWithPointIndex
+                    (\j' -> [ renderAnchor (PointCursor ph j') [] [ HH.text "•" ] ])
+                    (\i' -> renderTerm'WithCursor (Right c') h ph i')
+                # Array.fold
+          )
+          ( \(d1_inner /\ d2_inner) ->
+              let
+                j1_inner = shiftPointIndexByPointDist d1_inner (wrap 0)
+                j2_inner = shiftPointIndexByPointDistNeg d2_inner (lastPointIndexOfSpan e)
+              in
+                es
+                  # map renderTerm'
+                  # mapWithPointIndex
+                      ( \j' ->
+                          if j' == j1_inner then
+                            [ renderZipperHandle h (Inner Start) (PointCursor ph j1_inner) ]
+                          else if j' == j2_inner then
+                            [ renderZipperHandle h (Inner End) (PointCursor ph j2_inner) ]
+                          else
+                            [ renderPoint (PointCursor ph j') ]
+                      )
+                      (\_i' htmls -> htmls)
+                  # Array.fold
+          )
+
+renderTerm'WithCursor :: ZipperCursor \/ SpanCursor -> ZipperHandle -> Path -> KidIndex -> Term' -> Array HTML
+renderTerm'WithCursor _c _h ph i (Atom a) =
+  [ HH.div
+      [ HP.classes [ HH.ClassName "Atom" ]
+      , HE.onMouseUp \_event -> UserAction_Action $ StartDrag_TwoSided (PointCursor ph (pointIndexRightBeforeKidIndex i))
+      , HE.onMouseDown \_event -> UserAction_Action $ StartDrag_TwoSided (PointCursor ph (pointIndexRightAfterKidIndex i))
+      ]
+      [ HH.text a.label ]
+  ]
+renderTerm'WithCursor c h ph i (Group e) =
+  renderTermWithCursor c h (ph `snocPath` i) e
+
+--------------------------------------------------------------------------------
+
+renderAnchor :: PointCursor -> Array (HH.IProp HTML.Indexed.HTMLdiv Action) -> Array HTML -> HTML
+renderAnchor p props =
+  HH.div
+    ( [ HE.onMouseDown \_event -> UserAction_Action $ UserAction_Core $ StartDrag p
+      , HE.onMouseUp \_event -> UserAction_Action $ UserAction_Core $ EndDrag p
+      ] <> props
+    )
+
+--------------------------------------------------------------------------------
 
 -- TODO: take into account `n : NodeData` somehow
 renderTerm :: Term -> Array HTML

@@ -57,6 +57,12 @@ derive newtype instance Show PointIndex
 derive newtype instance Eq PointIndex
 derive newtype instance Ord PointIndex
 
+pointIndexRightBeforeKidIndex :: KidIndex -> PointIndex
+pointIndexRightBeforeKidIndex i = wrap (unwrap i)
+
+pointIndexRightAfterKidIndex :: KidIndex -> PointIndex
+pointIndexRightAfterKidIndex i = wrap (unwrap i + 1)
+
 -- | true ==> LT; false ==> GT
 compareKidIndexToPointIndex' :: KidIndex -> PointIndex -> Boolean
 compareKidIndexToPointIndex' i j = unwrap i < unwrap j
@@ -263,15 +269,11 @@ instance Semigroup SpanCursor where
       Nothing -> SpanCursor ph_outer (d1_outer + d1_inner) (d2_outer + d2_inner)
       Just (i_inner /\ ph'_inner) -> SpanCursor (ph_outer <> ((d1_outer `shiftKidIndexByPointDist` i_inner) `consPath` ph'_inner)) d1_inner d2_inner
 
-data Span n a = Span (Array (Sexp' n a))
+newtype Span n a = Span (Array (Sexp' n a))
 
-derive instance Generic (Span n a) _
-
-instance (Show n, Show a) => Show (Span n a) where
-  show x = genericShow x
-
-instance (Eq n, Eq a) => Eq (Span n a) where
-  eq x = genericEq x
+derive instance Newtype (Span n a) _
+derive newtype instance (Show n, Show a) => Show (Span n a)
+derive newtype instance (Eq n, Eq a) => Eq (Span n a)
 
 data SpanHandle = Start | End
 

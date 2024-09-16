@@ -12,3 +12,6 @@ assert label b k = if b then k unit else bug "assert" $ label
 
 todo :: forall a b. String -> a -> b
 todo msg _ = unsafeCrashWith ("[todo] " <> msg)
+
+unimplemented :: forall a b. String -> a -> b
+unimplemented msg _ = unsafeCrashWith ("[unimplemented] " <> msg)

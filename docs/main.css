@@ -35,3 +35,27 @@ body {
   font-weight: bold;
   user-select: none;
 }
+
+/* Anchor */
+
+.Anchor {}
+
+.Anchor.Point {
+  color: gray;
+}
+
+.Anchor.ZipperHandle {
+  color: red;
+}
+
+.Anchor.ZipperHandle.active {
+  outline: 0.2em solid rgb(255, 191, 191);
+}
+
+.Anchor.ZipperHandle.OuterStart {}
+
+.Anchor.ZipperHandle.InnerStart {}
+
+.Anchor.ZipperHandle.InnerEnd {}
+
+.Anchor.ZipperHandle.OuterEnd {}
