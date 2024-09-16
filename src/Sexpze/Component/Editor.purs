@@ -104,8 +104,8 @@ data Action
 --------------------------------------------------------------------------------
 
 data UserAction
-  = StartDrag_TwoSided PointCursor PointCursor
-  | EndDrag_TwoSided PointCursor PointCursor
+  = StartDrag_TwoSided PointCursor
+  | EndDrag_TwoSided PointCursor
   | UserAction_Core UserAction_Core
 
 derive instance Generic UserAction _
@@ -129,13 +129,28 @@ handleUserAction :: UserAction -> HM Unit
 handleUserAction = elaborateUserAction >=> traverse_ handleUserAction_Core
 
 elaborateUserAction :: UserAction -> HM (Array UserAction_Core)
-elaborateUserAction (StartDrag_TwoSided p1 p2) = do
-  todo "" {}
-elaborateUserAction (EndDrag_TwoSided _ _) = todo "" {}
-elaborateUserAction (UserAction_Core action) = todo "elaborateUserAction" { action }
+elaborateUserAction (StartDrag_TwoSided p1) = do
+  -- TODO: way to determine if dragging the left or right half of it?
+  pure [ StartDrag p1 ]
+elaborateUserAction (EndDrag_TwoSided p1) = do
+  state <- get
+  let p2 = p1 # shiftPointCursorByPointDist (wrap 1)
+  let p = state.termState.term # getCursorHandle state.termState.cursor
+  if p1 < p then
+    pure [ EndDrag p1 ] -- dragging from right to left
+  else
+    pure [ EndDrag p2 ] -- dragging from left to right
+elaborateUserAction (UserAction_Core action) = pure [ action ]
 
 handleUserAction_Core :: UserAction_Core -> HM Unit
-handleUserAction_Core action = todo "handleUserAction_Core" { action }
+handleUserAction_Core Delete = do
+  state <- get
+  let cursor /\ term = deleteAtCursor state.termState.cursor state.termState.term
+  modify_ _ { termState { cursor = cursor, term = term } }
+handleUserAction_Core Copy = todo "handleUserAction_Core" {}
+handleUserAction_Core (Paste _) = todo "handleUserAction_Core" {}
+handleUserAction_Core (StartDrag _) = todo "handleUserAction_Core" {}
+handleUserAction_Core (EndDrag _) = todo "handleUserAction_Core" {}
 
 --------------------------------------------------------------------------------
 -- rendering
@@ -145,10 +160,27 @@ renderTermState :: TermState -> HTML
 renderTermState state =
   HH.div
     [ HP.classes [ HH.ClassName "TermState" ] ]
-    (renderTermWithCursor state.term state.cursor)
+    -- (renderTermSpanWithCursor state.term state.cursor)
+    (renderTermSpan state.term)
 
-renderTermWithCursor :: TermSpan -> Cursor -> Array HTML
-renderTermWithCursor = todo "" {}
+renderTermSpanWithCursor :: TermSpan -> Cursor -> Array HTML
+renderTermSpanWithCursor = todo "" {}
+
+-- TODO: take into account `n : NodeData` somehow
+renderTerm :: Term -> Array HTML
+renderTerm (Sexp _n es) = renderTerm' `Array.foldMap` es
+
+renderTermSpan :: TermSpan -> Array HTML
+renderTermSpan = renderTerm <<< fromSpan defaultNodeData
+
+renderTerm' :: Term' -> Array HTML
+renderTerm' (Group e) =
+  [ [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "LeftParen" ] ] [ HH.text "(" ] ]
+  , renderTerm e
+  , [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "LeftParen" ] ] [ HH.text ")" ] ]
+  ] # Array.fold
+renderTerm' (Atom a) =
+  [ HH.div [ HP.classes [ HH.ClassName "Atom" ] ] [ HH.text a.label ] ]
 
 --------------------------------------------------------------------------------
 -- component

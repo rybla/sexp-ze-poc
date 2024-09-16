@@ -15,7 +15,7 @@ import Data.Maybe (Maybe(..), fromMaybe')
 import Data.Newtype (class Newtype, over2, unwrap, wrap)
 import Data.Ordering (invert)
 import Data.Show.Generic (genericShow)
-import Data.Tuple (Tuple(..), snd)
+import Data.Tuple (Tuple(..), fst, snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
 import Sexpze.Utility (bug, todo)
@@ -154,6 +154,9 @@ instance Ord PointCursor where
         Right j1 /\ Left (i2 /\ _) -> comparePointIndexToKidIndex j1 i2
         Right j1 /\ Right j2 -> compare j1 j2
 
+zeroPointCursor :: PointCursor
+zeroPointCursor = PointCursor mempty (wrap 0)
+
 consPointCursor :: KidIndex -> PointCursor -> PointCursor
 consPointCursor i (PointCursor ph j) = PointCursor (consPath i ph) j
 
@@ -197,6 +200,7 @@ derive instance Newtype PointDist _
 
 derive newtype instance Show PointDist
 derive newtype instance Eq PointDist
+derive newtype instance Semiring PointDist
 
 newtype PointDistNeg = PointDistNeg Int
 
@@ -204,6 +208,7 @@ derive instance Newtype PointDistNeg _
 
 derive newtype instance Show PointDistNeg
 derive newtype instance Eq PointDistNeg
+derive newtype instance Semiring PointDistNeg
 
 shiftPointCursorByPointDist :: PointDist -> PointCursor -> PointCursor
 shiftPointCursorByPointDist d (PointCursor ph j) = PointCursor ph (wrap (unwrap j + unwrap d))
@@ -211,17 +216,17 @@ shiftPointCursorByPointDist d (PointCursor ph j) = PointCursor ph (wrap (unwrap 
 shiftPointCursorByPointDistNeg :: PointDistNeg -> PointCursor -> PointCursor
 shiftPointCursorByPointDistNeg d (PointCursor ph j) = PointCursor ph (wrap (unwrap j - unwrap d))
 
-shiftPointIndexByPointDist :: forall n a. PointDist -> PointIndex -> PointIndex
+shiftPointIndexByPointDist :: PointDist -> PointIndex -> PointIndex
 shiftPointIndexByPointDist d j = wrap (unwrap j + unwrap d)
 
-shiftPointIndexByPointDistNeg :: forall n a. PointDistNeg -> PointIndex -> PointIndex
+shiftPointIndexByPointDistNeg :: PointDistNeg -> PointIndex -> PointIndex
 shiftPointIndexByPointDistNeg d j = wrap (unwrap j - unwrap d)
 
-getPointDistFromPointIndex :: forall n a. PointIndex -> Span n a -> PointDist
-getPointDistFromPointIndex j _ = wrap (unwrap j)
+getOffsetPointDist :: forall n a. PointIndex -> Span n a -> PointDist
+getOffsetPointDist i _ = wrap (unwrap i)
 
-getPointDistNegFromPointIndex :: forall n a. PointIndex -> Span n a -> PointDistNeg
-getPointDistNegFromPointIndex j (Span es) = wrap (Array.length es - unwrap j)
+getOffsetPointDistNeg :: forall n a. PointIndex -> Span n a -> PointDistNeg
+getOffsetPointDistNeg i (Span es) = wrap (Array.length es - unwrap i)
 
 getPointIndexFromPointDist :: forall n a. PointDist -> Span n a -> PointIndex
 getPointIndexFromPointDist d _ = wrap (unwrap d)
@@ -230,7 +235,7 @@ getPointIndexFromPointDistNeg :: forall n a. PointDistNeg -> Span n a -> PointIn
 getPointIndexFromPointDistNeg d (Span es) = wrap (Array.length es - unwrap d)
 
 getSpanCursorBetweenPointIndices :: forall n a. Path -> PointIndex -> PointIndex -> Span n a -> SpanCursor
-getSpanCursorBetweenPointIndices ph j1 j2 s = SpanCursor ph (getPointDistFromPointIndex j1 s) (getPointDistNegFromPointIndex j2 s)
+getSpanCursorBetweenPointIndices ph j1 j2 s = SpanCursor ph (getOffsetPointDist j1 s) (getOffsetPointDistNeg j2 s)
 
 pointDistBetweenPointIndices :: PointIndex -> PointIndex -> PointDist
 pointDistBetweenPointIndices j1 j2 = wrap (unwrap j2 - unwrap j1)
@@ -248,6 +253,15 @@ instance Show SpanCursor where
 
 instance Eq SpanCursor where
   eq x = genericEq x
+
+shiftKidIndexByPointDist :: PointDist -> KidIndex -> KidIndex
+shiftKidIndexByPointDist d i = wrap (unwrap i + unwrap d)
+
+instance Semigroup SpanCursor where
+  append (SpanCursor ph_outer d1_outer d2_outer) (SpanCursor ph_inner d1_inner d2_inner) =
+    case unconsPath ph_inner of
+      Nothing -> SpanCursor ph_outer (d1_outer + d1_inner) (d2_outer + d2_inner)
+      Just (i_inner /\ ph'_inner) -> SpanCursor (ph_outer <> ((d1_outer `shiftKidIndexByPointDist` i_inner) `consPath` ph'_inner)) d1_inner d2_inner
 
 data Span n a = Span (Array (Sexp' n a))
 
@@ -350,15 +364,11 @@ instance (Show n, Show a) => Show (Zipper n a) where
 instance (Eq n, Eq a) => Eq (Zipper n a) where
   eq x = genericEq x
 
-data ZipperHandle = Inner SpanHandle | Outer SpanHandle
+emptyZipper :: forall n a. Zipper n a
+emptyZipper = Zipper (Span []) zeroPointCursor
 
-derive instance Generic ZipperHandle _
-
-instance Show ZipperHandle where
-  show x = genericShow x
-
-instance Eq ZipperHandle where
-  eq x = genericEq x
+atZipper :: forall n a. Zipper n a -> (Span n a -> Span n a)
+atZipper (Zipper e p) = atPointCursor identity p e
 
 unconsZipperCursor
   :: ZipperCursor \/ SpanCursor
@@ -390,6 +400,12 @@ atZipperCursor (ZipperCursor s1 s2@(SpanCursor ph2 d2 _)) e =
       (w1 <<< (_ $ e2))
       (Zipper e2 (shiftPointCursorByPointDist d2 (PointCursor ph2 (wrap 0))))
 
+insertAtZipperCursor :: forall n a. ZipperCursor -> Zipper n a -> Span n a -> Span n a
+insertAtZipperCursor c z = atZipperCursor c >>> fst >>> (_ $ atZipper z)
+
+deleteAtZipperCursor :: forall n a. ZipperCursor -> Span n a -> Span n a
+deleteAtZipperCursor c = insertAtZipperCursor c emptyZipper
+
 --------------------------------------------------------------------------------
 -- Cursor
 --------------------------------------------------------------------------------
@@ -404,8 +420,45 @@ instance Show Cursor where
 instance Eq Cursor where
   eq x = genericEq x
 
-getCursorHandle :: Cursor -> PointCursor
-getCursorHandle (Cursor z h) = todo "" {}
+data ZipperHandle = Inner SpanHandle | Outer SpanHandle
+
+derive instance Generic ZipperHandle _
+
+instance Show ZipperHandle where
+  show x = genericShow x
+
+instance Eq ZipperHandle where
+  eq x = genericEq x
+
+getSpanCursorHandle :: forall n a. SpanCursor -> SpanHandle -> Span n a -> PointCursor
+getSpanCursorHandle (SpanCursor ph d _) Start e = PointCursor ph (d `shiftPointIndexByPointDist` firstPointIndexOfSpan e)
+getSpanCursorHandle (SpanCursor ph _ d) End e = PointCursor ph (d `shiftPointIndexByPointDistNeg` lastPointIndexOfSpan e)
+
+getZipperCursorHandle :: forall n a. ZipperCursor -> ZipperHandle -> Span n a -> PointCursor
+getZipperCursorHandle (ZipperCursor s _) (Outer h) = getSpanCursorHandle s h
+getZipperCursorHandle (ZipperCursor s_outer s_inner) (Inner h) = getSpanCursorHandle (s_outer <> s_inner) h
+
+getCursorHandle :: forall n a. Cursor -> Span n a -> PointCursor
+getCursorHandle (Cursor z h) = getZipperCursorHandle z h
+
+fromPointCursorToZeroWidthSpanCursor :: forall n a. PointCursor -> Span n a -> SpanCursor
+fromPointCursorToZeroWidthSpanCursor (PointCursor ph i) e =
+  let
+    _ /\ e_inner = e # atPath ph
+  in
+    SpanCursor ph (getOffsetPointDist i e_inner) (getOffsetPointDistNeg i e_inner)
+
+insertAtCursor :: forall n a. Zipper n a -> Cursor -> Span n a -> Cursor /\ Span n a
+insertAtCursor z@(Zipper _ p_inner) (Cursor c@(ZipperCursor s_outer s_inner) _h) e =
+  let
+    _ /\ e_middle = e # atSpanCursor s_outer
+  in
+    Tuple
+      (Cursor (ZipperCursor s_outer (s_inner <> fromPointCursorToZeroWidthSpanCursor p_inner e_middle)) (Inner Start))
+      (insertAtZipperCursor c z e)
+
+deleteAtCursor :: forall n a. Cursor -> Span n a -> Cursor /\ Span n a
+deleteAtCursor = insertAtCursor emptyZipper
 
 --------------------------------------------------------------------------------
 -- misc
