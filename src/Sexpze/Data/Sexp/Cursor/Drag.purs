@@ -23,15 +23,12 @@ dragFromPointCursor p1_top p2_top e_top =
     case unconsPointCursor p1 /\ unconsPointCursor p2 of
       -- p1 is sibling and after p2
       Right j1 /\ Right j2 | j1 >= j2 ->
-        let
-          _ = Debug.trace (show { ph, p1, j1, p2, j2, e }) \_ -> {}
-        in
-          Cursor
-            ( ZipperCursor
-                (getSpanCursorBetweenPointIndices ph j2 j1 e)
-                (SpanCursor mempty (wrap 0) (wrap 0))
-            )
-            (Inner Start)
+        Cursor
+          ( ZipperCursor
+              (getSpanCursorBetweenPointIndices ph j2 j1 e)
+              (SpanCursor mempty (wrap 0) (wrap 0))
+          )
+          (Inner Start)
       -- p1 is sibling and before p2
       Right j1 /\ Right j2 | j1 < j2 ->
         Cursor

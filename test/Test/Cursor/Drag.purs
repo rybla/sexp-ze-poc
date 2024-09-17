@@ -44,6 +44,32 @@ spec = do
             e
         )
         (mkCursor [] 0 2 [] 0 0 (Inner Start))
+  describe "deeper" do
+    let e = span [ Atom "a", Group (Sexp {} [ Atom "b", Atom "c", Atom "d" ]), Atom "e" ]
+    it "point" do
+      shouldEqual
+        ( dragFromCursor
+            (mkCursor [ 1 ] 0 3 [] 0 0 (Inner Start))
+            (mkPointCursor [ 1 ] 0)
+            e
+        )
+        (mkCursor [ 1 ] 0 3 [] 0 0 (Inner Start))
+    it "span left to right" do
+      shouldEqual
+        ( dragFromCursor
+            (mkCursor [ 1 ] 0 3 [] 0 0 (Inner Start))
+            (mkPointCursor [ 1 ] 1)
+            e
+        )
+        (mkCursor [ 1 ] 0 2 [] 0 0 (Inner Start))
+    it "span right to left" do
+      shouldEqual
+        ( dragFromCursor
+            (mkCursor [ 1 ] 1 2 [] 0 0 (Inner Start))
+            (mkPointCursor [ 1 ] 0)
+            e
+        )
+        (mkCursor [ 1 ] 0 2 [] 0 0 (Inner Start))
 
 data Tree = Node (Array String)
 
