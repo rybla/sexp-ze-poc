@@ -8,25 +8,30 @@ import Sexpze.Data.Sexp.Cursor
 import Data.Either (Either(..))
 import Data.Newtype (wrap)
 import Data.Tuple.Nested ((/\))
+import Debug as Debug
 import Sexpze.Utility (bug, todo)
 
 --------------------------------------------------------------------------------
 
-dragFromPointCursor :: forall n a. PointCursor -> PointCursor -> Span n a -> Cursor
+dragFromPointCursor :: forall n a. Show n => Show a => PointCursor -> PointCursor -> Span n a -> Cursor
 dragFromPointCursor p1_top p2_top e_top =
   let
     ph /\ p1 /\ p2 = commonPathOfPointCursors p1_top p2_top
     _ /\ e = atPath ph e_top
   in
+
     case unconsPointCursor p1 /\ unconsPointCursor p2 of
       -- p1 is sibling and after p2
-      Right j1 /\ Right j2 | otherwise || j1 >= j2 ->
-        Cursor
-          ( ZipperCursor
-              (getSpanCursorBetweenPointIndices ph j1 j2 e)
-              (SpanCursor mempty (wrap 0) (wrap 0))
-          )
-          (Inner Start)
+      Right j1 /\ Right j2 | j1 >= j2 ->
+        let
+          _ = Debug.trace (show { ph, p1, j1, p2, j2, e }) \_ -> {}
+        in
+          Cursor
+            ( ZipperCursor
+                (getSpanCursorBetweenPointIndices ph j2 j1 e)
+                (SpanCursor mempty (wrap 0) (wrap 0))
+            )
+            (Inner Start)
       -- p1 is sibling and before p2
       Right j1 /\ Right j2 | j1 < j2 ->
         Cursor
@@ -34,7 +39,7 @@ dragFromPointCursor p1_top p2_top e_top =
               (getSpanCursorBetweenPointIndices ph j1 j2 e)
               (SpanCursor mempty (wrap 0) (wrap 0))
           )
-          (Inner End)
+          (Inner Start)
       -- p1 is outside and before p2
       Right j_outer /\ Left (i_inner /\ _) | comparePointIndexToKidIndex' j_outer i_inner ->
         let
@@ -91,7 +96,7 @@ dragFromSpanCursor _ _ _ = todo "dragFromSpanCursor" {}
 dragFromZipperCursor :: forall n a. ZipperCursor -> PointCursor -> Span n a -> Cursor
 dragFromZipperCursor _ _ _ = todo "dragFromZipperCursor" {}
 
-dragFromCursor :: forall n a. Cursor -> PointCursor -> Span n a -> Cursor
+dragFromCursor :: forall n a. Show n => Show a => Cursor -> PointCursor -> Span n a -> Cursor
 -- dragFromCursor c p = todo "dragFromCursor" {}
 dragFromCursor c p e = dragFromPointCursor (getCursorHandle c e) p e
 

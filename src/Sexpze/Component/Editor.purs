@@ -155,12 +155,12 @@ handleUserAction_Core (StartDrag p) = do
   state <- get
   let cursor = Cursor (ZipperCursor (fromPointCursorToZeroWidthSpanCursor p state.termState.term) emptySpanCursor) (Inner Start)
   modify_ _ { termState { cursor = cursor } }
-  Console.logShow { _label: "StartDrag", cursor }
+  Console.log ("[StartDrag] " <> show { cursor })
 handleUserAction_Core (EndDrag p) = do
   state <- get
   let cursor = dragFromCursor state.termState.cursor p state.termState.term
   modify_ _ { termState { cursor = cursor } }
-  Console.logShow { _label: "EndDrag", cursor }
+  Console.log ("[EndDrag] " <> show { cursor })
 
 --------------------------------------------------------------------------------
 -- rendering
@@ -371,7 +371,7 @@ component = H.mkComponent { initialState, eval, render }
   handleQuery :: forall a. Query a -> HM (Maybe a)
   handleQuery = case _ of
     KeyboardEvent_Query event a -> do
-      Console.log $ "[KeyboardEvent_Query] " <> show { key: KeyboardEvent.key event }
+      -- Console.log $ "[KeyboardEvent_Query] " <> show { key: KeyboardEvent.key event }
       let actions = event # parseKeyboardEvent
       when (not (Array.null actions)) do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
