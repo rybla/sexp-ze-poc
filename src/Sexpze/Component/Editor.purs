@@ -132,10 +132,16 @@ elaborateUserAction (EndDrag_TwoSided p1) = do
   state <- get
   let p2 = p1 # shiftPointCursorByPointDist (wrap 1)
   let p = state.termState.term # getCursorHandle state.termState.cursor
-  if p1 < p then
-    pure [ EndDrag p1 ] -- dragging from right to left
+  if p == p1 then
+    pure [ EndDrag p1 ] -- started on p1
+  else if p == p2 then
+    pure [ EndDrag p1 ] -- started on p2
+  else if p < p1 then
+    pure [ EndDrag p2 ] -- dragging left to right
+  else if p2 < p then
+    pure [ EndDrag p1 ] -- dragging right to left
   else
-    pure [ EndDrag p2 ] -- dragging from left to right
+    pure []
 elaborateUserAction (UserAction_Core action) = pure [ action ]
 
 handleUserAction_Core :: UserAction_Core -> HM Unit
@@ -218,11 +224,11 @@ renderTermWithCursor c h ph (Sexp _n es) =
                             [ renderZipperHandle h (Inner Start) (PointCursor ph j1_inner) ]
                           else if j' == j1_outer then
                             [ renderZipperHandle h (Outer Start) (PointCursor ph j1_outer) ]
-                          -- Outer End override s Inner End
-                          else if j' == j2_outer then
-                            [ renderZipperHandle h (Outer End) (PointCursor ph j2_outer) ]
+                          -- Inner End overrides Outer End
                           else if j' == j2_inner then
                             [ renderZipperHandle h (Inner End) (PointCursor ph j2_inner) ]
+                          else if j' == j2_outer then
+                            [ renderZipperHandle h (Outer End) (PointCursor ph j2_outer) ]
                           else
                             [ renderPoint (PointCursor ph j') ]
                       )
@@ -260,7 +266,7 @@ renderTerm'WithCursor _c _h ph i (Atom a) =
   [ HH.div
       [ HP.classes [ HH.ClassName "Atom" ]
       , HE.onMouseUp \_event -> UserAction_Action $ StartDrag_TwoSided (PointCursor ph (pointIndexRightBeforeKidIndex i))
-      , HE.onMouseDown \_event -> UserAction_Action $ StartDrag_TwoSided (PointCursor ph (pointIndexRightAfterKidIndex i))
+      , HE.onMouseDown \_event -> UserAction_Action $ EndDrag_TwoSided (PointCursor ph (pointIndexRightAfterKidIndex i))
       ]
       [ HH.text a.label ]
   ]
@@ -300,7 +306,7 @@ renderTerm' ph i (Atom a) =
   [ HH.div
       [ HP.classes [ HH.ClassName "Atom" ]
       , HE.onMouseUp \_event -> UserAction_Action $ StartDrag_TwoSided (PointCursor ph (pointIndexRightBeforeKidIndex i))
-      , HE.onMouseDown \_event -> UserAction_Action $ StartDrag_TwoSided (PointCursor ph (pointIndexRightAfterKidIndex i))
+      , HE.onMouseDown \_event -> UserAction_Action $ EndDrag_TwoSided (PointCursor ph (pointIndexRightAfterKidIndex i))
       ]
       [ HH.text a.label ]
   ]
