@@ -47,6 +47,14 @@ body {
   color: gray;
 }
 
+.Anchor.PointHandle {
+  color: red;
+}
+
+.Anchor.PointHandle.active {
+  outline: 0.2em solid rgb(255, 191, 191);
+}
+
 .Anchor.ZipperHandle {
   color: red;
 }

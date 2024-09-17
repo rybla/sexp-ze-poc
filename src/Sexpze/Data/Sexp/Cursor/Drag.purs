@@ -92,7 +92,8 @@ dragFromZipperCursor :: forall n a. ZipperCursor -> PointCursor -> Span n a -> C
 dragFromZipperCursor = todo "dragFromZipper" {}
 
 dragFromCursor :: forall n a. Cursor -> PointCursor -> Span n a -> Cursor
-dragFromCursor c p = todo "" {}
+-- dragFromCursor c p = todo "dragFromCursor" {}
+dragFromCursor c p e = dragFromPointCursor (getCursorHandle c e) p e
 
 --------------------------------------------------------------------------------
 -- misc

@@ -155,9 +155,12 @@ handleUserAction_Core (StartDrag p) = do
   state <- get
   let cursor = Cursor (ZipperCursor (fromPointCursorToZeroWidthSpanCursor p state.termState.term) emptySpanCursor) (Inner Start)
   modify_ _ { termState { cursor = cursor } }
-  Console.logShow { cursor }
+  Console.logShow { _label: "StartDrag", cursor }
 handleUserAction_Core (EndDrag p) = do
-  pure unit
+  state <- get
+  let cursor = dragFromCursor state.termState.cursor p state.termState.term
+  modify_ _ { termState { cursor = cursor } }
+  Console.logShow { _label: "EndDrag", cursor }
 
 --------------------------------------------------------------------------------
 -- rendering
@@ -216,24 +219,37 @@ renderTermWithCursor c h ph (Sexp _n es) =
                 j1_inner = shiftPointIndexByPointDist (d1_outer + d1_inner) (wrap 0)
                 j2_inner = shiftPointIndexByPointDistNeg (d2_outer + d2_inner) (lastPointIndexOfSpan e)
               in
-                es
-                  # mapWithPointIndex
-                      ( \j' ->
-                          -- Inner Start overrides Outer Start
-                          if j' == j1_inner then
-                            [ renderZipperHandle h (Inner Start) (PointCursor ph j1_inner) ]
-                          else if j' == j1_outer then
-                            [ renderZipperHandle h (Outer Start) (PointCursor ph j1_outer) ]
-                          -- Inner End overrides Outer End
-                          else if j' == j2_inner then
-                            [ renderZipperHandle h (Inner End) (PointCursor ph j2_inner) ]
-                          else if j' == j2_outer then
-                            [ renderZipperHandle h (Outer End) (PointCursor ph j2_outer) ]
-                          else
-                            [ renderPoint (PointCursor ph j') ]
-                      )
-                      (renderTerm' ph)
-                  # Array.fold
+                -- point (0-width and 0-depth zipper)
+                if j1_outer == j2_outer then
+                  es
+                    # mapWithPointIndex
+                        ( \j' ->
+                            if j' == j1_inner then
+                              [ renderPointHandle (PointCursor ph j1_inner) ]
+                            else
+                              [ renderPoint (PointCursor ph j') ]
+                        )
+                        (renderTerm' ph)
+                    # Array.fold
+                else
+                  es
+                    # mapWithPointIndex
+                        ( \j' ->
+                            -- Inner Start overrides Outer Start
+                            if j' == j1_inner then
+                              [ renderZipperHandle h (Inner Start) (PointCursor ph j1_inner) ]
+                            else if j' == j1_outer then
+                              [ renderZipperHandle h (Outer Start) (PointCursor ph j1_outer) ]
+                            -- Inner End overrides Outer End
+                            else if j' == j2_inner then
+                              [ renderZipperHandle h (Inner End) (PointCursor ph j2_inner) ]
+                            else if j' == j2_outer then
+                              [ renderZipperHandle h (Outer End) (PointCursor ph j2_outer) ]
+                            else
+                              [ renderPoint (PointCursor ph j') ]
+                        )
+                        (renderTerm' ph)
+                    # Array.fold
           )
           ( \(_i /\ c') ->
               es
@@ -321,6 +337,13 @@ renderZipperHandle h h'@(Outer Start) p = renderAnchor p [ HP.classes ([ [ HH.Cl
 renderZipperHandle h h'@(Outer End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "OuterEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "]" ]
 renderZipperHandle h h'@(Inner Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "{" ]
 renderZipperHandle h h'@(Inner End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "}" ]
+
+renderSpanHandle :: SpanHandle -> SpanHandle -> PointCursor -> HTML
+renderSpanHandle h h'@Start p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "SpanHandle", HH.ClassName "Start" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "[" ]
+renderSpanHandle h h'@End p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "SpanHandle", HH.ClassName "End" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "[" ]
+
+renderPointHandle :: PointCursor -> HTML
+renderPointHandle p = renderAnchor p [ HP.classes [ HH.ClassName "Anchor", HH.ClassName "PointHandle", HH.ClassName "active" ] ] [ HH.text "|" ]
 
 renderAnchor :: PointCursor -> Array (HH.IProp HTML.Indexed.HTMLdiv Action) -> Array HTML -> HTML
 renderAnchor p props =

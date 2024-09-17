@@ -18,7 +18,7 @@ import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
-import Sexpze.Utility (bug, todo)
+import Sexpze.Utility (bug)
 
 --------------------------------------------------------------------------------
 -- KidIndex
@@ -269,6 +269,10 @@ instance Semigroup SpanCursor where
       Nothing -> SpanCursor ph_outer (d1_outer + d1_inner) (d2_outer + d2_inner)
       Just (i_inner /\ ph'_inner) -> SpanCursor (ph_outer <> ((d1_outer `shiftKidIndexByPointDist` i_inner) `consPath` ph'_inner)) d1_inner d2_inner
 
+getSpanCursorHandle :: forall n a. SpanCursor -> SpanHandle -> Span n a -> PointCursor
+getSpanCursorHandle (SpanCursor ph d _) Start e = PointCursor ph (d `shiftPointIndexByPointDist` firstPointIndexOfSpan e)
+getSpanCursorHandle (SpanCursor ph _ d) End e = PointCursor ph (d `shiftPointIndexByPointDistNeg` lastPointIndexOfSpan e)
+
 newtype Span n a = Span (Array (Sexp' n a))
 
 derive instance Newtype (Span n a) _
@@ -362,6 +366,10 @@ emptyZipperCursor = ZipperCursor emptySpanCursor emptySpanCursor
 emptySpanCursor :: SpanCursor
 emptySpanCursor = SpanCursor mempty zero zero
 
+getZipperCursorHandle :: forall n a. ZipperCursor -> ZipperHandle -> Span n a -> PointCursor
+getZipperCursorHandle (ZipperCursor s _) (Outer h) = getSpanCursorHandle s h
+getZipperCursorHandle (ZipperCursor s_outer s_inner) (Inner h) = getSpanCursorHandle (s_outer <> s_inner) h
+
 data Zipper n a = Zipper (Span n a) PointCursor
 
 derive instance Generic (Zipper n a) _
@@ -437,14 +445,6 @@ instance Show ZipperHandle where
 
 instance Eq ZipperHandle where
   eq x = genericEq x
-
-getSpanCursorHandle :: forall n a. SpanCursor -> SpanHandle -> Span n a -> PointCursor
-getSpanCursorHandle (SpanCursor ph d _) Start e = PointCursor ph (d `shiftPointIndexByPointDist` firstPointIndexOfSpan e)
-getSpanCursorHandle (SpanCursor ph _ d) End e = PointCursor ph (d `shiftPointIndexByPointDistNeg` lastPointIndexOfSpan e)
-
-getZipperCursorHandle :: forall n a. ZipperCursor -> ZipperHandle -> Span n a -> PointCursor
-getZipperCursorHandle (ZipperCursor s _) (Outer h) = getSpanCursorHandle s h
-getZipperCursorHandle (ZipperCursor s_outer s_inner) (Inner h) = getSpanCursorHandle (s_outer <> s_inner) h
 
 getCursorHandle :: forall n a. Cursor -> Span n a -> PointCursor
 getCursorHandle (Cursor z h) = getZipperCursorHandle z h
