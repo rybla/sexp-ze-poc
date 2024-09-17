@@ -19,22 +19,22 @@ dragFromPointCursor p1_top p2_top e_top =
     _ /\ e = atPath ph e_top
   in
     case unconsPointCursor p1 /\ unconsPointCursor p2 of
-      -- p1 is sibling and before p2
-      Right j1 /\ Right j2 | j1 <= j2 ->
-        Cursor
-          ( ZipperCursor
-              (getSpanCursorBetweenPointIndices ph j1 j2 e)
-              (SpanCursor mempty (wrap 0) (wrap 0))
-          )
-          (Inner End)
       -- p1 is sibling and after p2
-      Right j1 /\ Right j2 | otherwise || j1 > j2 ->
+      Right j1 /\ Right j2 | otherwise || j1 >= j2 ->
         Cursor
           ( ZipperCursor
               (getSpanCursorBetweenPointIndices ph j1 j2 e)
               (SpanCursor mempty (wrap 0) (wrap 0))
           )
           (Inner Start)
+      -- p1 is sibling and before p2
+      Right j1 /\ Right j2 | j1 < j2 ->
+        Cursor
+          ( ZipperCursor
+              (getSpanCursorBetweenPointIndices ph j1 j2 e)
+              (SpanCursor mempty (wrap 0) (wrap 0))
+          )
+          (Inner End)
       -- p1 is outside and before p2
       Right j_outer /\ Left (i_inner /\ _) | comparePointIndexToKidIndex' j_outer i_inner ->
         let
@@ -86,10 +86,10 @@ dragFromPointCursor p1_top p2_top e_top =
       _ -> bug "dragFromPointCursor" "impossible"
 
 dragFromSpanCursor :: forall n a. SpanCursor -> PointCursor -> Span n a -> Cursor
-dragFromSpanCursor = todo "dragFromSpan" {}
+dragFromSpanCursor _ _ _ = todo "dragFromSpanCursor" {}
 
 dragFromZipperCursor :: forall n a. ZipperCursor -> PointCursor -> Span n a -> Cursor
-dragFromZipperCursor = todo "dragFromZipper" {}
+dragFromZipperCursor _ _ _ = todo "dragFromZipperCursor" {}
 
 dragFromCursor :: forall n a. Cursor -> PointCursor -> Span n a -> Cursor
 -- dragFromCursor c p = todo "dragFromCursor" {}
