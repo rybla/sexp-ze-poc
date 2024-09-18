@@ -69,7 +69,7 @@ dragFromPointCursor p1_top p2_top e_top =
         in
           Cursor
             ( ZipperCursor
-                (e # getSpanCursorBetweenPointIndices ph j_outer (j_outer # shiftPointIndexByPointDist (wrap 1)))
+                (e # getSpanCursorBetweenPointIndices ph (j_outer # shiftPointIndexByPointDistNeg (wrap 1)) j_outer)
                 (e # getSpanCursorBetweenPointIndices ph_inner j_inner (lastPointIndexOfSpan e_inner))
             )
             (Outer End)

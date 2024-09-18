@@ -99,7 +99,7 @@ spec = do
       should_dragFromCursor e
         (mkCursor [ 1 ] 3 0 [] 0 0 (Inner Start))
         (mkPointCursor [] 2)
-        (mkCursor [] 1 1 [ 1 ] 3 0 (Outer Start))
+        (mkCursor [] 1 1 [ 1 ] 3 0 (Outer End))
     pending "outer end to inner end"
     pure unit
 
@@ -113,15 +113,20 @@ shouldEqualCursor (Span es) c1 c2 = unless (c1 == c2) $ fail $ indent 2 $ "\n" <
 
 should_dragFromCursor :: forall m. MonadThrow Error m => TermSpan -> Cursor -> PointCursor -> Cursor -> m Unit
 should_dragFromCursor e@(Span es) c1 p2 c =
-  unless (dragFromCursor c1 p2 e == c) do
-    fail $ indent 2 $ "\n" <> Array.foldMap (_ <> "\n")
-      [ "drag from\n"
-      , prettyTermWithCursor c1 (Sexp {} es)
-      , "\nto\n"
-      , prettyTermWithCursor (fromPointCursorToCursor p2 e) (Sexp {} es)
-      , "\nshould be\n"
-      , prettyTermWithCursor c (Sexp {} es)
-      ]
+  let
+    c' = dragFromCursor c1 p2 e
+  in
+    unless (c' == c) do
+      fail $ indent 2 $ "\n" <> Array.foldMap (_ <> "\n")
+        [ "drag from\n"
+        , prettyTermWithCursor c1 (Sexp {} es)
+        , "\nto\n"
+        , prettyTermWithCursor (fromPointCursorToCursor p2 e) (Sexp {} es)
+        , "\nis supposed to be\n"
+        , prettyTermWithCursor c (Sexp {} es)
+        , "\nbut actually is\n"
+        , prettyTermWithCursor c' (Sexp {} es)
+        ]
 
 --------------------------------------------------------------------------------
 
