@@ -8723,7 +8723,7 @@
             ;
             if (v2.value0 instanceof Right && (v2.value1 instanceof Left && !comparePointIndexToKidIndex$prime(v2.value0.value0)(v2.value1.value0.value0))) {
               var v3 = atPath(v.value1.value1.value0)(v1.value1);
-              return new Cursor(new ZipperCursor(getSpanCursorBetweenPointIndices(v.value0)(shiftPointIndexByPointDistNeg(wrap4(1))(v2.value0.value0))(v2.value0.value0)(v1.value1), getSpanCursorBetweenPointIndices(v.value1.value1.value0)(firstPointIndexOfSpan(v3.value1))(v.value1.value1.value1)(v1.value1)), new Inner(End.value));
+              return new Cursor(new ZipperCursor(getSpanCursorBetweenPointIndices(v.value0)(pointIndexRightBeforeKidIndex(v2.value1.value0.value0))(v2.value0.value0)(v1.value1), getSpanCursorBetweenPointIndices(v.value1.value1.value0)(firstPointIndexOfSpan(v3.value1))(v.value1.value1.value1)(v1.value1)), new Inner(End.value));
             }
             ;
             if (v2.value0 instanceof Left && (v2.value1 instanceof Right && compareKidIndexToPointIndex$prime(v2.value0.value0.value0)(v2.value1.value0))) {
