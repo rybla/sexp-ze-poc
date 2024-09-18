@@ -100,7 +100,11 @@ spec = do
         (mkCursor [ 1 ] 3 0 [] 0 0 (Inner Start))
         (mkPointCursor [] 2)
         (mkCursor [] 1 1 [ 1 ] 3 0 (Outer End))
-    pending "outer end to inner end"
+    it "outer end to inner end" do
+      should_dragFromCursor e
+        (mkCursor [] 2 1 [] 0 0 (Inner Start))
+        (mkPointCursor [ 1 ] 3)
+        (mkCursor [] 1 1 [ 1 ] 0 0 (Inner End))
     pure unit
 
 --------------------------------------------------------------------------------

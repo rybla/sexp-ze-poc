@@ -57,7 +57,7 @@ dragFromPointCursor p1_top p2_top e_top =
         in
           Cursor
             ( ZipperCursor
-                (e # getSpanCursorBetweenPointIndices ph j_outer (j_outer # shiftPointIndexByPointDist (wrap 1)))
+                (e # getSpanCursorBetweenPointIndices ph (j_outer # shiftPointIndexByPointDistNeg (wrap 1)) j_outer)
                 (e # getSpanCursorBetweenPointIndices ph_inner (firstPointIndexOfSpan e_inner) j_inner)
             )
             (Inner End)
@@ -85,7 +85,17 @@ dragFromPointCursor p1_top p2_top e_top =
                 (e # getSpanCursorBetweenPointIndices ph_inner (firstPointIndexOfSpan e_inner) j_inner)
             )
             (Outer Start)
-      _ -> bug "dragFromPointCursor" "impossible"
+      -- Left (i1 /\ ph1) /\ Left (i2 /\ ph2) ->
+      --   let
+      --     _ = unit
+      --   in
+      --     Cursor
+      --       ( ZipperCursor
+      --           ?a
+      --           ?a
+      --       )
+      --       ?a
+      x1 /\ x2 -> bug "dragFromPointCursor" ("impossible: " <> show { x1, x2 })
 
 dragFromSpanCursor :: forall n a. SpanCursor -> PointCursor -> Span n a -> Cursor
 dragFromSpanCursor _ _ _ = todo "dragFromSpanCursor" {}
