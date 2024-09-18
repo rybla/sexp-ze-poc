@@ -45,7 +45,8 @@ dragFromPointCursor p1_top p2_top e_top =
         in
           Cursor
             ( ZipperCursor
-                (e # getSpanCursorBetweenPointIndices ph j_outer (j_outer # shiftPointIndexByPointDist (wrap 1)))
+                -- xxx is the point immediately to the right of i_inner
+                (e # getSpanCursorBetweenPointIndices ph j_outer (i_inner # pointIndexRightAfterKidIndex))
                 (e # getSpanCursorBetweenPointIndices ph_inner j_inner (lastPointIndexOfSpan e_inner))
             )
             (Inner Start)

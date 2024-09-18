@@ -69,6 +69,11 @@ spec = do
         (mkCursor [] 1 2 [] 0 0 (Inner Start))
         (mkPointCursor [ 1 ] 0)
         (mkCursor [] 1 1 [ 1 ] 0 0 (Inner Start))
+    it "outer start to inner start" do
+      should_dragFromCursor e
+        (mkCursor [] 0 3 [] 0 0 (Inner Start))
+        (mkPointCursor [ 1 ] 0)
+        (mkCursor [] 0 1 [ 1 ] 0 0 (Inner Start))
     it "inner start to outer start" do
       should_dragFromCursor e
         (mkCursor [ 1 ] 0 3 [] 0 0 (Inner Start))
