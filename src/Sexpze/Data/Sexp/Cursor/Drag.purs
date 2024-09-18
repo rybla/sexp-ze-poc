@@ -1,4 +1,3 @@
--- TODO: make sure when insert span at span, update the end of span (since the point will be different now)
 module Sexpze.Data.Sexp.Cursor.Drag where
 
 import Prelude
@@ -6,10 +5,8 @@ import Sexpze.Data.Sexp
 import Sexpze.Data.Sexp.Cursor
 
 import Data.Either (Either(..))
-import Data.Either.Nested (type (\/))
 import Data.Newtype (wrap)
-import Data.Tuple.Nested (type (/\), (/\))
-import Debug as Debug
+import Data.Tuple.Nested ((/\))
 import Sexpze.Utility (bug, todo)
 
 --------------------------------------------------------------------------------
@@ -65,11 +62,10 @@ dragFromPointCursor p1_top p2_top e_top =
         let
           p_inner = p1
           -- p_outer = p2
-          PointCursor ph_inner j_inner = p_inner
+          PointCursor _ph_inner j_inner = p_inner
           PointCursor ph'_inner _ = p'_inner
-          _ /\ e_inner = e # atPath ph_inner
-          s_outer = e # getSpanCursorBetweenPointIndices ph (j_outer # shiftPointIndexByPointDistNeg (wrap 1)) j_outer
-          s_inner = e # getSpanCursorBetweenPointIndices ((i_inner # trimKidIndexIntoSpanCursor s_outer) `consPath` ph'_inner) j_inner (lastPointIndexOfSpan e_inner)
+          s_outer = e # getSpanCursorBetweenPointIndices ph (i_inner # pointIndexRightBeforeKidIndex) j_outer
+          s_inner = e # getSpanCursorBetweenPointIndices ((i_inner # trimKidIndexIntoSpanCursor s_outer) `consPath` ph'_inner) j_inner j_inner
         in
           Cursor (ZipperCursor s_outer s_inner) (Outer End)
       -- p1 is inside and after p2
@@ -77,11 +73,10 @@ dragFromPointCursor p1_top p2_top e_top =
         let
           -- p_outer = p2 
           p_inner = p1
-          PointCursor ph_inner j_inner = p_inner
+          PointCursor _ph_inner j_inner = p_inner
           PointCursor ph'_inner _ = p'_inner
-          _ /\ e_inner = e # atPath ph_inner
-          s_outer = e # getSpanCursorBetweenPointIndices ph j_outer (j_outer # shiftPointIndexByPointDist (wrap 1))
-          s_inner = e # getSpanCursorBetweenPointIndices ((i_inner # trimKidIndexIntoSpanCursor s_outer) `consPath` ph'_inner) (firstPointIndexOfSpan e_inner) j_inner
+          s_outer = e # getSpanCursorBetweenPointIndices ph j_outer (i_inner # pointIndexRightAfterKidIndex)
+          s_inner = e # getSpanCursorBetweenPointIndices ((i_inner # trimKidIndexIntoSpanCursor s_outer) `consPath` ph'_inner) j_inner j_inner
         in
           Cursor (ZipperCursor s_outer s_inner) (Outer Start)
       Left (_i1 /\ _ph1) /\ Left (_i2 /\ _ph2) -> bug "dragFromPointCursor" "is this impossible?"

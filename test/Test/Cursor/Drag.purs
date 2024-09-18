@@ -11,8 +11,7 @@ import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
 import Sexpze.Data.Sexp.Cursor (Cursor(..), KidIndex, Path(..), PointCursor(..), Span(..), SpanCursor(..), SpanHandle(..), ZipperCursor(..), ZipperHandle(..), fromPointCursorToCursor)
 import Sexpze.Data.Sexp.Cursor.Drag (dragFromCursor)
 import Sexpze.Data.Sexp.Cursor.Pretty (indent, prettyPointCursor, prettyTermWithCursor)
-import Sexpze.Utility (todo)
-import Test.Spec (Spec, describe, it, pending)
+import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (fail)
 
 --------------------------------------------------------------------------------
@@ -26,46 +25,56 @@ type TermSpan = Span {} String
 spec :: Spec Unit
 spec = do
   describe "dragFromPointCursor" do
-    describe "basic" do
-      let e = fromTreeToTermSpan [ L "a", L "b", L "c" ]
-      describe "point" do
-        e # it_should_dragFromPointCursor "" (mkPointCursor [] 0) (mkPointCursor [] 0) (mkCursor [] 0 3 [] 0 0 (Inner Start))
-        e # it_should_dragFromPointCursor "" (mkPointCursor [] 1) (mkPointCursor [] 1) (mkCursor [] 1 2 [] 0 0 (Inner Start))
-        e # it_should_dragFromPointCursor "" (mkPointCursor [] 2) (mkPointCursor [] 2) (mkCursor [] 2 1 [] 0 0 (Inner Start))
-        e # it_should_dragFromPointCursor "" (mkPointCursor [] 3) (mkPointCursor [] 3) (mkCursor [] 3 0 [] 0 0 (Inner Start))
-      describe "span" do
-        e # it_should_dragFromPointCursor "to end " (mkPointCursor [] 0) (mkPointCursor [] 1) (mkCursor [] 0 2 [] 0 0 (Inner Start))
-        e # it_should_dragFromPointCursor "to start " (mkPointCursor [] 1) (mkPointCursor [] 0) (mkCursor [] 0 2 [] 0 0 (Inner Start))
-    describe "deeper" do
-      let e = fromTreeToTermSpan [ L "a", B [ L "b", L "c", L "d" ], L "e" ]
-      describe "point" do
-        e # it_should_dragFromPointCursor "" (mkPointCursor [ 1 ] 0) (mkPointCursor [ 1 ] 0) (mkCursor [ 1 ] 0 3 [] 0 0 (Inner Start))
-        e # it_should_dragFromPointCursor "" (mkPointCursor [ 1 ] 1) (mkPointCursor [ 1 ] 1) (mkCursor [ 1 ] 1 2 [] 0 0 (Inner Start))
-        e # it_should_dragFromPointCursor "" (mkPointCursor [ 1 ] 2) (mkPointCursor [ 1 ] 2) (mkCursor [ 1 ] 2 1 [] 0 0 (Inner Start))
-        e # it_should_dragFromPointCursor "" (mkPointCursor [ 1 ] 3) (mkPointCursor [ 1 ] 3) (mkCursor [ 1 ] 3 0 [] 0 0 (Inner Start))
-      describe "span" do
-        e # it_should_dragFromPointCursor "start to end " (mkPointCursor [ 1 ] 0) (mkPointCursor [ 1 ] 1) (mkCursor [ 1 ] 0 2 [] 0 0 (Inner Start))
-        e # it_should_dragFromPointCursor "end to start " (mkPointCursor [ 1 ] 1) (mkPointCursor [ 1 ] 0) (mkCursor [ 1 ] 0 2 [] 0 0 (Inner Start))
-    describe "basic zippers" do
-      let e = fromTreeToTermSpan [ L "a", B [ L "b", L "c", L "d" ], L "e" ]
-      do
-        e # it_should_dragFromPointCursor "outer start to inner start " (mkPointCursor [] 1) (mkPointCursor [ 1 ] 0) (mkCursor [] 1 1 [ 0 ] 0 0 (Inner Start))
-        e # it_should_dragFromPointCursor "outer start far to inner start " (mkPointCursor [] 0) (mkPointCursor [ 1 ] 0) (mkCursor [] 0 1 [ 1 ] 0 0 (Inner Start))
-        e # it_should_dragFromPointCursor "outer start to inner start far " (mkPointCursor [] 1) (mkPointCursor [ 1 ] 1) (mkCursor [] 1 1 [ 0 ] 1 0 (Inner Start))
-      do
-        e # it_should_dragFromPointCursor "inner start to outer start " (mkPointCursor [ 1 ] 0) (mkPointCursor [] 1) (mkCursor [] 1 1 [ 0 ] 0 3 (Outer Start))
-        pending "inner start far to outer start " -- e # it_should_dragFromPointCursor "inner start far to outer start " (mkPointCursor [ 1 ] 1) (mkPointCursor [] 1) (mkCursor [] 1 1 [ 0 ] 1 2 (Outer Start))
-        pending "inner start to outer start far " -- e # it_should_dragFromPointCursor "inner start to outer start far " (mkPointCursor [ 1 ] 0) (mkPointCursor [] 0) (mkCursor [] 0 1 [ 1 ] 0 3 (Outer Start))
+    points_spec
+    spans_spec
+    zippers_spec
 
-      do
-        e # it_should_dragFromPointCursor "inner end to outer end " (mkPointCursor [ 1 ] 3) (mkPointCursor [] 2) (mkCursor [] 1 1 [ 0 ] 3 0 (Outer End))
-        e # it_should_dragFromPointCursor "inner end to outer end far " (mkPointCursor [ 1 ] 3) (mkPointCursor [] 2) (mkCursor [] 1 1 [ 0 ] 3 0 (Outer End))
-        pending "inner end far to outer end "
-      do
-        e # it_should_dragFromPointCursor "outer end to inner end " (mkPointCursor [] 2) (mkPointCursor [ 1 ] 3) (mkCursor [] 1 1 [ 0 ] 0 0 (Inner End))
-        e # it_should_dragFromPointCursor "outer end far to inner end " (mkPointCursor [] 3) (mkPointCursor [ 1 ] 3) (mkCursor [] 1 0 [ 0 ] 0 0 (Inner End))
-        pending "outer end to inner end far "
-  pure unit
+points_spec :: Spec Unit
+points_spec = describe "points" do
+  describe "basic" do
+    let e = fromTreeToTermSpan [ L "a", L "b", L "c" ]
+    e # it_should_dragFromPointCursor "" (mkPointCursor [] 0) (mkPointCursor [] 0) (mkCursor [] 0 3 [] 0 0 (Inner Start))
+    e # it_should_dragFromPointCursor "" (mkPointCursor [] 1) (mkPointCursor [] 1) (mkCursor [] 1 2 [] 0 0 (Inner Start))
+    e # it_should_dragFromPointCursor "" (mkPointCursor [] 2) (mkPointCursor [] 2) (mkCursor [] 2 1 [] 0 0 (Inner Start))
+    e # it_should_dragFromPointCursor "" (mkPointCursor [] 3) (mkPointCursor [] 3) (mkCursor [] 3 0 [] 0 0 (Inner Start))
+  describe "deeper" do
+    let e = fromTreeToTermSpan [ L "a", B [ L "b", L "c", L "d" ], L "e" ]
+    e # it_should_dragFromPointCursor "" (mkPointCursor [ 1 ] 0) (mkPointCursor [ 1 ] 0) (mkCursor [ 1 ] 0 3 [] 0 0 (Inner Start))
+    e # it_should_dragFromPointCursor "" (mkPointCursor [ 1 ] 1) (mkPointCursor [ 1 ] 1) (mkCursor [ 1 ] 1 2 [] 0 0 (Inner Start))
+    e # it_should_dragFromPointCursor "" (mkPointCursor [ 1 ] 2) (mkPointCursor [ 1 ] 2) (mkCursor [ 1 ] 2 1 [] 0 0 (Inner Start))
+    e # it_should_dragFromPointCursor "" (mkPointCursor [ 1 ] 3) (mkPointCursor [ 1 ] 3) (mkCursor [ 1 ] 3 0 [] 0 0 (Inner Start))
+
+spans_spec :: Spec Unit
+spans_spec = describe "spans" do
+  describe "basic" do
+    let e = fromTreeToTermSpan [ L "a", L "b", L "c" ]
+    e # it_should_dragFromPointCursor "to end " (mkPointCursor [] 0) (mkPointCursor [] 1) (mkCursor [] 0 2 [] 0 0 (Inner Start))
+    e # it_should_dragFromPointCursor "to start " (mkPointCursor [] 1) (mkPointCursor [] 0) (mkCursor [] 0 2 [] 0 0 (Inner Start))
+  describe "deeper" do
+    let e = fromTreeToTermSpan [ L "a", B [ L "b", L "c", L "d" ], L "e" ]
+    e # it_should_dragFromPointCursor "start to end " (mkPointCursor [ 1 ] 0) (mkPointCursor [ 1 ] 1) (mkCursor [ 1 ] 0 2 [] 0 0 (Inner Start))
+    e # it_should_dragFromPointCursor "end to start " (mkPointCursor [ 1 ] 1) (mkPointCursor [ 1 ] 0) (mkCursor [ 1 ] 0 2 [] 0 0 (Inner Start))
+
+zippers_spec :: Spec Unit
+zippers_spec = describe "zippers" do
+  describe "basic" do
+    let e = fromTreeToTermSpan [ L "a", B [ L "b", L "c", L "d" ], L "e" ]
+    do
+      e # it_should_dragFromPointCursor "outer start to inner start " (mkPointCursor [] 1) (mkPointCursor [ 1 ] 0) (mkCursor [] 1 1 [ 0 ] 0 0 (Inner Start))
+      e # it_should_dragFromPointCursor "outer start far to inner start " (mkPointCursor [] 0) (mkPointCursor [ 1 ] 0) (mkCursor [] 0 1 [ 1 ] 0 0 (Inner Start))
+      e # it_should_dragFromPointCursor "outer start to inner start far " (mkPointCursor [] 1) (mkPointCursor [ 1 ] 1) (mkCursor [] 1 1 [ 0 ] 1 0 (Inner Start))
+    do
+      e # it_should_dragFromPointCursor "inner start to outer start " (mkPointCursor [ 1 ] 0) (mkPointCursor [] 1) (mkCursor [] 1 1 [ 0 ] 0 3 (Outer Start))
+      e # it_should_dragFromPointCursor "inner start far to outer start " (mkPointCursor [ 1 ] 1) (mkPointCursor [] 1) (mkCursor [] 1 1 [ 0 ] 1 2 (Outer Start))
+      e # it_should_dragFromPointCursor "inner start to outer start far " (mkPointCursor [ 1 ] 0) (mkPointCursor [] 0) (mkCursor [] 0 1 [ 1 ] 0 3 (Outer Start))
+    do
+      e # it_should_dragFromPointCursor "inner end to outer end " (mkPointCursor [ 1 ] 3) (mkPointCursor [] 2) (mkCursor [] 1 1 [ 0 ] 3 0 (Outer End))
+      e # it_should_dragFromPointCursor "inner end to outer end far " (mkPointCursor [ 1 ] 3) (mkPointCursor [] 2) (mkCursor [] 1 1 [ 0 ] 3 0 (Outer End))
+      e # it_should_dragFromPointCursor "inner end far to outer end " (mkPointCursor [ 1 ] 2) (mkPointCursor [] 2) (mkCursor [] 1 1 [ 0 ] 2 1 (Outer End))
+    do
+      e # it_should_dragFromPointCursor "outer end to inner end " (mkPointCursor [] 2) (mkPointCursor [ 1 ] 3) (mkCursor [] 1 1 [ 0 ] 0 0 (Inner End))
+      e # it_should_dragFromPointCursor "outer end far to inner end " (mkPointCursor [] 3) (mkPointCursor [ 1 ] 3) (mkCursor [] 1 0 [ 0 ] 0 0 (Inner End))
+      e # it_should_dragFromPointCursor "outer end to inner end far " (mkPointCursor [] 2) (mkPointCursor [ 1 ] 2) (mkCursor [] 1 1 [ 0 ] 0 1 (Inner End))
 
 --------------------------------------------------------------------------------
 
@@ -106,16 +115,18 @@ should_dragFromCursor c1 p2 c e@(Span es) =
 data Tree = B (Array Tree) | L String
 
 fromTreeToTerm :: Array Tree -> Term
-fromTreeToTerm = Sexp {} <<< map toSexp'
+fromTreeToTerm = Sexp {} <<< map fromTreeToTerm'
 
 fromTreeToTermSpan :: Array Tree -> TermSpan
-fromTreeToTermSpan = Span <<< map toSexp'
+fromTreeToTermSpan = Span <<< map fromTreeToTerm'
 
-toSexp' :: Tree -> Term'
-toSexp' (B ts) = Group (Sexp {} (ts # map toSexp'))
-toSexp' (L s) = Atom s
+fromTreeToTerm' :: Tree -> Term'
+fromTreeToTerm' (B ts) = Group (Sexp {} (ts # map fromTreeToTerm'))
+fromTreeToTerm' (L s) = Atom s
 
-span :: Array (Sexp' {} String) -> TermSpan
+--------------------------------------------------------------------------------
+
+span :: Array Term' -> TermSpan
 span es = Span es
 
 mkCursor :: Array Int -> Int -> Int -> Array Int -> Int -> Int -> ZipperHandle -> Cursor
