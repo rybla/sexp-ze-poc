@@ -84,6 +84,11 @@ atPointIndex i (Span es) (Span es') =
   in
     Span (before <> es' <> after)
 
+mapWithPointIndex :: forall a r. (PointIndex -> r) -> (KidIndex -> a -> r) -> Array a -> Array r
+mapWithPointIndex f_point f_kid xs =
+  [ [ f_point (wrap 0) ] ] <> (xs # Array.mapWithIndex \i x -> [ f_kid (wrap i) x, f_point (wrap (i + 1)) ])
+    # Array.fold
+
 --------------------------------------------------------------------------------
 -- Path
 --------------------------------------------------------------------------------
@@ -448,6 +453,12 @@ instance Eq ZipperHandle where
 
 getCursorHandle :: forall n a. Cursor -> Span n a -> PointCursor
 getCursorHandle (Cursor z h) = getZipperCursorHandle z h
+
+fromPointCursorToCursor :: forall n a. PointCursor -> Span n a -> Cursor
+fromPointCursorToCursor p e = Cursor (fromPointCursorToZipperCursor p e) (Inner Start)
+
+fromPointCursorToZipperCursor :: forall n a. PointCursor -> Span n a -> ZipperCursor
+fromPointCursorToZipperCursor p e = let s = fromPointCursorToZeroWidthSpanCursor p e in ZipperCursor s emptySpanCursor
 
 fromPointCursorToZeroWidthSpanCursor :: forall n a. PointCursor -> Span n a -> SpanCursor
 fromPointCursorToZeroWidthSpanCursor (PointCursor ph i) e =

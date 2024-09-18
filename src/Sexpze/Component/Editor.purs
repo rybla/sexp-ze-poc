@@ -295,11 +295,6 @@ renderTerm'WithCursor c h ph i (Group e) =
   , [ HH.div [ HP.classes [ HH.ClassName "Punc", HH.ClassName "Paren", HH.ClassName "RightParen" ] ] [ HH.text ")" ] ]
   ] # Array.fold
 
-mapWithPointIndex :: forall a r. (PointIndex -> r) -> (KidIndex -> a -> r) -> Array a -> Array r
-mapWithPointIndex f_point f_kid xs =
-  [ [ f_point (wrap 0) ] ] <> (xs # Array.mapWithIndex \i x -> [ f_kid (wrap i) x, f_point (wrap (i + 1)) ])
-    # Array.fold
-
 --------------------------------------------------------------------------------
 
 -- TODO: take into account `n : NodeData` somehow
