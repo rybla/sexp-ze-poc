@@ -193,3 +193,26 @@ renderZipperHandleInnerMiddle h _ = case h of
 
 renderPointHandle :: PointCursor -> Item
 renderPointHandle _ = Item [ "|", "*" ]
+
+--------------------------------------------------------------------------------
+
+prettyCursor :: Cursor -> String
+prettyCursor (Cursor z h) = "⟨ Cursor | " <> prettyZipperCursor z <> " " <> show h <> " ⟩"
+
+prettyZipperCursor :: ZipperCursor -> String
+prettyZipperCursor (ZipperCursor s1 s2) = [ prettySpanCursor s1, prettySpanCursor s2 ] # prettyTuple
+
+prettySpanCursor :: SpanCursor -> String
+prettySpanCursor (SpanCursor ph d1 d2) = [ prettyPath ph, show d1, show d2 ] # prettyTuple
+
+prettyPointCursor :: PointCursor -> String
+prettyPointCursor (PointCursor ph j) = [ prettyPath ph, show j ] # prettyTuple
+
+prettyPath :: Path -> String
+prettyPath (Path is) = is # Array.fromFoldable # show
+
+--------------------------------------------------------------------------------
+
+prettyTuple :: Array String -> String
+prettyTuple ss = "(" <> Array.intercalate " , " ss <> ")"
+
