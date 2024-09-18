@@ -221,6 +221,12 @@ derive newtype instance Show PointDistNeg
 derive newtype instance Eq PointDistNeg
 derive newtype instance Semiring PointDistNeg
 
+shiftKidIndexByPointDist :: PointDist -> KidIndex -> KidIndex
+shiftKidIndexByPointDist d i = wrap (unwrap i + unwrap d)
+
+trimKidIndexByPointDist :: PointDist -> KidIndex -> KidIndex
+trimKidIndexByPointDist d i = wrap (unwrap i - unwrap d)
+
 shiftPointCursorByPointDist :: PointDist -> PointCursor -> PointCursor
 shiftPointCursorByPointDist d (PointCursor ph j) = PointCursor ph (wrap (unwrap j + unwrap d))
 
@@ -265,8 +271,8 @@ instance Show SpanCursor where
 instance Eq SpanCursor where
   eq x = genericEq x
 
-shiftKidIndexByPointDist :: PointDist -> KidIndex -> KidIndex
-shiftKidIndexByPointDist d i = wrap (unwrap i + unwrap d)
+trimKidIndexIntoSpanCursor :: SpanCursor -> KidIndex -> KidIndex
+trimKidIndexIntoSpanCursor (SpanCursor _ d1 _) = trimKidIndexByPointDist d1
 
 instance Semigroup SpanCursor where
   append (SpanCursor ph_outer d1_outer d2_outer) (SpanCursor ph_inner d1_inner d2_inner) =
