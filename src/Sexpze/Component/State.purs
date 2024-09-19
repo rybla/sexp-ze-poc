@@ -3,10 +3,14 @@ module Sexpze.Component.State where
 import Prelude
 
 import Data.Array as Array
-import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype, wrap)
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
+import Data.Maybe (Maybe(..), fromMaybe')
+import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
-import Sexpze.Utility (todo)
+import Debug as Debug
+import Sexpze.Utility (bug, todo)
 
 --------------------------------------------------------------------------------
 -- types
@@ -17,30 +21,83 @@ type State =
   , mb_clipboard :: Maybe Clipboard
   }
 
+newtype Point = Point Int
+
+derive instance Newtype Point _
+derive newtype instance Show Point
+derive newtype instance Eq Point
+derive newtype instance Ord Point
+derive newtype instance Semiring Point
+derive newtype instance Ring Point
+
 newtype Index = Index Int
 
-newtype PointCursor = PointCursor Int
+derive instance Newtype Index _
+derive newtype instance Show Index
+derive newtype instance Eq Index
+derive newtype instance Ord Index
+derive newtype instance Semiring Index
+derive newtype instance Ring Index
 
-derive instance Newtype PointCursor _
-derive newtype instance Eq PointCursor
-derive newtype instance Ord PointCursor
-derive newtype instance Semiring PointCursor
+data SpanCursor = SpanCursor Point Point
 
-data SpanCursor = SpanCursor PointCursor PointCursor
+derive instance Generic SpanCursor _
 
-data ZipperCursor = ZipperCursor PointCursor PointCursor PointCursor PointCursor
+instance Show SpanCursor where
+  show x = genericShow x
+
+instance Eq SpanCursor where
+  eq x = genericEq x
+
+data ZipperCursor = ZipperCursor Point Point Point Point
+
+derive instance Generic ZipperCursor _
+
+instance Show ZipperCursor where
+  show x = genericShow x
+
+instance Eq ZipperCursor where
+  eq x = genericEq x
 
 data Cursor
   = MakeSpanCursor SpanCursor
   | MakeZipperCursor ZipperCursor
 
+derive instance Generic Cursor _
+
+instance Show Cursor where
+  show x = genericShow x
+
+instance Eq Cursor where
+  eq x = genericEq x
+
 data Clipboard
   = SpanClipboard Span
   | ZipperClipboard
 
-data Atom = LitAtom String | Open | Close
+derive instance Generic Clipboard _
+
+instance Show Clipboard where
+  show x = genericShow x
+
+instance Eq Clipboard where
+  eq x = genericEq x
+
+data Atom = Lit String | Open | Close
+
+derive instance Generic Atom _
+
+instance Show Atom where
+  show x = genericShow x
+
+instance Eq Atom where
+  eq x = genericEq x
 
 newtype Span = Span (Array Atom)
+
+derive instance Newtype Span _
+derive newtype instance Show Span
+derive newtype instance Eq Span
 
 data Zipper = Zipper Span Span
 
@@ -48,10 +105,10 @@ data Zipper = Zipper Span Span
 -- drag
 --------------------------------------------------------------------------------
 
-dragFromPointCursor :: PointCursor -> PointCursor -> Span -> Cursor
-dragFromPointCursor ps pe e | ps == pe = MakeSpanCursor $ SpanCursor ps pe
-dragFromPointCursor ps pe e =
+dragFromPoint :: Point -> Point -> Span -> Cursor
+dragFromPoint ps_ pe_ e =
   let
+    ps /\ pe = if ps_ < pe_ then ps_ /\ pe_ else pe_ /\ ps_
     s = e # atSpanCursor (SpanCursor ps pe)
     { unopened, unclosed } = s # countUnopenedAndUnclosed
   in
@@ -60,21 +117,45 @@ dragFromPointCursor ps pe e =
       todo "" {}
     else if unopened > 0 then
       -- ==> zipper with second half on the left
-      todo "" {}
+      let
+        i = getPointRightAfterNthPrevUnclosedParenStartingFromPoint unopened pe s
+      in
+        MakeZipperCursor $ ZipperCursor ps pe i (i + one)
     else if unclosed > 0 then
       -- ==> zipper with second half on the right
-      todo "" {}
+      let
+        i = getPointRightBeforeNthNextUnopenedParenStartingFromPoint unclosed pe s
+      in
+        MakeZipperCursor $ ZipperCursor ps pe i (i + one)
     else
       -- unopened == unclosed == 0
       -- ==> span
-      todo "" {}
+      MakeSpanCursor $ SpanCursor ps pe
+
+getPointRightBeforeNthNextUnopenedParenStartingFromPoint :: Int -> Point -> Span -> Point
+getPointRightBeforeNthNextUnopenedParenStartingFromPoint n0 p0 xs = go n0 p0
+  where
+  go n p = case xs # atIndex (getIndexRightAfterPoint p) of
+    Lit _ -> go n (p + one)
+    Open -> go (n + one) (p + one)
+    Close | n == 1 -> p
+    Close -> go (n - one) (p + one)
+
+getPointRightAfterNthPrevUnclosedParenStartingFromPoint :: Int -> Point -> Span -> Point
+getPointRightAfterNthPrevUnclosedParenStartingFromPoint n0 p0 xs = go n0 p0
+  where
+  go n p = case xs # atIndex (getIndexRightBeforePoint p) of
+    Lit _ -> go n (p - one)
+    Close -> go (n + one) (p - one)
+    Open | n == 1 -> p
+    Open -> go (n - one) (p - one)
 
 countUnopenedAndUnclosed :: Span -> { unopened :: Int, unclosed :: Int }
 countUnopenedAndUnclosed (Span xs) = go 0 0 xs
   where
   go unopened unclosed = Array.uncons >>> case _ of
     Nothing -> { unopened, unclosed }
-    Just { head: LitAtom _, tail: xs' } -> xs' # go unopened unclosed
+    Just { head: Lit _, tail: xs' } -> xs' # go unopened unclosed
     Just { head: Open, tail: xs' } -> xs' # go unopened (unclosed + 1)
     Just { head: Close, tail: xs' } -> xs' # if unclosed > 0 then go unopened (unclosed - 1) else go (unopened + 1) unclosed
 
@@ -82,17 +163,23 @@ countUnopenedAndUnclosed (Span xs) = go 0 0 xs
 -- utilities
 --------------------------------------------------------------------------------
 
-atPointCursor :: PointCursor -> Span -> Atom
-atPointCursor = todo ""
+getIndexRightBeforePoint :: Point -> Index
+getIndexRightBeforePoint i = wrap (unwrap i - 1)
 
-beforePointCursor :: PointCursor -> Span -> Span
-beforePointCursor = todo "" {}
+getIndexRightAfterPoint :: Point -> Index
+getIndexRightAfterPoint i = wrap (unwrap i)
 
-afterPointCursor :: PointCursor -> Span -> Span
-afterPointCursor = todo "" {}
+atIndex :: Index -> Span -> Atom
+atIndex (Index i) (Span es) = es Array.!! i # fromMaybe' (\_ -> bug "atIndex" ("index out of bounds: " <> show { i, es }))
+
+beforeIndex :: Index -> Span -> Span
+beforeIndex _ _ = todo "" {}
+
+afterIndex :: Index -> Span -> Span
+afterIndex _ _ = todo "" {}
 
 atSpanCursor :: SpanCursor -> Span -> Span
-atSpanCursor = todo "" {}
+atSpanCursor _ _ = todo "" {}
 
 atZipperCursor :: SpanCursor -> Span -> Zipper
-atZipperCursor = todo "" {}
+atZipperCursor _ _ = todo "" {}
