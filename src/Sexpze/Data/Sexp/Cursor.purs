@@ -18,7 +18,7 @@ import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
-import Sexpze.Utility (bug)
+import Sexpze.Utility (bug, todo)
 
 --------------------------------------------------------------------------------
 -- KidIndex
@@ -476,13 +476,16 @@ fromPointCursorToZeroWidthSpanCursor (PointCursor ph i) e =
     SpanCursor ph (getOffsetPointDist i e_inner) (getOffsetPointDistNeg i e_inner)
 
 insertAtCursor :: forall n a. Zipper n a -> Cursor -> Span n a -> Cursor /\ Span n a
-insertAtCursor z@(Zipper _ p_inner) (Cursor c@(ZipperCursor s_outer s_inner) h) e =
+insertAtCursor z@(Zipper _ p_inner) (Cursor c@(ZipperCursor s_outer _s_inner) h) e =
   let
-    _ /\ e_middle = e # atSpanCursor s_outer
+    e' = e # insertAtZipperCursor c z
+    _ /\ e_middle = e' # atSpanCursor s_outer
+    s_middle = fromPointCursorToZeroWidthSpanCursor p_inner e_middle
+    c' = Cursor (ZipperCursor (s_outer <> s_middle) (SpanCursor mempty zero zero)) h
   in
-    Tuple
-      (Cursor (ZipperCursor s_outer (s_inner <> fromPointCursorToZeroWidthSpanCursor p_inner e_middle)) h)
-      (e # insertAtZipperCursor c z)
+    c' /\ e'
+
+-- (Cursor (ZipperCursor s_outer (s_inner <> fromPointCursorToZeroWidthSpanCursor p_inner e_middle)) h)
 
 deleteAtCursor :: forall n a. Cursor -> Span n a -> Cursor /\ Span n a
 deleteAtCursor = insertAtCursor emptyZipper

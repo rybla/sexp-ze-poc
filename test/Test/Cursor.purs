@@ -8,7 +8,7 @@ import Data.Newtype (wrap)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception (Error)
 import Sexpze.Data.Sexp (Sexp(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), PointCursor, Span(..), SpanHandle(..), ZipperHandle(..), atSpanCursor, atSpanPointIndexSpan, deleteAtCursor, fromPointCursorToCursor)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), PointCursor, Span(..), SpanHandle(..), Zipper(..), ZipperHandle(..), atSpanCursor, atSpanPointIndexSpan, deleteAtCursor, fromPointCursorToCursor, insertAtCursor)
 import Sexpze.Data.Sexp.Cursor.Drag (dragFromCursor)
 import Sexpze.Data.Sexp.Cursor.Pretty (indent, prettyPointCursor, prettyTermWithCursor)
 import Test.Common (TermSpan, mkCursor, mkPointCursor, mkSpan, mkSpanCursor, shouldEqual)
@@ -51,16 +51,20 @@ delete_spec = describe "delete" do
         shouldEqual
           (w (fromTreeToTermSpan [ L "•" ]) /\ e')
           (fromTreeToTermSpan [ L "a", L "•" ] /\ (fromTreeToTermSpan []))
-    describe "fromTreeToTermSpan" do
-      when false <<< it "" $ do
+    describe "deleteAtCursor" do
+      it "delete small span" $ do
         let e = fromTreeToTermSpan [ L "a" ]
         let e' = fromTreeToTermSpan []
         shouldEqual
-          ( deleteAtCursor
-              (mkCursor [] 0 0 [] 1 0 (Inner Start))
-              e
-          )
+          (deleteAtCursor (mkCursor [] 0 0 [] 1 0 (Inner Start)) e)
           (mkCursor [] 0 0 [] 0 0 (Inner Start) /\ e')
+    describe "insertAtCursor" do
+      it "insert small span" $ do
+        let e = fromTreeToTermSpan []
+        let e' = fromTreeToTermSpan [ L "a" ]
+        shouldEqual
+          (insertAtCursor (Zipper (fromTreeToTermSpan [ L "a" ]) (mkPointCursor mempty 0)) (mkCursor [] 0 0 [] 0 0 (Inner Start)) e)
+          (mkCursor [] 0 1 [] 0 0 (Inner Start) /\ e')
   pure unit
 
 insert_spec :: Spec Unit

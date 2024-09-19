@@ -54,7 +54,8 @@ component = H.mkComponent { initialState, eval, render }
           ( Editor.Input
               let
                 -- es = [ Atom { label: "a" }, Group (Sexp {} [ Atom { label: "b" }, Atom { label: "c" }, Atom { label: "d" } ]), Atom { label: "e" } ]
-                es = [ Atom { label: "a" } ]
+                -- es = [ Atom { label: "a" } ]
+                es = []
               in
                 { termState:
                     { cursor: Cursor (ZipperCursor (SpanCursor mempty zero (wrap (Array.length es))) (SpanCursor mempty zero zero)) (Inner Start)

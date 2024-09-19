@@ -127,22 +127,26 @@ handleUserAction = elaborateUserAction >=> traverse_ handleUserAction_Core
 
 elaborateUserAction :: UserAction -> HM (Array UserAction_Core)
 elaborateUserAction (StartDrag_TwoSided p1) = do
+  -- TODO: make this actually work
   -- TODO: way to determine if dragging the left or right half of it?
-  pure [ StartDrag p1 ]
+  -- pure [ StartDrag p1 ]
+  pure []
 elaborateUserAction (EndDrag_TwoSided p1) = do
-  state <- get
-  let p2 = p1 # shiftPointCursorByPointDist (wrap 1)
-  let p = state.termState.term # getCursorHandle state.termState.cursor
-  if p == p1 then
-    pure [ EndDrag p1 ] -- started on p1
-  else if p == p2 then
-    pure [ EndDrag p1 ] -- started on p2
-  else if p < p1 then
-    pure [ EndDrag p2 ] -- dragging left to right
-  else if p2 < p then
-    pure [ EndDrag p1 ] -- dragging right to left
-  else
-    pure []
+  -- TODO: make this actually work
+  -- state <- get
+  -- let p2 = p1 # shiftPointCursorByPointDist (wrap 1)
+  -- let p = state.termState.term # getCursorHandle state.termState.cursor
+  -- if p == p1 then
+  --   pure [ EndDrag p1 ] -- started on p1
+  -- else if p == p2 then
+  --   pure [ EndDrag p1 ] -- started on p2
+  -- else if p < p1 then
+  --   pure [ EndDrag p2 ] -- dragging left to right
+  -- else if p2 < p then
+  --   pure [ EndDrag p1 ] -- dragging right to left
+  -- else
+  --   pure []
+  pure []
 elaborateUserAction (UserAction_Core action) = pure [ action ]
 
 handleUserAction_Core :: UserAction_Core -> HM Unit
@@ -155,15 +159,9 @@ handleUserAction_Core (Paste mb_clipboard) = do
   state <- get
   case mb_clipboard <|> state.mb_clipboard of
     Nothing -> pure unit
-    Just (Fragment z) -> do
-      -- TODO: update termState.cursor
-      modify_ _
-        { termState
-            { cursor = state.termState.cursor
-            , term = state.termState.term # insertAtCursor z state.termState.cursor # snd
-            }
-        }
-      pure unit
+    Just (Fragment clipboard) -> do
+      let cursor' /\ term' = state.termState.term # insertAtCursor clipboard state.termState.cursor
+      modify_ _ { termState { cursor = cursor', term = term' } }
 handleUserAction_Core (StartDrag p) = do
   state <- get
   let cursor = Cursor (ZipperCursor (fromPointCursorToZeroWidthSpanCursor p state.termState.term) (SpanCursor mempty zero zero)) (Inner Start)
@@ -291,10 +289,10 @@ renderTermWithCursor c h ph (Sexp _n es) =
                               [ renderZipperHandle h (Outer Start) (PointCursor ph j1_outer) ]
                             else if j' == j1_inner then
                               [ renderZipperHandle h (Inner Start) (PointCursor ph j1_inner) ]
-                            else if j' == j2_inner then
-                              [ renderZipperHandle h (Inner End) (PointCursor ph j2_inner) ]
                             else if j' == j2_outer then
                               [ renderZipperHandle h (Outer End) (PointCursor ph j2_outer) ]
+                            else if j' == j2_inner then
+                              [ renderZipperHandle h (Inner End) (PointCursor ph j2_inner) ]
                             else
                               [ renderPoint (PointCursor ph j') ]
                         )
@@ -380,10 +378,10 @@ renderPoint :: PointCursor -> HTML
 renderPoint p = renderAnchor p [ HP.classes [ HH.ClassName "Anchor", HH.ClassName "Point" ] ] [ HH.text "•" ]
 
 renderZipperHandle :: ZipperHandle -> ZipperHandle -> PointCursor -> HTML
-renderZipperHandle h h'@(Outer Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "OuterStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "{[" ]
-renderZipperHandle h h'@(Outer End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "OuterEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "]}" ]
-renderZipperHandle h h'@(Inner Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "InnerStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "]{" ]
-renderZipperHandle h h'@(Inner End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "InnerEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "}[" ]
+renderZipperHandle h h'@(Outer Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "OuterStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "⦃" ]
+renderZipperHandle h h'@(Outer End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "OuterEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "⦄" ]
+renderZipperHandle h h'@(Inner Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "InnerStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "{" ]
+renderZipperHandle h h'@(Inner End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "InnerEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "}" ]
 
 renderZipperHandleInnerMiddle :: ZipperHandle -> PointCursor -> HTML
 renderZipperHandleInnerMiddle h p = renderAnchor p
