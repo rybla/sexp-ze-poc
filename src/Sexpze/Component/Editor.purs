@@ -166,7 +166,8 @@ handleUserAction_Core (StartDrag p) = do
   state <- get
   let cursor = Cursor (ZipperCursor (fromPointCursorToZeroWidthSpanCursor p state.termState.term) (SpanCursor mempty zero zero)) (Inner Start)
   modify_ _ { termState { cursor = cursor } }
-  Console.log ("[StartDrag] " <> show { cursor })
+  -- Console.log ("[StartDrag] " <> show { cursor })
+  pure unit
 handleUserAction_Core (EndDrag p) = do
   state <- get
   let cursor = dragFromCursor state.termState.cursor p state.termState.term
@@ -198,14 +199,14 @@ renderTermWithCursor c h ph (Sexp _n es) =
   in
     unconsZipperCursor c
       # either5
-          ( \(_i /\ c') ->
+          ( \(i /\ c') ->
               es
                 # mapWithPointIndex
                     (\j' -> [ renderPoint (PointCursor ph j') ])
-                    (\i' -> renderTerm'WithCursor (Left c') h ph i')
+                    (\i' -> if i' == i then renderTerm'WithCursor (Left c') h ph i' else renderTerm' ph i')
                 # Array.fold
           )
-          ( \((d1_outer /\ d2_inner) /\ (_i /\ c')) ->
+          ( \((d1_outer /\ d2_inner) /\ (i /\ c')) ->
               let
                 j1_outer = shiftPointIndexByPointDist d1_outer (wrap 0)
                 j2_outer = shiftPointIndexByPointDistNeg d2_inner (lastPointIndexOfSpan e)
@@ -220,16 +221,16 @@ renderTermWithCursor c h ph (Sexp _n es) =
                           else
                             [ renderPoint (PointCursor ph j') ]
                       )
-                      (\i' -> renderTerm'WithCursor (Right c') h ph i')
+                      (\i' -> if i' == i then renderTerm'WithCursor (Right c') h ph i' else renderTerm' ph i')
                   # Array.fold
           )
           ( \((d1_outer /\ d2_outer) /\ (d1_inner /\ d2_inner)) ->
               let
+                -- _ = Debug.trace (show { j1_outer, j2_outer, j1_inner, j2_inner })
                 j1_outer = shiftPointIndexByPointDist d1_outer (wrap 0)
                 j2_outer = shiftPointIndexByPointDistNeg d2_outer (lastPointIndexOfSpan e)
                 j1_inner = shiftPointIndexByPointDist (d1_outer + d1_inner) (wrap 0)
                 j2_inner = shiftPointIndexByPointDistNeg (d2_outer + d2_inner) (lastPointIndexOfSpan e)
-                _ = Debug.trace (show { j1_outer, j2_outer, j1_inner, j2_inner })
               in
                 -- point
                 if j1_outer == j2_outer then
@@ -299,11 +300,11 @@ renderTermWithCursor c h ph (Sexp _n es) =
                         (renderTerm' ph)
                     # Array.fold
           )
-          ( \(_i /\ c') ->
+          ( \(i /\ c') ->
               es
                 # mapWithPointIndex
                     (\j' -> [ renderPoint (PointCursor ph j') ])
-                    (\i' -> renderTerm'WithCursor (Right c') h ph i')
+                    (\i' -> if i' == i then renderTerm'WithCursor (Right c') h ph i' else renderTerm' ph i')
                 # Array.fold
           )
           ( \(d1_inner /\ d2_inner) ->
