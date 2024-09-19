@@ -221,6 +221,9 @@ derive newtype instance Show PointDistNeg
 derive newtype instance Eq PointDistNeg
 derive newtype instance Semiring PointDistNeg
 
+getPointDistBetweenPointIndices :: PointIndex -> PointIndex -> PointDist
+getPointDistBetweenPointIndices j1 j2 = wrap (unwrap j2 - unwrap j1)
+
 shiftKidIndexByPointDist :: PointDist -> KidIndex -> KidIndex
 shiftKidIndexByPointDist d i = wrap (unwrap i + unwrap d)
 

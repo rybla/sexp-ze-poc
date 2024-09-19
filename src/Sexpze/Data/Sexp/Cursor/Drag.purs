@@ -17,20 +17,19 @@ dragFromPointCursor p1_top p2_top e_top =
     ph /\ p1 /\ p2 = commonPathOfPointCursors p1_top p2_top
     _ /\ e = atPath ph e_top
   in
-
     case unconsPointCursor p1 /\ unconsPointCursor p2 of
       -- p1 is sibling and after p2
-      Right j1 /\ Right j2 | j1 >= j2 ->
+      Right j_end /\ Right j_start | j_start <= j_end ->
         let
-          s_outer = getSpanCursorBetweenPointIndices ph j2 j1 e
-          s_inner = SpanCursor mempty (wrap 0) (wrap 0)
+          s_outer = getSpanCursorBetweenPointIndices ph j_start j_end e
+          s_inner = SpanCursor mempty (getPointDistBetweenPointIndices j_start j_end) (wrap 0)
         in
           Cursor (ZipperCursor s_outer s_inner) (Inner Start)
       -- p1 is sibling and before p2
-      Right j1 /\ Right j2 | j1 < j2 ->
+      Right j_start /\ Right j_end | j_start < j_end ->
         let
-          s_outer = getSpanCursorBetweenPointIndices ph j1 j2 e
-          s_inner = SpanCursor mempty (wrap 0) (wrap 0)
+          s_outer = getSpanCursorBetweenPointIndices ph j_start j_end e
+          s_inner = SpanCursor mempty (getPointDistBetweenPointIndices j_start j_end) (wrap 0)
         in
           Cursor (ZipperCursor s_outer s_inner) (Inner Start)
       -- p1 is outside and before p2

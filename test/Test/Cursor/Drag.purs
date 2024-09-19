@@ -40,12 +40,12 @@ spans_spec :: Spec Unit
 spans_spec = describe "spans" do
   describe "basic" do
     let e = fromTreeToTermSpan [ L "a", L "b", L "c" ]
-    e # it_should_dragFromPointCursor "to end " (mkPointCursor [] 0) (mkPointCursor [] 1) (mkCursor [] 0 2 [] 0 0 (Inner Start))
-    e # it_should_dragFromPointCursor "to start " (mkPointCursor [] 1) (mkPointCursor [] 0) (mkCursor [] 0 2 [] 0 0 (Inner Start))
+    e # it_should_dragFromPointCursor "to end " (mkPointCursor [] 0) (mkPointCursor [] 1) (mkCursor [] 0 2 [] 1 0 (Inner Start))
+    e # it_should_dragFromPointCursor "to start " (mkPointCursor [] 1) (mkPointCursor [] 0) (mkCursor [] 0 2 [] 1 0 (Inner Start))
   describe "deeper" do
     let e = fromTreeToTermSpan [ L "a", B [ L "b", L "c", L "d" ], L "e" ]
-    e # it_should_dragFromPointCursor "start to end " (mkPointCursor [ 1 ] 0) (mkPointCursor [ 1 ] 1) (mkCursor [ 1 ] 0 2 [] 0 0 (Inner Start))
-    e # it_should_dragFromPointCursor "end to start " (mkPointCursor [ 1 ] 1) (mkPointCursor [ 1 ] 0) (mkCursor [ 1 ] 0 2 [] 0 0 (Inner Start))
+    e # it_should_dragFromPointCursor "start to end " (mkPointCursor [ 1 ] 0) (mkPointCursor [ 1 ] 1) (mkCursor [ 1 ] 0 2 [] 1 0 (Inner Start))
+    e # it_should_dragFromPointCursor "end to start " (mkPointCursor [ 1 ] 1) (mkPointCursor [ 1 ] 0) (mkCursor [ 1 ] 0 2 [] 1 0 (Inner Start))
 
 zippers_spec :: Spec Unit
 zippers_spec = describe "zippers" do
@@ -71,7 +71,9 @@ zippers_spec = describe "zippers" do
 --------------------------------------------------------------------------------
 
 it_should_dragFromPointCursor :: String -> PointCursor -> PointCursor -> Cursor -> TermSpan -> Spec Unit
-it_should_dragFromPointCursor s p1 p2 c e = it (s <> prettyPointCursor p1 <> " --> " <> prettyPointCursor p2) do e # should_dragFromCursor (fromPointCursorToCursor p1 e) p2 c
+it_should_dragFromPointCursor s p1 p2 c e =
+  it (s <> prettyPointCursor p1 <> " --> " <> prettyPointCursor p2) do
+    e # should_dragFromCursor (fromPointCursorToCursor p1 e) p2 c
 
 should_dragFromCursor :: forall m. MonadThrow Error m => Cursor -> PointCursor -> Cursor -> TermSpan -> m Unit
 should_dragFromCursor c1 p2 c e@(Span es) =
