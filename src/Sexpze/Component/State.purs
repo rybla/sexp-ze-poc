@@ -9,8 +9,7 @@ import Data.Maybe (Maybe(..), fromMaybe')
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
-import Debug as Debug
-import Sexpze.Utility (bug, todo)
+import Sexpze.Utility (bug)
 
 --------------------------------------------------------------------------------
 -- types
@@ -106,32 +105,42 @@ data Zipper = Zipper Span Span
 --------------------------------------------------------------------------------
 
 dragFromPoint :: Point -> Point -> Span -> Cursor
-dragFromPoint ps_ pe_ e =
+dragFromPoint p1_top p2_top e =
   let
-    ps /\ pe = if ps_ < pe_ then ps_ /\ pe_ else pe_ /\ ps_
-    s = e # atSpanCursor (SpanCursor ps pe)
-    { unopened, unclosed } = s # countUnopenedAndUnclosed
+    pl_top /\ pr_top = if p1_top < p2_top then p1_top /\ p2_top else p2_top /\ p1_top
+    s = e # atSpanCursor (SpanCursor pl_top pr_top)
+    { unopened, unclosed } = s # countUnopenedAndUnclosedParens
   in
     if unopened > 0 && unclosed > 0 then
       -- ==> span that needs to expand out to nearest valid parent
-      todo "" {}
+      let
+        pl = getPointRightAfterNthPrevUnclosedParenStartingFromPoint 1 pl_top s - one
+        pr = getPointRightAfterNthPrevUnclosedParenStartingFromPoint 1 pr_top s + one
+      in
+        MakeSpanCursor $ SpanCursor pl pr
     else if unopened > 0 then
-      -- ==> zipper with second half on the left
+      -- ==> zippr_topr with second half on the left
       let
-        i = getPointRightAfterNthPrevUnclosedParenStartingFromPoint unopened pe s
+        pol = getPointRightAfterNthPrevUnclosedParenStartingFromPoint unopened pl_top s - one
+        pil = getPointRightAfterNthPrevUnclosedParenStartingFromPoint 1 pl_top s
+        pir = pl_top
+        por = pr_top
       in
-        MakeZipperCursor $ ZipperCursor ps pe i (i + one)
+        MakeZipperCursor $ ZipperCursor pol pil pir por
     else if unclosed > 0 then
-      -- ==> zipper with second half on the right
+      -- ==> zippr_topr with second half on the right
       let
-        i = getPointRightBeforeNthNextUnopenedParenStartingFromPoint unclosed pe s
+        pol = pl_top
+        pil = pr_top
+        pir = getPointRightBeforeNthNextUnopenedParenStartingFromPoint unclosed pr_top s
+        por = getPointRightBeforeNthNextUnopenedParenStartingFromPoint unopened pr_top s + one
       in
-        MakeZipperCursor $ ZipperCursor ps pe i (i + one)
+        MakeZipperCursor $ ZipperCursor pol pil pir por
     else
-      -- unopened == unclosed == 0
-      -- ==> span
-      MakeSpanCursor $ SpanCursor ps pe
+      -- unopened == unclosed == 0 ==> span
+      MakeSpanCursor $ SpanCursor pl_top pr_top
 
+-- | looks to the right
 getPointRightBeforeNthNextUnopenedParenStartingFromPoint :: Int -> Point -> Span -> Point
 getPointRightBeforeNthNextUnopenedParenStartingFromPoint n0 p0 xs = go n0 p0
   where
@@ -141,6 +150,7 @@ getPointRightBeforeNthNextUnopenedParenStartingFromPoint n0 p0 xs = go n0 p0
     Close | n == 1 -> p
     Close -> go (n - one) (p + one)
 
+-- | looks to the left
 getPointRightAfterNthPrevUnclosedParenStartingFromPoint :: Int -> Point -> Span -> Point
 getPointRightAfterNthPrevUnclosedParenStartingFromPoint n0 p0 xs = go n0 p0
   where
@@ -150,8 +160,8 @@ getPointRightAfterNthPrevUnclosedParenStartingFromPoint n0 p0 xs = go n0 p0
     Open | n == 1 -> p
     Open -> go (n - one) (p - one)
 
-countUnopenedAndUnclosed :: Span -> { unopened :: Int, unclosed :: Int }
-countUnopenedAndUnclosed (Span xs) = go 0 0 xs
+countUnopenedAndUnclosedParens :: Span -> { unopened :: Int, unclosed :: Int }
+countUnopenedAndUnclosedParens (Span xs) = go 0 0 xs
   where
   go unopened unclosed = Array.uncons >>> case _ of
     Nothing -> { unopened, unclosed }
@@ -170,16 +180,16 @@ getIndexRightAfterPoint :: Point -> Index
 getIndexRightAfterPoint i = wrap (unwrap i)
 
 atIndex :: Index -> Span -> Atom
-atIndex (Index i) (Span es) = es Array.!! i # fromMaybe' (\_ -> bug "atIndex" ("index out of bounds: " <> show { i, es }))
+atIndex i s = unwrap s Array.!! unwrap i # fromMaybe' (\_ -> bug "atIndex" ("index out of bounds: " <> show { i, s }))
 
-beforeIndex :: Index -> Span -> Span
-beforeIndex _ _ = todo "" {}
+beforePoint :: Point -> Span -> Span
+beforePoint p s = unwrap s # Array.take (unwrap p) # wrap
 
-afterIndex :: Index -> Span -> Span
-afterIndex _ _ = todo "" {}
+afterPoint :: Point -> Span -> Span
+afterPoint p s = unwrap s # Array.drop (unwrap p) # wrap
 
 atSpanCursor :: SpanCursor -> Span -> Span
-atSpanCursor _ _ = todo "" {}
+atSpanCursor (SpanCursor pl pr) = unwrap >>> Array.slice (unwrap pl) (unwrap pr) >>> wrap
 
-atZipperCursor :: SpanCursor -> Span -> Zipper
-atZipperCursor _ _ = todo "" {}
+atZipperCursor :: ZipperCursor -> Span -> Zipper
+atZipperCursor (ZipperCursor pol pil pir por) s = Zipper (s # atSpanCursor (SpanCursor pol pil)) (s # atSpanCursor (SpanCursor pir por))
