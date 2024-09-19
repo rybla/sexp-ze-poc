@@ -339,8 +339,13 @@ atPointIndexSpan i1 i2 (Sexp n es) =
 atSpanPointIndexSpan :: forall n a. PointDist -> PointDistNeg -> Span n a -> (Span n a -> Span n a) /\ Span n a
 atSpanPointIndexSpan d1 d2 (Span es) =
   let
-    { before, after: after_ } = es # Array.splitAt (unwrap d1)
-    { before: middle, after } = after_ # Array.splitAt (Array.length es - unwrap d2)
+    i0 = 0
+    i1 = unwrap d1
+    i2 = Array.length es - unwrap d2
+    i3 = Array.length es
+    before = es # Array.slice i0 i1
+    middle = es # Array.slice i1 i2
+    after = es # Array.slice i2 i3
   in
     Tuple
       (\(Span es') -> Span (before <> es' <> after))
@@ -394,8 +399,8 @@ instance (Eq n, Eq a) => Eq (Zipper n a) where
 emptyZipper :: forall n a. Zipper n a
 emptyZipper = Zipper (Span []) zeroPointCursor
 
-atZipper :: forall n a. Zipper n a -> (Span n a -> Span n a)
-atZipper (Zipper e p) = atPointCursor identity p e
+inZipper :: forall n a. Zipper n a -> (Span n a -> Span n a)
+inZipper (Zipper e p) = atPointCursor identity p e
 
 unconsZipperCursor
   :: ZipperCursor \/ SpanCursor
@@ -418,17 +423,17 @@ unconsZipperCursor (Right s) | Right (j1 /\ j2) <- unconsSpanCursor s = in5 (j1 
 unconsZipperCursor _ = bug "unconsZipperCursor" "impossible"
 
 atZipperCursor :: forall n a. ZipperCursor -> Span n a -> ((Span n a -> Span n a) -> Span n a) /\ Zipper n a
-atZipperCursor (ZipperCursor s1 s2@(SpanCursor ph2 d2 _)) e =
+atZipperCursor (ZipperCursor s_outer s_inner@(SpanCursor ph_inner d1_inner _)) e =
   let
-    w1 /\ e1 = e # atSpanCursor s1
-    _w2 /\ e2 = e1 # atSpanCursor s2
+    w1 /\ e1 = e # atSpanCursor s_outer
+    _w2 /\ e2 = e1 # atSpanCursor s_inner
   in
     Tuple
       (w1 <<< (_ $ e2))
-      (Zipper e2 (shiftPointCursorByPointDist d2 (PointCursor ph2 (wrap 0))))
+      (Zipper e2 (PointCursor ph_inner (wrap 0) # shiftPointCursorByPointDist d1_inner))
 
 insertAtZipperCursor :: forall n a. ZipperCursor -> Zipper n a -> Span n a -> Span n a
-insertAtZipperCursor c z = atZipperCursor c >>> fst >>> (_ $ atZipper z)
+insertAtZipperCursor c z = atZipperCursor c >>> fst >>> (_ $ inZipper z)
 
 deleteAtZipperCursor :: forall n a. ZipperCursor -> Span n a -> Span n a
 deleteAtZipperCursor c = insertAtZipperCursor c emptyZipper
@@ -474,13 +479,13 @@ fromPointCursorToZeroWidthSpanCursor (PointCursor ph i) e =
     SpanCursor ph (getOffsetPointDist i e_inner) (getOffsetPointDistNeg i e_inner)
 
 insertAtCursor :: forall n a. Zipper n a -> Cursor -> Span n a -> Cursor /\ Span n a
-insertAtCursor z@(Zipper _ p_inner) (Cursor c@(ZipperCursor s_outer s_inner) _h) e =
+insertAtCursor z@(Zipper _ p_inner) (Cursor c@(ZipperCursor s_outer s_inner) h) e =
   let
     _ /\ e_middle = e # atSpanCursor s_outer
   in
     Tuple
-      (Cursor (ZipperCursor s_outer (s_inner <> fromPointCursorToZeroWidthSpanCursor p_inner e_middle)) (Inner Start))
-      (insertAtZipperCursor c z e)
+      (Cursor (ZipperCursor s_outer (s_inner <> fromPointCursorToZeroWidthSpanCursor p_inner e_middle)) h)
+      (e # insertAtZipperCursor c z)
 
 deleteAtCursor :: forall n a. Cursor -> Span n a -> Cursor /\ Span n a
 deleteAtCursor = insertAtCursor emptyZipper

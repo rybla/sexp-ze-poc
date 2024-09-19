@@ -52,7 +52,8 @@ component = H.mkComponent { initialState, eval, render }
           ( Editor.Input
               { termState:
                   { cursor: Cursor emptyZipperCursor (Inner Start)
-                  , term: Span [ Atom { label: "a" }, Group (Sexp {} [ Atom { label: "b" }, Atom { label: "c" }, Atom { label: "d" } ]), Atom { label: "e" } ]
+                  -- , term: Span [ Atom { label: "a" }, Group (Sexp {} [ Atom { label: "b" }, Atom { label: "c" }, Atom { label: "d" } ]), Atom { label: "e" } ]
+                  , term: Span [ Atom { label: "a" } ]
                   }
               }
           )

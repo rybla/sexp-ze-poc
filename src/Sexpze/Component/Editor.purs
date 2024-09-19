@@ -3,6 +3,7 @@ module Sexpze.Component.Editor where
 import Prelude
 import Sexpze.Data.Sexp.Cursor
 
+import Control.Alt ((<|>))
 import Control.Monad.State (get, modify_)
 import Control.Plus (empty)
 import DOM.HTML.Indexed as HTML.Indexed
@@ -53,7 +54,7 @@ defaultNodeData = {}
 
 type State =
   { termState :: TermState
-  , mb_clipboard :: Maybe Clipboard
+  , mb_clipboard :: Maybe Fragment
   }
 
 type TermState =
@@ -61,11 +62,11 @@ type TermState =
   , cursor :: Cursor
   }
 
-newtype Clipboard = Clipboard TermZipper
+newtype Fragment = Fragment TermZipper
 
-derive instance Newtype Clipboard _
-derive newtype instance Show Clipboard
-derive newtype instance Eq Clipboard
+derive instance Newtype Fragment _
+derive newtype instance Show Fragment
+derive newtype instance Eq Fragment
 
 --------------------------------------------------------------------------------
 -- component Types
@@ -112,7 +113,7 @@ instance Show UserAction where
 data UserAction_Core
   = Delete
   | Copy
-  | Paste (Maybe Clipboard)
+  | Paste (Maybe Fragment) -- can supply a clipboard to override the clipboard in the editor state
   | StartDrag PointCursor
   | EndDrag PointCursor
 
@@ -150,7 +151,19 @@ handleUserAction_Core Delete = do
   let cursor /\ term = deleteAtCursor state.termState.cursor state.termState.term
   modify_ _ { termState { cursor = cursor, term = term } }
 handleUserAction_Core Copy = unimplemented "handleUserAction_Core" {}
-handleUserAction_Core (Paste _) = unimplemented "handleUserAction_Core.Paste" {}
+handleUserAction_Core (Paste mb_clipboard) = do
+  state <- get
+  case mb_clipboard <|> state.mb_clipboard of
+    Nothing -> pure unit
+    Just (Fragment z) -> do
+      -- TODO: update termState.cursor
+      modify_ _
+        { termState
+            { cursor = state.termState.cursor
+            , term = state.termState.term # insertAtCursor z state.termState.cursor # snd
+            }
+        }
+      pure unit
 handleUserAction_Core (StartDrag p) = do
   state <- get
   let cursor = Cursor (ZipperCursor (fromPointCursorToZeroWidthSpanCursor p state.termState.term) emptySpanCursor) (Inner Start)
@@ -404,8 +417,8 @@ parseKeyboardEvent event =
   else if cmd && key == "x" then [ UserAction_Core Copy, UserAction_Core Delete ]
   else if cmd && key == "v" then [ UserAction_Core $ Paste empty ]
   else if key == "Backspace" then [ UserAction_Core Delete ]
-  else if key == "(" || key == ")" then [ UserAction_Core $ Paste (pure (Clipboard (Zipper (Span [ Group (Sexp defaultNodeData []) ]) (PointCursor (wrap 0 `consPath` mempty) (wrap 0))))) ]
-  else if String.length key == 1 then [ UserAction_Core $ Paste (pure (Clipboard (Zipper (Span [ Atom { label: key } ]) (PointCursor mempty (wrap 1))))) ]
+  else if key == "(" || key == ")" then [ UserAction_Core $ Paste (pure (Fragment (Zipper (Span [ Group (Sexp defaultNodeData []) ]) (PointCursor (wrap 0 `consPath` mempty) (wrap 0))))) ]
+  else if String.length key == 1 then [ UserAction_Core $ Paste (pure (Fragment (Zipper (Span [ Atom { label: key } ]) (PointCursor mempty (wrap 1))))) ]
   else Debug.trace (show { key }) \_ -> []
   where
   key = event # KeyboardEvent.key
