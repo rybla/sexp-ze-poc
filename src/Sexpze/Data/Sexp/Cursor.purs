@@ -379,12 +379,6 @@ instance Eq ZipperCursor where
 zipperCursor :: SpanCursor -> SpanCursor -> ZipperCursor
 zipperCursor = ZipperCursor -- TODO
 
-emptyZipperCursor :: ZipperCursor
-emptyZipperCursor = ZipperCursor emptySpanCursor emptySpanCursor
-
-emptySpanCursor :: SpanCursor
-emptySpanCursor = SpanCursor mempty zero zero
-
 getZipperCursorHandle :: forall n a. ZipperCursor -> ZipperHandle -> Span n a -> PointCursor
 getZipperCursorHandle (ZipperCursor s _) (Outer h) = getSpanCursorHandle s h
 getZipperCursorHandle (ZipperCursor s_outer s_inner) (Inner h) = getSpanCursorHandle (s_outer <> s_inner) h
@@ -472,7 +466,7 @@ fromPointCursorToCursor :: forall n a. PointCursor -> Span n a -> Cursor
 fromPointCursorToCursor p e = Cursor (fromPointCursorToZipperCursor p e) (Inner Start)
 
 fromPointCursorToZipperCursor :: forall n a. PointCursor -> Span n a -> ZipperCursor
-fromPointCursorToZipperCursor p e = let s = fromPointCursorToZeroWidthSpanCursor p e in ZipperCursor s emptySpanCursor
+fromPointCursorToZipperCursor p e = let s = fromPointCursorToZeroWidthSpanCursor p e in ZipperCursor s (SpanCursor mempty zero zero)
 
 fromPointCursorToZeroWidthSpanCursor :: forall n a. PointCursor -> Span n a -> SpanCursor
 fromPointCursorToZeroWidthSpanCursor (PointCursor ph i) e =

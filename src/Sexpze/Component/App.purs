@@ -2,7 +2,9 @@ module Sexpze.Component.App where
 
 import Prelude
 
+import Data.Array as Array
 import Data.Maybe (Maybe(..))
+import Data.Newtype (wrap)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Halogen as H
@@ -10,7 +12,7 @@ import Halogen.HTML as HH
 import Halogen.Query.Event as HQE
 import Sexpze.Component.Editor as Editor
 import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
-import Sexpze.Data.Sexp.Cursor (Cursor(..), Span(..), SpanHandle(..), ZipperHandle(..), emptyZipperCursor)
+import Sexpze.Data.Sexp.Cursor (Cursor(..), Span(..), SpanCursor(..), SpanHandle(..), ZipperCursor(..), ZipperHandle(..))
 import Type.Proxy (Proxy(..))
 import Web.HTML as Web.HTML
 import Web.HTML.HTMLDocument as HTMLDocument
@@ -50,12 +52,15 @@ component = H.mkComponent { initialState, eval, render }
     HH.div []
       [ HH.slot (Proxy :: Proxy "editor") unit Editor.component
           ( Editor.Input
-              { termState:
-                  { cursor: Cursor emptyZipperCursor (Inner Start)
-                  -- , term: Span [ Atom { label: "a" }, Group (Sexp {} [ Atom { label: "b" }, Atom { label: "c" }, Atom { label: "d" } ]), Atom { label: "e" } ]
-                  , term: Span [ Atom { label: "a" } ]
-                  }
-              }
+              let
+                -- es = [ Atom { label: "a" }, Group (Sexp {} [ Atom { label: "b" }, Atom { label: "c" }, Atom { label: "d" } ]), Atom { label: "e" } ]
+                es = [ Atom { label: "a" } ]
+              in
+                { termState:
+                    { cursor: Cursor (ZipperCursor (SpanCursor mempty zero (wrap (Array.length es))) (SpanCursor mempty zero zero)) (Inner Start)
+                    , term: Span es
+                    }
+                }
           )
           EditorOutput
       ]

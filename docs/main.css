@@ -47,21 +47,20 @@ body {
   color: gray;
 }
 
-.Anchor.PointHandle {
+.Anchor.Handle {
   color: red;
 }
 
-.Anchor.PointHandle.active {
+.Anchor.Handle.active {
   outline: 0.2em solid rgb(255, 191, 191);
 }
 
-.Anchor.ZipperHandle {
-  color: red;
-}
 
-.Anchor.ZipperHandle.active {
-  outline: 0.2em solid rgb(255, 191, 191);
-}
+.Anchor.PointHandle {}
+
+
+.Anchor.ZipperHandle {}
+
 
 .Anchor.ZipperHandle.OuterStart {}
 

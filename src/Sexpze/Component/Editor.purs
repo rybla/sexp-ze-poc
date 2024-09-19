@@ -28,7 +28,7 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Data.Sexp (Sexp(..), Sexp'(..))
 import Sexpze.Data.Sexp.Cursor.Drag (dragFromCursor)
-import Sexpze.Utility (todo, unimplemented)
+import Sexpze.Utility (allEqual, todo, unimplemented)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.KeyboardEvent as KeyboardEvent
@@ -166,7 +166,7 @@ handleUserAction_Core (Paste mb_clipboard) = do
       pure unit
 handleUserAction_Core (StartDrag p) = do
   state <- get
-  let cursor = Cursor (ZipperCursor (fromPointCursorToZeroWidthSpanCursor p state.termState.term) emptySpanCursor) (Inner Start)
+  let cursor = Cursor (ZipperCursor (fromPointCursorToZeroWidthSpanCursor p state.termState.term) (SpanCursor mempty zero zero)) (Inner Start)
   modify_ _ { termState { cursor = cursor } }
   Console.log ("[StartDrag] " <> show { cursor })
 handleUserAction_Core (EndDrag p) = do
@@ -231,8 +231,9 @@ renderTermWithCursor c h ph (Sexp _n es) =
                 j2_outer = shiftPointIndexByPointDistNeg d2_outer (lastPointIndexOfSpan e)
                 j1_inner = shiftPointIndexByPointDist (d1_outer + d1_inner) (wrap 0)
                 j2_inner = shiftPointIndexByPointDistNeg (d2_outer + d2_inner) (lastPointIndexOfSpan e)
+                _ = Debug.trace (show { j1_outer, j2_outer, j1_inner, j2_inner })
               in
-                -- point (0-width and 0-depth zipper)
+                -- point
                 if j1_outer == j2_outer then
                   es
                     # mapWithPointIndex
@@ -244,16 +245,52 @@ renderTermWithCursor c h ph (Sexp _n es) =
                         )
                         (renderTerm' ph)
                     # Array.fold
+                -- span from start
+                else if allEqual [ j1_inner, j2_inner, j2_outer ] then
+                  let
+                    h' = case h of
+                      Outer Start -> Start
+                      _ -> End
+                  in
+                    es
+                      # mapWithPointIndex
+                          ( \j' ->
+                              if j' == j1_outer then
+                                [ renderSpanHandle h' Start (PointCursor ph j1_outer) ]
+                              else if j' == j1_inner then
+                                [ renderSpanHandle h' End (PointCursor ph j1_inner) ]
+                              else
+                                [ renderPoint (PointCursor ph j') ]
+                          )
+                          (renderTerm' ph)
+                      # Array.fold
+                -- span from end
+                else if allEqual [ j1_outer, j1_inner, j2_outer ] then
+                  let
+                    h' = case h of
+                      Outer End -> End
+                      _ -> Start
+                  in
+                    es
+                      # mapWithPointIndex
+                          ( \j' ->
+                              if j' == j2_outer then
+                                [ renderSpanHandle h' Start (PointCursor ph j1_outer) ]
+                              else if j' == j1_outer then
+                                [ renderSpanHandle h' End (PointCursor ph j1_outer) ]
+                              else
+                                [ renderPoint (PointCursor ph j') ]
+                          )
+                          (renderTerm' ph)
+                      # Array.fold
                 else
                   es
                     # mapWithPointIndex
                         ( \j' ->
-                            -- Inner Start overrides Outer Start
-                            if j' == j1_inner then
-                              [ renderZipperHandle h (Inner Start) (PointCursor ph j1_inner) ]
-                            else if j' == j1_outer then
+                            if j' == j1_outer then
                               [ renderZipperHandle h (Outer Start) (PointCursor ph j1_outer) ]
-                            -- Inner End overrides Outer End
+                            else if j' == j1_inner then
+                              [ renderZipperHandle h (Inner Start) (PointCursor ph j1_inner) ]
                             else if j' == j2_inner then
                               [ renderZipperHandle h (Inner End) (PointCursor ph j2_inner) ]
                             else if j' == j2_outer then
@@ -343,15 +380,15 @@ renderPoint :: PointCursor -> HTML
 renderPoint p = renderAnchor p [ HP.classes [ HH.ClassName "Anchor", HH.ClassName "Point" ] ] [ HH.text "•" ]
 
 renderZipperHandle :: ZipperHandle -> ZipperHandle -> PointCursor -> HTML
-renderZipperHandle h h'@(Outer Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "OuterStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "[" ]
-renderZipperHandle h h'@(Outer End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "OuterEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "]" ]
-renderZipperHandle h h'@(Inner Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "{" ]
-renderZipperHandle h h'@(Inner End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "}" ]
+renderZipperHandle h h'@(Outer Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "OuterStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "{[" ]
+renderZipperHandle h h'@(Outer End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "OuterEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "]}" ]
+renderZipperHandle h h'@(Inner Start) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "InnerStart" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "]{" ]
+renderZipperHandle h h'@(Inner End) p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "InnerEnd" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "}[" ]
 
 renderZipperHandleInnerMiddle :: ZipperHandle -> PointCursor -> HTML
 renderZipperHandleInnerMiddle h p = renderAnchor p
   [ HP.classes
-      ( [ [ HH.ClassName "Anchor", HH.ClassName "ZipperHandle", HH.ClassName "InnerMiddle" ]
+      ( [ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "ZipperHandle", HH.ClassName "InnerMiddle" ]
         , case h of
             Outer _ -> []
             Inner _ -> [ HH.ClassName "active" ]
@@ -361,11 +398,11 @@ renderZipperHandleInnerMiddle h p = renderAnchor p
   [ HH.text "|" ]
 
 renderSpanHandle :: SpanHandle -> SpanHandle -> PointCursor -> HTML
-renderSpanHandle h h'@Start p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "SpanHandle", HH.ClassName "Start" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "[" ]
-renderSpanHandle h h'@End p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "SpanHandle", HH.ClassName "End" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "[" ]
+renderSpanHandle h h'@Start p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "SpanHandle", HH.ClassName "Start" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "[" ]
+renderSpanHandle h h'@End p = renderAnchor p [ HP.classes ([ [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "SpanHandle", HH.ClassName "End" ], if h == h' then [ HH.ClassName "active" ] else [] ] # Array.fold) ] [ HH.text "]" ]
 
 renderPointHandle :: PointCursor -> HTML
-renderPointHandle p = renderAnchor p [ HP.classes [ HH.ClassName "Anchor", HH.ClassName "PointHandle", HH.ClassName "active" ] ] [ HH.text "|" ]
+renderPointHandle p = renderAnchor p [ HP.classes [ HH.ClassName "Anchor", HH.ClassName "Handle", HH.ClassName "PointHandle", HH.ClassName "active" ] ] [ HH.text "|" ]
 
 renderAnchor :: PointCursor -> Array (HH.IProp HTML.Indexed.HTMLdiv Action) -> Array HTML -> HTML
 renderAnchor p props =
