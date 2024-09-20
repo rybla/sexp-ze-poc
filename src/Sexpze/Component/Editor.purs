@@ -7,6 +7,8 @@ import Control.Monad.State (get, modify_)
 import Control.Plus (empty)
 import Data.Foldable (foldMap)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap, wrap)
+import Data.String as String
 import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -14,6 +16,7 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Sexpze.Utility (todo)
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
+import Web.UIEvent.KeyboardEvent as KeyboardEvent
 
 --------------------------------------------------------------------------------
 -- types
@@ -57,7 +60,62 @@ component = H.mkComponent { initialState, eval, render }
   eval = H.mkEval H.defaultEval { handleQuery = handleQuery, handleAction = handleAction, initialize = Just Initialize }
 
   handleQuery :: forall a. Query a -> HM (Maybe a)
-  handleQuery (KeyboardEvent_Query _event a) = do
+  handleQuery (KeyboardEvent_Query event a) = do
+    let
+      key = event # KeyboardEvent.key
+      shift = event # KeyboardEvent.shiftKey
+      ctrl = event # KeyboardEvent.ctrlKey
+      meta = event # KeyboardEvent.metaKey
+      cmd = ctrl || meta
+    state <- get
+
+    if false then pure unit
+    else if key == "ArrowRight" then do
+      case state.cursor of
+        MakeSpanCursor (SpanCursor pl pr) | pl == pr && unwrap pl < length state.span -> do
+          modify_ _
+            { cursor = MakeSpanCursor $ SpanCursor (pl + one) (pl + one) }
+        _ -> pure unit
+    else if key == "ArrowLeft" then do
+      case state.cursor of
+        MakeSpanCursor (SpanCursor pl pr) | pl == pr && wrap 0 < pl -> do
+          modify_ _
+            { cursor = MakeSpanCursor $ SpanCursor (pl - one) (pl - one) }
+        _ -> pure unit
+    else if key == "Backspace" then do
+      case state.cursor of
+        MakeSpanCursor (SpanCursor pl pr) | pl == pr && wrap 0 < pl -> do
+          let s@(SpanCursor pl' _pr') = makeSpanCursorFromDrag (pl - one) pl state.span
+          -- empty span
+          modify_ _
+            { span = state.span # replaceAtSpanCursor (Zipper mempty mempty) s
+            , cursor = MakeSpanCursor $ SpanCursor pl' pl'
+            }
+        MakeSpanCursor c@(SpanCursor pl _pr) -> do
+          modify_ _
+            { span = state.span # replaceAtSpanCursor (Zipper mempty mempty) c
+            , cursor = MakeSpanCursor $ SpanCursor pl pl
+            }
+        MakeZipperCursor _c -> pure unit -- TODO
+    else if not cmd && (key == "(" || key == ")") then do
+      case state.cursor of
+        MakeSpanCursor c@(SpanCursor pl pr) -> do
+          modify_ _
+            { span = state.span # replaceAtSpanCursor (Zipper (Span [ Open ]) (Span [ Close ])) c
+            , cursor = MakeSpanCursor $ SpanCursor (pl + one) (pr + one)
+            }
+        MakeZipperCursor _c -> pure unit -- TODO
+    else if not cmd && String.length key == 1 then do
+      case state.cursor of
+        MakeSpanCursor c@(SpanCursor pl _pr) -> do
+          modify_ _
+            { span = state.span # replaceAtSpanCursor (Zipper (Span [ Lit key ]) mempty) c
+            , cursor = MakeSpanCursor $ SpanCursor (pl + one) (pl + one)
+            }
+        MakeZipperCursor _c -> pure unit -- TODO
+    else
+      pure unit
+
     pure (pure a)
 
   handleAction :: Action -> HM Unit
@@ -128,7 +186,7 @@ renderSpanCursorAndSpan (SpanCursor pl pr) (Span es) =
         Close -> template [ HH.ClassName "Paren", HH.ClassName "Close" ] ")"
 
 renderZipperCursorAndSpan :: ZipperCursor -> Span -> HTML
-renderZipperCursorAndSpan _ _ = todo "" {}
+renderZipperCursorAndSpan _ _ = todo "renderZipperCursorAndSpan" {}
 
 --------------------------------------------------------------------------------
 

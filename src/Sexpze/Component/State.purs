@@ -16,7 +16,6 @@ import Prelude
 import Data.Array as Array
 import Data.Array as String
 import Data.Eq.Generic (genericEq)
-import Data.Foldable (length)
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), fromMaybe')
@@ -116,6 +115,9 @@ derive newtype instance Show Span
 derive newtype instance Eq Span
 derive newtype instance Semigroup Span
 derive newtype instance Monoid Span
+
+length :: Span -> Int
+length (Span es) = Array.length es
 
 data Zipper = Zipper Span Span
 
@@ -291,9 +293,15 @@ atSpanCursor (SpanCursor pl pr) e =
 
 atZipperCursor :: ZipperCursor -> Span -> Tuple ((Span -> Span) -> Span) Zipper
 atZipperCursor (ZipperCursor pol pil pir por) s =
-  Tuple
-    (todo "" {})
-    (Zipper (s # atSpanCursor (SpanCursor pol pil) # snd) (s # atSpanCursor (SpanCursor pir por) # snd))
+  let
+    to_pol = s # atSpanCursor (SpanCursor (wrap 0) pol) # snd
+    por_to = s # atSpanCursor (SpanCursor por (wrap (length s))) # snd
+    s_pol_to_pil = s # atSpanCursor (SpanCursor pol pil) # snd
+    s_pir_to_por = s # atSpanCursor (SpanCursor pir por) # snd
+  in
+    Tuple
+      (\w -> to_pol <> w (s # atSpanCursor (SpanCursor pil pir) # snd) <> por_to)
+      (Zipper s_pol_to_pil s_pir_to_por)
 
 atZipper :: Zipper -> (Span -> Span)
 atZipper (Zipper sl sr) sm = sl <> sm <> sr
@@ -308,5 +316,5 @@ foldMapPointsAndWithIndex :: forall a m. Monoid m => (Point -> m) -> (Index -> a
 foldMapPointsAndWithIndex f_point f_index xs =
   Array.snoc
     (mapWithIndex (\i x -> f_point (wrap i) <> f_index (wrap i) x) xs)
-    (f_point (xs # length))
+    (f_point (xs # Array.length # wrap))
     # Array.fold

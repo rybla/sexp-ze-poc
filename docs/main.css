@@ -34,9 +34,16 @@ body {
 
 .Cursor {
   color: red;
+  font-weight: bold;
 }
 
 .Atom {
-  color: green;
+  color: black;
   user-select: none;
+  white-space: pre;
+}
+
+.Atom.Paren {
+  font-weight: bold;
+  color: green;
 }
