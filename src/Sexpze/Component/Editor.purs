@@ -94,6 +94,8 @@ component = H.mkComponent { initialState, eval, render }
     case unit of
       -- _ | key == "Escape" -> modify_ _ { cursor = escapeAtCursor state.cursor }
 
+      -- interact with Marker
+
       _ | SpanCursorState Nothing c <- state.cursorState, key == " " -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         modify_ _ { cursorState = SpanCursorState (pure c) c }
@@ -101,6 +103,8 @@ component = H.mkComponent { initialState, eval, render }
       _ | SpanCursorState (Just m) c <- state.cursorState, key == " " -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         modify_ _ { cursorState = ZipperCursorState (state.span # makeZipperCursorFromSpanCursors m c) }
+
+      -- adjust cursor with arrow keys
 
       _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" && shift -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
@@ -118,29 +122,41 @@ component = H.mkComponent { initialState, eval, render }
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         when (pr + one <= wrap (length state.span)) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag pl (pr + one)) }
 
+      -- cut 
+
       _ | SpanCursorState mb_mark c <- state.cursorState, key == "x" && cmd -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let e' = state.span # atSpanCursor c # snd
         let c' /\ span' = deleteAtSpanCursor (c /\ state.span)
         modify_ _ { mb_clipboard = pure (SpanClipboard e'), cursorState = SpanCursorState mb_mark c', span = span' }
 
+      -- delete 
+
       _ | SpanCursorState mb_mark c <- state.cursorState, key == "Backspace" -> do
         let c' /\ span' = deleteAtSpanCursor (c /\ state.span)
         modify_ _ { cursorState = SpanCursorState mb_mark c', span = span' }
+
+      -- copy
 
       _ | SpanCursorState mb_mark s <- state.cursorState, key == "c" && cmd -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let e' = state.span # atSpanCursor s # snd
         modify_ _ { mb_clipboard = pure (SpanClipboard e') }
 
+      -- paste
+
       _ | SpanCursorState mb_mark c <- state.cursorState, Just (SpanClipboard e') <- state.mb_clipboard, key == "v" && cmd -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let c' /\ span' = replaceAtSpanCursor (Zipper e' mempty) (c /\ state.span)
         modify_ _ { mb_clipboard = pure (SpanClipboard e'), cursorState = SpanCursorState mb_mark c', span = span' }
 
+      -- insert group
+
       _ | SpanCursorState mb_mark c <- state.cursorState, key == "(" || key == ")" && not cmd -> do
         let c' /\ span' = insertAtSpanCursor (Zipper (Span [ Open ]) (Span [ Close ])) (c /\ state.span)
         modify_ _ { cursorState = SpanCursorState mb_mark c', span = span' }
+
+      -- insert atom
 
       _ | SpanCursorState mb_mark c <- state.cursorState, String.length key == 1 && not cmd -> do
         let c' /\ span' = insertAtSpanCursor (Zipper (Span [ Lit key ]) mempty) (c /\ state.span)
