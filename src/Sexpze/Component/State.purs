@@ -307,35 +307,42 @@ countUnopenedAndUnclosedParens (Span xs) = go 0 0 xs
 -- interact with Cursor
 --------------------------------------------------------------------------------
 
-deleteAtCursor :: Cursor /\ Span -> Cursor /\ Span
-deleteAtCursor (MakeSpanCursor c@(SpanCursor pl pr) /\ e) =
-  Tuple
-    (makePointCursor pl)
-    (replaceAtSpanCursor mempty c e)
-deleteAtCursor (MakeZipperCursor c@(ZipperCursor pol pil pir _por) /\ e) =
-  Tuple
-    (makeSpanCursor pol (pir # shiftPoint (-distBetweenPoints pol pil)))
-    (replaceAtZipperCursor mempty c e)
+-- deleteAtCursor :: Cursor /\ Span -> Cursor /\ Span
+-- deleteAtCursor (MakeSpanCursor c@(SpanCursor pl pr) /\ e) =
+--   Tuple (makePointCursor pl) (replaceAtSpanCursor mempty c e)
+-- deleteAtCursor (MakeZipperCursor c@(ZipperCursor pol pil pir _por) /\ e) =
+--   Tuple
+--     (makeSpanCursor pol (pir # shiftPoint (-distBetweenPoints pol pil)))
+--     (replaceAtZipperCursor mempty c e)
 
-insertAtCursor :: Zipper -> Cursor /\ Span -> Cursor /\ Span
-insertAtCursor z (MakeSpanCursor c@(SpanCursor pl pr) /\ e) =
+-- insertAtCursor :: Zipper -> Cursor /\ Span -> Cursor /\ Span
+-- insertAtCursor z (MakeSpanCursor c@(SpanCursor pl pr) /\ e) =
+--   Tuple
+--     (makeSpanCursor (pl # shiftPoint (lengthLeft z)) (pr # shiftPoint (lengthLeft z)))
+--     (insertAtSpanCursor z c e)
+-- insertAtCursor z (MakeZipperCursor c@(ZipperCursor pol pil pir _por) /\ e) =
+--   Tuple
+--     (makeSpanCursor (pol # shiftPoint (lengthLeft z)) (pol # shiftPoint (lengthLeft z + distBetweenPoints pil pir)))
+--     (replaceAtZipperCursor z c e)
+
+-- escapeAtCursor :: Cursor -> Cursor
+-- escapeAtCursor (MakeSpanCursor (SpanCursor p _)) = makeSpanCursor p p
+-- escapeAtCursor (MakeZipperCursor (ZipperCursor _ p _ _)) = makeSpanCursor p p
+
+deleteAtSpanCursor :: SpanCursor /\ Span -> SpanCursor /\ Span
+deleteAtSpanCursor = replaceAtSpanCursor mempty
+
+insertAtSpanCursor :: Zipper -> SpanCursor /\ Span -> SpanCursor /\ Span
+insertAtSpanCursor z (c@(SpanCursor pl pr) /\ e) =
   Tuple
-    (makeSpanCursor (pl # shiftPoint (lengthLeft z)) (pr # shiftPoint (lengthLeft z)))
-    (insertAroundSpanCursor z c e)
-insertAtCursor z (MakeZipperCursor c@(ZipperCursor pol pil pir _por) /\ e) =
+    (SpanCursor (pl # shiftPoint (lengthLeft z)) (pr # shiftPoint (lengthLeft z)))
+    (replaceAtZipperCursor z (fromSpanCursorToEmptyZipperCursor c) e)
+
+replaceAtSpanCursor :: Zipper -> SpanCursor /\ Span -> SpanCursor /\ Span
+replaceAtSpanCursor z (c@(SpanCursor pl pr) /\ e) =
   Tuple
-    (makeSpanCursor (pol # shiftPoint (lengthLeft z)) (pol # shiftPoint (lengthLeft z + distBetweenPoints pil pir)))
-    (replaceAtZipperCursor z c e)
-
-escapeAtCursor :: Cursor -> Cursor
-escapeAtCursor (MakeSpanCursor (SpanCursor p _)) = makeSpanCursor p p
-escapeAtCursor (MakeZipperCursor (ZipperCursor _ p _ _)) = makeSpanCursor p p
-
-insertAroundSpanCursor :: Zipper -> SpanCursor -> Span -> Span
-insertAroundSpanCursor z c = replaceAtZipperCursor z (fromSpanCursorToEmptyZipperCursor c)
-
-replaceAtSpanCursor :: Zipper -> SpanCursor -> Span -> Span
-replaceAtSpanCursor z c = replaceAtZipperCursor z (fromSpanCursorToFullZipperCursor c)
+    (SpanCursor pl (pl # shiftPoint (lengthLeft z)))
+    (replaceAtZipperCursor z (fromSpanCursorToFullZipperCursor c) e)
 
 replaceAtZipperCursor :: Zipper -> ZipperCursor -> Span -> Span
 replaceAtZipperCursor z c = atZipperCursor c >>> fst >>> (_ $ atZipper z)
