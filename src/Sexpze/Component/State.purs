@@ -88,7 +88,7 @@ instance Eq Cursor where
 
 data Clipboard
   = SpanClipboard Span
-  | ZipperClipboard
+  | ZipperClipboard Zipper
 
 derive instance Generic Clipboard _
 
@@ -310,20 +310,21 @@ countUnopenedAndUnclosedParens (Span xs) = go 0 0 xs
 deleteAtSpanCursor :: SpanCursor /\ Span -> SpanCursor /\ Span
 deleteAtSpanCursor = replaceAtSpanCursor mempty
 
+deleteAtZipperCursor :: ZipperCursor /\ Span -> SpanCursor /\ Span
+deleteAtZipperCursor = replaceAtZipperCursor mempty
+
 insertAtSpanCursor :: Zipper -> SpanCursor /\ Span -> SpanCursor /\ Span
-insertAtSpanCursor z (c@(SpanCursor pl pr) /\ e) =
-  Tuple
-    (SpanCursor (pl # shiftPoint (lengthLeft z)) (pr # shiftPoint (lengthLeft z)))
-    (replaceAtZipperCursor z (fromSpanCursorToEmptyZipperCursor c) e)
+insertAtSpanCursor z (c /\ e) = replaceAtZipperCursor z (fromSpanCursorToEmptyZipperCursor c /\ e)
 
 replaceAtSpanCursor :: Zipper -> SpanCursor /\ Span -> SpanCursor /\ Span
-replaceAtSpanCursor z (c@(SpanCursor pl pr) /\ e) =
-  Tuple
-    (SpanCursor pl (pl # shiftPoint (lengthLeft z)))
-    (replaceAtZipperCursor z (fromSpanCursorToFullZipperCursor c) e)
+replaceAtSpanCursor z (c /\ e) =
+  replaceAtZipperCursor z (fromSpanCursorToFullZipperCursor c /\ e)
 
-replaceAtZipperCursor :: Zipper -> ZipperCursor -> Span -> Span
-replaceAtZipperCursor z c = atZipperCursor c >>> fst >>> (_ $ atZipper z)
+replaceAtZipperCursor :: Zipper -> ZipperCursor /\ Span -> SpanCursor /\ Span
+replaceAtZipperCursor z (c@(ZipperCursor pol pil pir _por) /\ e) =
+  Tuple
+    (SpanCursor (pol # shiftPoint (lengthLeft z)) (pol # shiftPoint (lengthLeft z + distBetweenPoints pil pir)))
+    (e # atZipperCursor c # fst # (_ $ atZipper z))
 
 --------------------------------------------------------------------------------
 -- utilities
