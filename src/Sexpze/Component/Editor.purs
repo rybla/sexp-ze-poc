@@ -95,21 +95,27 @@ component = H.mkComponent { initialState, eval, render }
       -- _ | key == "Escape" -> modify_ _ { cursor = escapeAtCursor state.cursor }
 
       _ | SpanCursorState Nothing c <- state.cursorState, key == " " -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         modify_ _ { cursorState = SpanCursorState (pure c) c }
 
       _ | SpanCursorState (Just m) c <- state.cursorState, key == " " -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         modify_ _ { cursorState = ZipperCursorState (state.span # makeZipperCursorFromSpanCursors m c) }
 
       _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" && shift -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         when (pl <= pr - one) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag pl (pr - one)) }
 
       _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         when (wrap 0 <= pl - one) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag (pl - one) pr) }
 
       _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" && shift -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         when (pl + one <= pr) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag (pl + one) pr) }
 
       _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         when (pr + one <= wrap (length state.span)) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag pl (pr + one)) }
 
       _ | SpanCursorState mb_mark c <- state.cursorState, key == "x" && cmd -> do
@@ -142,50 +148,6 @@ component = H.mkComponent { initialState, eval, render }
 
       _ -> pure unit
 
-    -- if true then pure unit
-    -- else if shift && key == "ArrowLeft" then do
-    --   case state.cursor of
-    --     MakeSpanCursor (SpanCursor pl pr) | 0 < unwrap pl -> do
-    --       let s = state.span # makeSpanCursorFromDrag (pl - one) pr
-    --       modify_ _ { cursor = MakeSpanCursor s }
-    --     _ -> pure unit
-    -- else if key == "ArrowLeft" then do
-    --   case state.cursor of
-    --     MakeSpanCursor (SpanCursor pl pr) | pl == pr && 0 < unwrap pl -> do
-    --       modify_ _ { cursor = MakeSpanCursor $ SpanCursor (pl - one) (pl - one) }
-    --     _ -> pure unit
-    -- else if shift && key == "ArrowRight" then do
-    --   case state.cursor of
-    --     MakeSpanCursor (SpanCursor pl pr) | unwrap pr < length state.span -> do
-    --       let s = state.span # makeSpanCursorFromDrag pl (pr + one)
-    --       modify_ _ { cursor = MakeSpanCursor s }
-    --     _ -> pure unit
-    -- else if key == "ArrowRight" then do
-    --   case state.cursor of
-    --     MakeSpanCursor (SpanCursor pl pr) | pl == pr && unwrap pr < length state.span -> do
-    --       modify_ _ { cursor = MakeSpanCursor $ SpanCursor (pl + one) (pl + one) }
-    --     _ -> pure unit
-    -- else if key == "Backspace" then do
-    --   case state.cursor of
-    --     MakeSpanCursor (SpanCursor pl pr) | pl == pr && wrap 0 < pl -> do
-    --       -- empty span
-    --       let s@(SpanCursor pl' _pr') = makeSpanCursorFromDrag (pl - one) pl state.span
-    --       modify_ _
-    --         { span = state.span # replaceAtSpanCursor (Zipper mempty mempty) s
-    --         , cursor = MakeSpanCursor $ SpanCursor pl' pl'
-    --         }
-    --     c -> do
-    --       let cursor /\ span = deleteAtCursor (c /\ state.span)
-    --       modify_ _ { cursor = cursor, span = span }
-    -- else if not cmd && (key == "(" || key == ")") then do
-    --   let cursor /\ span = insertAtCursor (Zipper (Span [ Open ]) (Span [ Close ])) (state.cursor /\ state.span)
-    --   modify_ _ { cursor = cursor, span = span }
-    -- else if not cmd && String.length key == 1 then do
-    --   let cursor /\ span = insertAtCursor (Zipper (Span [ Lit key ]) mempty) (state.cursor /\ state.span)
-    --   modify_ _ { cursor = cursor, span = span }
-    -- else
-    --   pure unit
-
     pure (pure a)
 
   handleAction :: Action -> HM Unit
@@ -207,6 +169,34 @@ component = H.mkComponent { initialState, eval, render }
       [ HH.div
           [ HP.classes [ HH.ClassName "content" ] ]
           [ renderCursorStateAndSpan state.cursorState state.span ]
+      , HH.div
+          [ HP.classes [ HH.ClassName "information" ] ]
+          [ HH.div
+              [ HP.classes [ HH.ClassName "block" ] ]
+              [ HH.div [ HP.classes [ HH.ClassName "title" ] ] [ HH.text "concepts" ]
+              , HH.div [] [ HH.text "there are two types of cursors, spans and zippers" ]
+              , HH.div [] [ HH.text "a span cursor looks like `... [ ... ] ...`; a span cursor is on the enclosed expression" ]
+              , HH.div [] [ HH.text "a zipper cursor looks like `... { ... [ ... ] ... } ...`; a zipper cursor is on the enclosed one-hole context" ]
+              ]
+          , HH.div
+              [ HP.classes [ HH.ClassName "block" ] ]
+              [ HH.div [ HP.classes [ HH.ClassName "title" ] ] [ HH.text "controls" ]
+              , HH.table_
+                  [ HH.thead_
+                      [ HH.tr_ [ HH.th_ [ HH.text "cursor" ], HH.th_ [ HH.text "input" ], HH.th_ [ HH.text "effect" ] ] ]
+                  , HH.tbody_
+                      [ HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "→" ], HH.td_ [ HH.text "move the right edge of the span to the right" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⇧→" ], HH.td_ [ HH.text "move the left edge of the span to the right" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "→" ], HH.td_ [ HH.text "move the left edge of the span to the left" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⇧→" ], HH.td_ [ HH.text "move the right edge of the span to the left" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⌘c" ], HH.td_ [ HH.text "copy the expression under the cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⌘x" ], HH.td_ [ HH.text "cut the expression under the cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⌘v" ], HH.td_ [ HH.text "paste a span clipboard in place of the cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⌘v" ], HH.td_ [ HH.text "paste a zipper clipboard around the cursor" ] ]
+                      ]
+                  ]
+              ]
+          ]
       ]
 
 --------------------------------------------------------------------------------
@@ -283,10 +273,14 @@ renderZipperCursorStateAndSpan (ZipperCursor pol pil pir por) (Span es) =
     in
       if p == pol && p == pil && p == pir && p == por then
         template [ HH.ClassName "Cursor" ] "||"
+      else if p == pol && p == pil then
+        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "outer-left-and-inner-left" ] "{"
       else if p == pol then
         template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "outer-left" ] "{"
       else if p == pil then
         template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "inner-left" ] "["
+      else if p == pir && p == por then
+        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "inner-right-and-outer-right" ] "}"
       else if p == pir then
         template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "inner-right" ] "]"
       else if p == por then

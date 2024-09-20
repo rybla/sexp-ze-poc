@@ -6,16 +6,61 @@ body {
   padding: 0;
 }
 
-/* body {
-  background-color: black;
-  color: white;
-} */
-
 /* Editor */
 
 .Editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
   padding: 1em;
-  box-shadow: 0 0 0 0.2em black inset;
+  width: 600px;
+  margin: auto;
+}
+
+.Editor>.content {
+  margin: auto;
+  padding: 1em 0;
+  font-size: 1.5em;
+}
+
+.Editor>.information {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+.Editor>.information .block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  padding: 1em;
+  box-shadow: 0 0 0 0.1em black;
+}
+
+.Editor>.information .title {
+  font-weight: bold;
+  font-size: 1.5em;
+}
+
+.Editor>.information table {
+  border-collapse: collapse;
+}
+
+.Editor>.information thead {}
+
+.Editor>.information tbody {}
+
+.Editor>.information tr {}
+
+.Editor>.information th {
+  padding: 0.5em;
+  border: 1px solid #ddd;
+  background-color: rgba(0, 0, 0, 0.177);
+}
+
+.Editor>.information td {
+  padding: 0.5em;
+  border: 1px solid #ddd;
 }
 
 /* Term */
@@ -32,15 +77,6 @@ body {
   color: rgb(190, 190, 190);
 }
 
-.Cursor {
-  color: red;
-  font-weight: bold;
-}
-
-.Cursor.Marker {
-  color: rgb(115, 115, 255);
-}
-
 .Atom {
   color: black;
   user-select: none;
@@ -50,4 +86,46 @@ body {
 .Atom.Paren {
   font-weight: bold;
   color: green;
+}
+
+/* Cursor */
+
+.Point.Cursor {
+  color: red;
+  text-shadow: 0 0 8px red;
+  font-weight: bold;
+}
+
+.Point.Cursor.Marker {
+  color: rgb(115, 115, 255);
+  text-shadow: 0 0 8px rgb(115, 115, 255);
+}
+
+.Point.Cursor.ZipperCursor.outer-left-and-inner-left {
+  background-color: rgba(255, 0, 0, 0.242);
+}
+
+.Point.Cursor.ZipperCursor.outer-left,
+.Point.Cursor.ZipperCursor.outer-left~div {
+  background-color: rgba(255, 0, 0, 0.242);
+}
+
+.Point.Cursor.ZipperCursor.inner-left~div {
+  background-color: transparent;
+}
+
+.Point.Cursor.ZipperCursor.inner-right-and-outer-right {
+  background-color: rgba(255, 0, 0, 0.242) !important;
+}
+
+.Point.Cursor.ZipperCursor.inner-right {
+  background-color: rgba(255, 0, 0, 0.242) !important;
+}
+
+.Point.Cursor.ZipperCursor.inner-right~div {
+  background-color: rgba(255, 0, 0, 0.242);
+}
+
+.Point.Cursor.ZipperCursor.outer-right~div {
+  background-color: transparent;
 }
