@@ -1,3 +1,14 @@
+{-
+idea:
+- cursor is a span
+- by default, an empty span (looks like ibeam)
+  - on keyboard, can expand span left or right with a special key
+  - on mouse, can expand span by just dragging a new one, or dragging out endpoints of existing span
+- selection is between two spans: first navigate cursor (span) to a position, set mark
+  - on keyboard, hold shift and make a new cursor (span) by moving and expanding left/right
+  - on mouse, hold shift, and make a new cursor (span) by dragging
+-}
+
 module Sexpze.Component.Editor where
 
 import Prelude
@@ -5,10 +16,12 @@ import Sexpze.Component.State
 
 import Control.Monad.State (get, modify_)
 import Control.Plus (empty)
+import Data.Array as Array
 import Data.Foldable (foldMap)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap, wrap)
 import Data.String as String
+import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -30,6 +43,13 @@ type Input =
 data Query a = KeyboardEvent_Query KeyboardEvent a
 
 data Output = Output
+
+type State =
+  { cursor :: Cursor
+  , span :: Span
+  , mb_clipboard :: Maybe Clipboard
+  , mb_dragOrigin :: Maybe Point
+  }
 
 data Action
   = Initialize
@@ -70,49 +90,48 @@ component = H.mkComponent { initialState, eval, render }
     state <- get
 
     if false then pure unit
-    else if key == "ArrowRight" then do
+    else if key == "Escape" then do
+      modify_ _ { cursor = escapeAtCursor state.cursor }
+    else if shift && key == "ArrowLeft" then do
       case state.cursor of
-        MakeSpanCursor (SpanCursor pl pr) | pl == pr && unwrap pl < length state.span -> do
-          modify_ _
-            { cursor = MakeSpanCursor $ SpanCursor (pl + one) (pl + one) }
+        MakeSpanCursor (SpanCursor pl pr) | 0 < unwrap pl -> do
+          let s = state.span # makeSpanCursorFromDrag (pl - one) pr
+          modify_ _ { cursor = MakeSpanCursor s }
         _ -> pure unit
     else if key == "ArrowLeft" then do
       case state.cursor of
-        MakeSpanCursor (SpanCursor pl pr) | pl == pr && wrap 0 < pl -> do
-          modify_ _
-            { cursor = MakeSpanCursor $ SpanCursor (pl - one) (pl - one) }
+        MakeSpanCursor (SpanCursor pl pr) | pl == pr && 0 < unwrap pl -> do
+          modify_ _ { cursor = MakeSpanCursor $ SpanCursor (pl - one) (pl - one) }
+        _ -> pure unit
+    else if shift && key == "ArrowRight" then do
+      case state.cursor of
+        MakeSpanCursor (SpanCursor pl pr) | unwrap pr < length state.span -> do
+          let s = state.span # makeSpanCursorFromDrag pl (pr + one)
+          modify_ _ { cursor = MakeSpanCursor s }
+        _ -> pure unit
+    else if key == "ArrowRight" then do
+      case state.cursor of
+        MakeSpanCursor (SpanCursor pl pr) | pl == pr && unwrap pr < length state.span -> do
+          modify_ _ { cursor = MakeSpanCursor $ SpanCursor (pl + one) (pl + one) }
         _ -> pure unit
     else if key == "Backspace" then do
       case state.cursor of
         MakeSpanCursor (SpanCursor pl pr) | pl == pr && wrap 0 < pl -> do
-          let s@(SpanCursor pl' _pr') = makeSpanCursorFromDrag (pl - one) pl state.span
           -- empty span
+          let s@(SpanCursor pl' _pr') = makeSpanCursorFromDrag (pl - one) pl state.span
           modify_ _
             { span = state.span # replaceAtSpanCursor (Zipper mempty mempty) s
             , cursor = MakeSpanCursor $ SpanCursor pl' pl'
             }
-        MakeSpanCursor c@(SpanCursor pl _pr) -> do
-          modify_ _
-            { span = state.span # replaceAtSpanCursor (Zipper mempty mempty) c
-            , cursor = MakeSpanCursor $ SpanCursor pl pl
-            }
-        MakeZipperCursor _c -> pure unit -- TODO
+        c -> do
+          let cursor /\ span = deleteAtCursor (c /\ state.span)
+          modify_ _ { cursor = cursor, span = span }
     else if not cmd && (key == "(" || key == ")") then do
-      case state.cursor of
-        MakeSpanCursor c@(SpanCursor pl pr) -> do
-          modify_ _
-            { span = state.span # replaceAtSpanCursor (Zipper (Span [ Open ]) (Span [ Close ])) c
-            , cursor = MakeSpanCursor $ SpanCursor (pl + one) (pr + one)
-            }
-        MakeZipperCursor _c -> pure unit -- TODO
+      let cursor /\ span = insertAtCursor (Zipper (Span [ Open ]) (Span [ Close ])) (state.cursor /\ state.span)
+      modify_ _ { cursor = cursor, span = span }
     else if not cmd && String.length key == 1 then do
-      case state.cursor of
-        MakeSpanCursor c@(SpanCursor pl _pr) -> do
-          modify_ _
-            { span = state.span # replaceAtSpanCursor (Zipper (Span [ Lit key ]) mempty) c
-            , cursor = MakeSpanCursor $ SpanCursor (pl + one) (pl + one)
-            }
-        MakeZipperCursor _c -> pure unit -- TODO
+      let cursor /\ span = insertAtCursor (Zipper (Span [ Lit key ]) mempty) (state.cursor /\ state.span)
+      modify_ _ { cursor = cursor, span = span }
     else
       pure unit
 

@@ -1,14 +1,3 @@
-{-
-idea:
-- cursor is a span
-- by default, an empty span (looks like ibeam)
-  - on keyboard, can expand span left or right with a special key
-  - on mouse, can expand span by just dragging a new one, or dragging out endpoints of existing span
-- selection is between two spans: first navigate cursor (span) to a position, set mark
-  - on keyboard, hold shift and make a new cursor (span) by moving and expanding left/right
-  - on mouse, hold shift, and make a new cursor (span) by dragging
--}
-
 module Sexpze.Component.State where
 
 import Prelude
@@ -19,22 +8,16 @@ import Data.Eq.Generic (genericEq)
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), fromMaybe')
+import Data.Monoid (mempty)
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Tuple.Nested ((/\))
+import Data.Tuple.Nested (type (/\), (/\))
 import Sexpze.Utility (bug, todo)
 
 --------------------------------------------------------------------------------
 -- types
 --------------------------------------------------------------------------------
-
-type State =
-  { cursor :: Cursor
-  , span :: Span
-  , mb_clipboard :: Maybe Clipboard
-  , mb_dragOrigin :: Maybe Point
-  }
 
 newtype Point = Point Int
 
@@ -121,12 +104,33 @@ length (Span es) = Array.length es
 
 data Zipper = Zipper Span Span
 
+derive instance Generic Zipper _
+
+instance Show Zipper where
+  show x = genericShow x
+
+instance Eq Zipper where
+  eq x = genericEq x
+
+instance Semigroup Zipper where
+  append (Zipper ol or) (Zipper il ir) = Zipper (ol <> il) (ir <> or)
+
+instance Monoid Zipper where
+  mempty = Zipper mempty mempty
+
+lengthLeft :: Zipper -> Int
+lengthLeft (Zipper ls _) = length ls
+
+lengthRight :: Zipper -> Int
+lengthRight (Zipper _ rs) = length rs
+
 --------------------------------------------------------------------------------
 -- make
 --------------------------------------------------------------------------------
 
-makeSpanCursor :: Point -> Point -> Cursor
 makeSpanCursor pl pr = MakeSpanCursor $ SpanCursor pl pr
+makeZipperCursor pol pil pir por = MakeZipperCursor $ ZipperCursor pol pil pir por
+makePointCursor p = MakeSpanCursor $ SpanCursor p p
 
 --------------------------------------------------------------------------------
 -- pretty
@@ -254,8 +258,32 @@ countUnopenedAndUnclosedParens (Span xs) = go 0 0 xs
     Just { head: Close, tail: xs' } -> xs' # if unclosed > 0 then go unopened (unclosed - 1) else go (unopened + 1) unclosed
 
 --------------------------------------------------------------------------------
--- insert
+-- interact with Cursor
 --------------------------------------------------------------------------------
+
+deleteAtCursor :: Cursor /\ Span -> Cursor /\ Span
+deleteAtCursor (MakeSpanCursor c@(SpanCursor pl pr) /\ e) =
+  Tuple
+    (makePointCursor pl)
+    (replaceAtSpanCursor mempty c e)
+deleteAtCursor (MakeZipperCursor c@(ZipperCursor pol pil pir _por) /\ e) =
+  Tuple
+    (makeSpanCursor pol (pir # shiftPoint (-distBetweenPoints pol pil)))
+    (replaceAtZipperCursor mempty c e)
+
+insertAtCursor :: Zipper -> Cursor /\ Span -> Cursor /\ Span
+insertAtCursor z (MakeSpanCursor c@(SpanCursor pl pr) /\ e) =
+  Tuple
+    (makeSpanCursor (pl # shiftPoint (lengthLeft z)) (pr # shiftPoint (lengthLeft z)))
+    (insertAroundSpanCursor z c e)
+insertAtCursor z (MakeZipperCursor c@(ZipperCursor pol pil pir _por) /\ e) =
+  Tuple
+    (makeSpanCursor (pol # shiftPoint (lengthLeft z)) (pol # shiftPoint (lengthLeft z + distBetweenPoints pil pir)))
+    (replaceAtZipperCursor z c e)
+
+escapeAtCursor :: Cursor -> Cursor
+escapeAtCursor (MakeSpanCursor (SpanCursor p _)) = makeSpanCursor p p
+escapeAtCursor (MakeZipperCursor (ZipperCursor _ p _ _)) = makeSpanCursor p p
 
 insertAroundSpanCursor :: Zipper -> SpanCursor -> Span -> Span
 insertAroundSpanCursor z c = replaceAtZipperCursor z (fromSpanCursorToEmptyZipperCursor c)
@@ -318,3 +346,11 @@ foldMapPointsAndWithIndex f_point f_index xs =
     (mapWithIndex (\i x -> f_point (wrap i) <> f_index (wrap i) x) xs)
     (f_point (xs # Array.length # wrap))
     # Array.fold
+
+shiftPoint :: Int -> Point -> Point
+shiftPoint dx (Point x) = Point (dx + x)
+
+distBetweenPoints :: Point -> Point -> Int
+distBetweenPoints (Point x) (Point y) | x <= y = y - x
+distBetweenPoints (Point x) (Point y) = bug "distBetweenPoints" $ "required: " <> show x <> " <= " <> show y
+
