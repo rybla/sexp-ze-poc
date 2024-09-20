@@ -3,12 +3,14 @@ module Sexpze.Component.App where
 import Prelude
 
 import Data.Maybe (Maybe(..))
+import Data.Newtype (wrap)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.Query.Event as HQE
 import Sexpze.Component.Editor as Editor
+import Sexpze.Component.State (Atom(..), Cursor(..), Span(..), SpanCursor(..))
 import Type.Proxy (Proxy(..))
 import Web.HTML as Web.HTML
 import Web.HTML.HTMLDocument as HTMLDocument
@@ -46,12 +48,9 @@ component = H.mkComponent { initialState, eval, render }
 
   render _state =
     HH.div []
-      -- [ HH.slot (Proxy :: Proxy "editor") unit Editor.component
-      --     ( Editor.Input
-      --         { term: [ Group {} [ Atom "a", Atom "b", Atom "c" ] ]
-      --         , cursor: InjectPoint (Point mempty (wrap 0))
-      --         }
-      --     )
-      --     EditorOutput
-      -- ]
-      []
+      [ HH.slot (Proxy :: Proxy "editor") unit Editor.component
+          { span: Span [ Lit "a", Open, Lit "b", Open, Lit "c", Close, Lit "d", Close, Lit "e" ]
+          , cursor: MakeSpanCursor $ SpanCursor (wrap 0) (wrap 0)
+          }
+          EditorOutput
+      ]
