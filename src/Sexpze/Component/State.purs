@@ -304,30 +304,8 @@ countUnopenedAndUnclosedParens (Span xs) = go 0 0 xs
     Just { head: Close, tail: xs' } -> xs' # if unclosed > 0 then go unopened (unclosed - 1) else go (unopened + 1) unclosed
 
 --------------------------------------------------------------------------------
--- interact with Cursor
+-- interact with SpanCursos and ZipperCursor
 --------------------------------------------------------------------------------
-
--- deleteAtCursor :: Cursor /\ Span -> Cursor /\ Span
--- deleteAtCursor (MakeSpanCursor c@(SpanCursor pl pr) /\ e) =
---   Tuple (makePointCursor pl) (replaceAtSpanCursor mempty c e)
--- deleteAtCursor (MakeZipperCursor c@(ZipperCursor pol pil pir _por) /\ e) =
---   Tuple
---     (makeSpanCursor pol (pir # shiftPoint (-distBetweenPoints pol pil)))
---     (replaceAtZipperCursor mempty c e)
-
--- insertAtCursor :: Zipper -> Cursor /\ Span -> Cursor /\ Span
--- insertAtCursor z (MakeSpanCursor c@(SpanCursor pl pr) /\ e) =
---   Tuple
---     (makeSpanCursor (pl # shiftPoint (lengthLeft z)) (pr # shiftPoint (lengthLeft z)))
---     (insertAtSpanCursor z c e)
--- insertAtCursor z (MakeZipperCursor c@(ZipperCursor pol pil pir _por) /\ e) =
---   Tuple
---     (makeSpanCursor (pol # shiftPoint (lengthLeft z)) (pol # shiftPoint (lengthLeft z + distBetweenPoints pil pir)))
---     (replaceAtZipperCursor z c e)
-
--- escapeAtCursor :: Cursor -> Cursor
--- escapeAtCursor (MakeSpanCursor (SpanCursor p _)) = makeSpanCursor p p
--- escapeAtCursor (MakeZipperCursor (ZipperCursor _ p _ _)) = makeSpanCursor p p
 
 deleteAtSpanCursor :: SpanCursor /\ Span -> SpanCursor /\ Span
 deleteAtSpanCursor = replaceAtSpanCursor mempty
@@ -407,3 +385,14 @@ distBetweenPoints :: Point -> Point -> Int
 distBetweenPoints (Point x) (Point y) | x <= y = y - x
 distBetweenPoints (Point x) (Point y) = bug "distBetweenPoints" $ "required: " <> show x <> " <= " <> show y
 
+ltPointAndIndex :: Point -> Index -> Boolean
+ltPointAndIndex p i = unwrap p <= unwrap i
+
+gtPointAndIndex :: Point -> Index -> Boolean
+gtPointAndIndex p i = unwrap p >= unwrap i
+
+ltIndexAndPoint :: Index -> Point -> Boolean
+ltIndexAndPoint i p = unwrap i < unwrap p
+
+gtIndexAndPoint :: Index -> Point -> Boolean
+gtIndexAndPoint i p = unwrap i > unwrap p

@@ -225,33 +225,68 @@ renderSpanCursorStateAndSpan mb_mark (SpanCursor pl pr) (Span es) =
             [ HH.text sym ]
         ]
     in
-      if p == pl && p == pr then
-        template [ HH.ClassName "Cursor" ] "|"
-      else if p == pl then
-        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "left", HH.ClassName "Active" ] "["
-      else if p == pr then
-        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "right", HH.ClassName "Active" ] "]"
-      else if pure p == (mb_mark <#> endpointLeft) && pure p == (mb_mark <#> endpointRight) then
-        template [ HH.ClassName "Cursor", HH.ClassName "Marker" ] "|"
-      else if pure p == (mb_mark <#> endpointLeft) then
-        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "left", HH.ClassName "Marker" ] "["
-      else if pure p == (mb_mark <#> endpointRight) then
-        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "right", HH.ClassName "Marker" ] "]"
-      else
-        template [] "•"
+      case unit of
+        -- on cursor
+        _ | p == pl && p == pr ->
+          template [ HH.ClassName "Cursor", HH.ClassName "PointCursor" ] "|"
+        _ | p == pl ->
+          template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Active" ] "["
+        _ | p == pr ->
+          template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Active" ] "]"
+        _ | Just (SpanCursor pl' pr') <- mb_mark, p == pl' && p == pr' ->
+          template [ HH.ClassName "Cursor", HH.ClassName "PointCursor", HH.ClassName "Marker" ] "|"
+        _ | Just (SpanCursor pl' pr') <- mb_mark, p == pl' ->
+          template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Marker" ] "["
+        _ | Just (SpanCursor pl' pr') <- mb_mark, p == pr' ->
+          template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Marker" ] "]"
+        -- inside cursor
+        _ | Nothing <- mb_mark, pl < p && p < pr ->
+          template [ HH.ClassName "inside-active-SpanCursor" ] "•"
+        _ | Just (SpanCursor pl' pr') <- mb_mark, ((pl <= pl' && pr' <= pr) && ((pl < p && p < pl') || (pr' < p && p < pr))) || ((pl' <= pl && pr <= pr') && (pl < p && p < pr)) ->
+          template [ HH.ClassName "inside-active-SpanCursor" ] "•"
+        _ | Just (SpanCursor pl' pr') <- mb_mark, ((pl' <= pl && pr <= pr') && ((pl' < p && p < pl) || (pr < p && p < pr'))) || ((pl <= pl' && pr' <= pr) && (pl' < p && p < pr')) ->
+          template [ HH.ClassName "inside-marker-SpanCursor" ] "•"
+        _ ->
+          template [] "•"
 
-  renderAtom _i a =
+  renderAtom i a =
     let
-      template cns sym =
+      template cns =
         [ HH.div
-            [ HP.classes ([ HH.ClassName "Atom" ] <> cns) ]
-            [ HH.text sym ]
+            [ HP.classes
+                ( [ HH.ClassName "Atom" ]
+                    <>
+                      ( case a of
+                          Lit sym -> []
+                          Open -> [ HH.ClassName "Paren", HH.ClassName "Open" ]
+                          Close -> [ HH.ClassName "Paren", HH.ClassName "Close" ]
+                      )
+                    <> cns
+                )
+            ]
+            [ HH.text case a of
+                Lit sym -> sym
+                Open -> "("
+                Close -> ")"
+            ]
         ]
     in
-      case a of
-        Lit sym -> template [] sym
-        Open -> template [ HH.ClassName "Paren", HH.ClassName "Open" ] "("
-        Close -> template [ HH.ClassName "Paren", HH.ClassName "Close" ] ")"
+      case unit of
+        _ | Nothing <- mb_mark, pl `ltPointAndIndex` i && i `ltIndexAndPoint` pr ->
+          template [ HH.ClassName "inside-active-SpanCursor" ]
+        _
+          | Just (SpanCursor pl' pr') <- mb_mark
+          , ((pl <= pl' && pr' <= pr) && ((pl `ltPointAndIndex` i && i `ltIndexAndPoint` pl') || (pr' `ltPointAndIndex` i && i `ltIndexAndPoint` pr))) || -- active around marker
+              ((pl' <= pl && pr <= pr') && (pl `ltPointAndIndex` i && i `ltIndexAndPoint` pr)) -> -- marker around active 
+
+              template [ HH.ClassName "inside-active-SpanCursor" ]
+        _
+          | Just (SpanCursor pl' pr') <- mb_mark
+          , ((pl' <= pl && pr <= pr') && ((pl' `ltPointAndIndex` i && i `ltIndexAndPoint` pl) || (pr `ltPointAndIndex` i && i `ltIndexAndPoint` pr'))) || -- marker around active
+              ((pl <= pl' && pr' <= pr) && (pl' `ltPointAndIndex` i && i `ltIndexAndPoint` pr')) -> -- active around marker
+
+              template [ HH.ClassName "inside-marker-SpanCursor" ]
+        _ -> template []
 
 renderZipperCursorStateAndSpan :: ZipperCursor -> Span -> HTML
 renderZipperCursorStateAndSpan (ZipperCursor pol pil pir por) (Span es) =
@@ -274,32 +309,52 @@ renderZipperCursorStateAndSpan (ZipperCursor pol pil pir por) (Span es) =
       if p == pol && p == pil && p == pir && p == por then
         template [ HH.ClassName "Cursor" ] "||"
       else if p == pol && p == pil then
-        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "outer-left-and-inner-left" ] "{"
+        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "{"
       else if p == pol then
-        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "outer-left" ] "{"
+        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "{"
       else if p == pil then
-        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "inner-left" ] "["
+        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "["
       else if p == pir && p == por then
-        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "inner-right-and-outer-right" ] "}"
+        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "}"
       else if p == pir then
-        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "inner-right" ] "]"
+        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "]"
       else if p == por then
-        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor", HH.ClassName "outer-right" ] "}"
+        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "}"
+      else if pol <= p && p <= pil then
+        template [ HH.ClassName "inside-ZipperCursor" ] "•"
+      else if pir <= p && p <= por then
+        template [ HH.ClassName "inside-ZipperCursor" ] "•"
       else
         template [] "•"
 
-  renderAtom _i a =
+  renderAtom i a =
     let
-      template cns sym =
+      template cns =
         [ HH.div
-            [ HP.classes ([ HH.ClassName "Atom" ] <> cns) ]
-            [ HH.text sym ]
+            [ HP.classes
+                ( [ HH.ClassName "Atom" ]
+                    <>
+                      ( case a of
+                          Lit sym -> [ HH.ClassName $ "Lit-" <> sym ]
+                          Open -> [ HH.ClassName "Paren", HH.ClassName "Open" ]
+                          Close -> [ HH.ClassName "Paren", HH.ClassName "Close" ]
+                      )
+                    <> cns
+                )
+            ]
+            [ HH.text case a of
+                Lit sym -> sym
+                Open -> "("
+                Close -> ")"
+            ]
         ]
     in
-      case a of
-        Lit sym -> template [] sym
-        Open -> template [ HH.ClassName "Paren", HH.ClassName "Open" ] "("
-        Close -> template [ HH.ClassName "Paren", HH.ClassName "Close" ] ")"
+      if pol `ltPointAndIndex` i && i `ltIndexAndPoint` pil then
+        template [ HH.ClassName "inside-ZipperCursor" ]
+      else if pir `ltPointAndIndex` i && i `ltIndexAndPoint` por then
+        template [ HH.ClassName "inside-ZipperCursor" ]
+      else
+        template []
 
 --------------------------------------------------------------------------------
 
