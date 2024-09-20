@@ -16,6 +16,8 @@ import Prelude
 import Data.Array as Array
 import Data.Array as String
 import Data.Eq.Generic (genericEq)
+import Data.Foldable (length)
+import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), fromMaybe')
 import Data.Newtype (class Newtype, unwrap, wrap)
@@ -301,3 +303,9 @@ fromSpanCursorToEmptyZipperCursor (SpanCursor pl pr) = ZipperCursor pl pl pr pr
 fromSpanCursorToFullZipperCursor :: SpanCursor -> ZipperCursor
 fromSpanCursorToFullZipperCursor (SpanCursor pl pr) = ZipperCursor pl pr pr pr
 
+foldMapPointsAndWithIndex :: forall a m. Monoid m => (Point -> m) -> (Index -> a -> m) -> Array a -> m
+foldMapPointsAndWithIndex f_point f_index xs =
+  Array.snoc
+    (mapWithIndex (\i x -> f_point (wrap i) <> f_index (wrap i) x) xs)
+    (f_point (xs # length))
+    # Array.fold

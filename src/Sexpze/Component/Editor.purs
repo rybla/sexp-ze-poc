@@ -3,11 +3,15 @@ module Sexpze.Component.Editor where
 import Prelude
 import Sexpze.Component.State
 
+import Control.Monad.State (modify_)
 import Control.Plus (empty)
+import Data.Foldable (foldMap)
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties as HP
 import Sexpze.Utility (todo)
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 
@@ -24,7 +28,10 @@ data Query a = KeyboardEvent_Query KeyboardEvent a
 
 data Output = Output
 
-data Action = Initialize
+data Action
+  = Initialize
+  | StartDrag Point
+  | EndDrag Point
 
 type Slots = ()
 
@@ -55,8 +62,19 @@ component = H.mkComponent { initialState, eval, render }
   handleAction :: Action -> HM Unit
   handleAction Initialize = do
     pure unit
+  handleAction (StartDrag p) = do
+    pure unit
+  handleAction (EndDrag p) = do
+    modify_ _ { cursor = MakeSpanCursor $ SpanCursor p p }
+    pure unit
 
-  render state = HH.div [] [ HH.text "<Editor/>" ]
+  render state =
+    HH.div
+      [ HP.classes [ HH.ClassName "Editor" ] ]
+      [ HH.div
+          [ HP.classes [ HH.ClassName "content" ] ]
+          [ renderCursorAndSpan state.cursor state.span ]
+      ]
 
 --------------------------------------------------------------------------------
 -- render
@@ -67,8 +85,47 @@ renderCursorAndSpan (MakeSpanCursor c) = renderSpanCursorAndSpan c
 renderCursorAndSpan (MakeZipperCursor c) = renderZipperCursorAndSpan c
 
 renderSpanCursorAndSpan :: SpanCursor -> Span -> HTML
-renderSpanCursorAndSpan = todo "" {}
+renderSpanCursorAndSpan (SpanCursor pl pr) (Span es) =
+  HH.div
+    [ HP.classes [ HH.ClassName "Span" ] ]
+    (es # foldMapPointsAndWithIndex renderPoint renderAtom)
+  where
+
+  renderPoint p =
+    let
+      template cns sym =
+        [ HH.div
+            [ HP.classes ([ HH.ClassName "Point" ] <> cns)
+            , HE.onMouseDown (const (StartDrag p))
+            , HE.onMouseUp (const (EndDrag p))
+            ]
+            [ HH.text sym ]
+        ]
+    in
+      if p == pl && p == pr then
+        template [ HH.ClassName "Cursor" ] "|"
+      else if p == pl then
+        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "left" ] "["
+      else if p == pr then
+        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "right" ] "]"
+      else
+        template [] "•"
+
+  renderAtom _i a =
+    let
+      template cns sym =
+        [ HH.div
+            [ HP.classes ([ HH.ClassName "Atom" ] <> cns) ]
+            [ HH.text sym ]
+        ]
+    in
+      case a of
+        Lit sym -> template [] sym
+        Open -> template [ HH.ClassName "Paren", HH.ClassName "Open" ] "("
+        Close -> template [ HH.ClassName "Paren", HH.ClassName "Close" ] ")"
 
 renderZipperCursorAndSpan :: ZipperCursor -> Span -> HTML
-renderZipperCursorAndSpan = todo "" {}
+renderZipperCursorAndSpan _ _ = todo "" {}
+
+--------------------------------------------------------------------------------
 
