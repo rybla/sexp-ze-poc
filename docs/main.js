@@ -8115,12 +8115,12 @@
           ;
           var $104 = eq12(pure9(p2))(mapFlipped2(mb_mark)(endpointLeft));
           if ($104) {
-            return template(["Cursor", "Marker"])("[");
+            return template(["Cursor", "SpanCursor", "left", "Marker"])("[");
           }
           ;
           var $105 = eq12(pure9(p2))(mapFlipped2(mb_mark)(endpointRight));
           if ($105) {
-            return template(["Cursor", "Marker"])("]");
+            return template(["Cursor", "SpanCursor", "right", "Marker"])("]");
           }
           ;
           return template([])("\u2022");

@@ -228,15 +228,15 @@ renderSpanCursorStateAndSpan mb_mark (SpanCursor pl pr) (Span es) =
       if p == pl && p == pr then
         template [ HH.ClassName "Cursor" ] "|"
       else if p == pl then
-        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "left" ] "["
+        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "left", HH.ClassName "Active" ] "["
       else if p == pr then
-        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "right" ] "]"
+        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "right", HH.ClassName "Active" ] "]"
       else if pure p == (mb_mark <#> endpointLeft) && pure p == (mb_mark <#> endpointRight) then
         template [ HH.ClassName "Cursor", HH.ClassName "Marker" ] "|"
       else if pure p == (mb_mark <#> endpointLeft) then
-        template [ HH.ClassName "Cursor", HH.ClassName "Marker" ] "["
+        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "left", HH.ClassName "Marker" ] "["
       else if pure p == (mb_mark <#> endpointRight) then
-        template [ HH.ClassName "Cursor", HH.ClassName "Marker" ] "]"
+        template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "right", HH.ClassName "Marker" ] "]"
       else
         template [] "•"
 

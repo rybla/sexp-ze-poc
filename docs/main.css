@@ -101,6 +101,24 @@ body {
   text-shadow: 0 0 8px rgb(115, 115, 255);
 }
 
+/* .Point.Cursor.SpanCursor.Main.left,
+.Point.Cursor.SpanCursor.Main.left~div {
+  background-color: rgba(255, 0, 0, 0.242);
+}
+
+.Point.Cursor.SpanCursor.Main.right~div {
+  background-color: transparent !important;
+}
+
+.Point.Cursor.SpanCursor.Marker.left,
+.Point.Cursor.SpanCursor.Marker.left~div {
+  background-color: rgba(115, 115, 255, 0.278);
+}
+
+.Point.Cursor.SpanCursor.Marker.right~div {
+  background-color: transparent !important;
+}
+
 .Point.Cursor.ZipperCursor.outer-left-and-inner-left {
   background-color: rgba(255, 0, 0, 0.242);
 }
@@ -128,4 +146,4 @@ body {
 
 .Point.Cursor.ZipperCursor.outer-right~div {
   background-color: transparent;
-}
+} */
