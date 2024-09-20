@@ -34,6 +34,7 @@ type State =
   { cursor :: Cursor
   , span :: Span
   , mb_clipboard :: Maybe Clipboard
+  , mb_dragOrigin :: Maybe Point
   }
 
 newtype Point = Point Int

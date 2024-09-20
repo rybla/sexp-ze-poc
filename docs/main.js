@@ -1077,23 +1077,23 @@
 
   // output/Control.Monad/index.js
   var unlessM = function(dictMonad) {
-    var bind6 = bind(dictMonad.Bind1());
+    var bind7 = bind(dictMonad.Bind1());
     var unless2 = unless(dictMonad.Applicative0());
     return function(mb) {
       return function(m) {
-        return bind6(mb)(function(b2) {
+        return bind7(mb)(function(b2) {
           return unless2(b2)(m);
         });
       };
     };
   };
   var ap = function(dictMonad) {
-    var bind6 = bind(dictMonad.Bind1());
+    var bind7 = bind(dictMonad.Bind1());
     var pure11 = pure(dictMonad.Applicative0());
     return function(f) {
       return function(a2) {
-        return bind6(f)(function(f$prime) {
-          return bind6(a2)(function(a$prime) {
+        return bind7(f)(function(f$prime) {
+          return bind7(a2)(function(a$prime) {
             return pure11(f$prime(a$prime));
           });
         });
@@ -1115,6 +1115,13 @@
   // output/Data.Symbol/index.js
   var reflectSymbol = function(dict) {
     return dict.reflectSymbol;
+  };
+
+  // output/Record.Unsafe/foreign.js
+  var unsafeGet = function(label5) {
+    return function(rec) {
+      return rec[label5];
+    };
   };
 
   // output/Data.Semigroup/index.js
@@ -1196,6 +1203,13 @@
     return EQ2;
   }();
 
+  // output/Data.Ring/foreign.js
+  var intSub = function(x) {
+    return function(y) {
+      return x - y | 0;
+    };
+  };
+
   // output/Data.Semiring/foreign.js
   var intAdd = function(x) {
     return function(y) {
@@ -1223,6 +1237,17 @@
   };
   var add = function(dict) {
     return dict.add;
+  };
+
+  // output/Data.Ring/index.js
+  var sub = function(dict) {
+    return dict.sub;
+  };
+  var ringInt = {
+    sub: intSub,
+    Semiring0: function() {
+      return semiringInt;
+    }
   };
 
   // output/Data.Ord/index.js
@@ -1255,6 +1280,161 @@
   var compare = function(dict) {
     return dict.compare;
   };
+  var lessThanOrEq = function(dictOrd) {
+    var compare3 = compare(dictOrd);
+    return function(a1) {
+      return function(a2) {
+        var v = compare3(a1)(a2);
+        if (v instanceof GT) {
+          return false;
+        }
+        ;
+        return true;
+      };
+    };
+  };
+
+  // output/Data.Show/foreign.js
+  var showIntImpl = function(n) {
+    return n.toString();
+  };
+  var showStringImpl = function(s) {
+    var l = s.length;
+    return '"' + s.replace(
+      /[\0-\x1F\x7F"\\]/g,
+      // eslint-disable-line no-control-regex
+      function(c, i2) {
+        switch (c) {
+          case '"':
+          case "\\":
+            return "\\" + c;
+          case "\x07":
+            return "\\a";
+          case "\b":
+            return "\\b";
+          case "\f":
+            return "\\f";
+          case "\n":
+            return "\\n";
+          case "\r":
+            return "\\r";
+          case "	":
+            return "\\t";
+          case "\v":
+            return "\\v";
+        }
+        var k = i2 + 1;
+        var empty8 = k < l && s[k] >= "0" && s[k] <= "9" ? "\\&" : "";
+        return "\\" + c.charCodeAt(0).toString(10) + empty8;
+      }
+    ) + '"';
+  };
+  var showArrayImpl = function(f) {
+    return function(xs) {
+      var ss = [];
+      for (var i2 = 0, l = xs.length; i2 < l; i2++) {
+        ss[i2] = f(xs[i2]);
+      }
+      return "[" + ss.join(",") + "]";
+    };
+  };
+
+  // output/Data.Show/index.js
+  var showString = {
+    show: showStringImpl
+  };
+  var showRecordFields = function(dict) {
+    return dict.showRecordFields;
+  };
+  var showRecord = function() {
+    return function() {
+      return function(dictShowRecordFields) {
+        var showRecordFields1 = showRecordFields(dictShowRecordFields);
+        return {
+          show: function(record) {
+            return "{" + (showRecordFields1($$Proxy.value)(record) + "}");
+          }
+        };
+      };
+    };
+  };
+  var showInt = {
+    show: showIntImpl
+  };
+  var show = function(dict) {
+    return dict.show;
+  };
+  var showArray = function(dictShow) {
+    return {
+      show: showArrayImpl(show(dictShow))
+    };
+  };
+  var showRecordFieldsCons = function(dictIsSymbol) {
+    var reflectSymbol2 = reflectSymbol(dictIsSymbol);
+    return function(dictShowRecordFields) {
+      var showRecordFields1 = showRecordFields(dictShowRecordFields);
+      return function(dictShow) {
+        var show1 = show(dictShow);
+        return {
+          showRecordFields: function(v) {
+            return function(record) {
+              var tail = showRecordFields1($$Proxy.value)(record);
+              var key2 = reflectSymbol2($$Proxy.value);
+              var focus3 = unsafeGet(key2)(record);
+              return " " + (key2 + (": " + (show1(focus3) + ("," + tail))));
+            };
+          }
+        };
+      };
+    };
+  };
+  var showRecordFieldsConsNil = function(dictIsSymbol) {
+    var reflectSymbol2 = reflectSymbol(dictIsSymbol);
+    return function(dictShow) {
+      var show1 = show(dictShow);
+      return {
+        showRecordFields: function(v) {
+          return function(record) {
+            var key2 = reflectSymbol2($$Proxy.value);
+            var focus3 = unsafeGet(key2)(record);
+            return " " + (key2 + (": " + (show1(focus3) + " ")));
+          };
+        }
+      };
+    };
+  };
+
+  // output/Data.Generic.Rep/index.js
+  var Inl = /* @__PURE__ */ function() {
+    function Inl2(value0) {
+      this.value0 = value0;
+    }
+    ;
+    Inl2.create = function(value0) {
+      return new Inl2(value0);
+    };
+    return Inl2;
+  }();
+  var Inr = /* @__PURE__ */ function() {
+    function Inr2(value0) {
+      this.value0 = value0;
+    }
+    ;
+    Inr2.create = function(value0) {
+      return new Inr2(value0);
+    };
+    return Inr2;
+  }();
+  var NoArguments = /* @__PURE__ */ function() {
+    function NoArguments2() {
+    }
+    ;
+    NoArguments2.value = new NoArguments2();
+    return NoArguments2;
+  }();
+  var from = function(dict) {
+    return dict.from;
+  };
 
   // output/Data.Maybe/index.js
   var identity3 = /* @__PURE__ */ identity(categoryFn);
@@ -1275,6 +1455,21 @@
     };
     return Just2;
   }();
+  var maybe$prime = function(v) {
+    return function(v1) {
+      return function(v2) {
+        if (v2 instanceof Nothing) {
+          return v(unit);
+        }
+        ;
+        if (v2 instanceof Just) {
+          return v1(v2.value0);
+        }
+        ;
+        throw new Error("Failed pattern match at Data.Maybe (line 250, column 1 - line 250, column 62): " + [v.constructor.name, v1.constructor.name, v2.constructor.name]);
+      };
+    };
+  };
   var maybe = function(v) {
     return function(v1) {
       return function(v2) {
@@ -1304,6 +1499,9 @@
     }
   };
   var map2 = /* @__PURE__ */ map(functorMaybe);
+  var fromMaybe$prime = function(a2) {
+    return maybe$prime(a2)(identity3);
+  };
   var fromMaybe = function(a2) {
     return maybe(a2)(identity3);
   };
@@ -1816,6 +2014,11 @@
       });
     };
   };
+  var get = function(dictMonadState) {
+    return state(dictMonadState)(function(s) {
+      return new Tuple(s, s);
+    });
+  };
 
   // output/Effect.Class/index.js
   var monadEffectEffect = {
@@ -1915,11 +2118,11 @@
   var length = function(dictFoldable) {
     var foldl2 = foldl(dictFoldable);
     return function(dictSemiring) {
-      var add1 = add(dictSemiring);
+      var add12 = add(dictSemiring);
       var one2 = one(dictSemiring);
       return foldl2(function(c) {
         return function(v) {
-          return add1(one2)(c);
+          return add12(one2)(c);
         };
       })(zero(dictSemiring));
     };
@@ -1975,12 +2178,12 @@
   var foldMapDefaultR = function(dictFoldable) {
     var foldr22 = foldr(dictFoldable);
     return function(dictMonoid) {
-      var append6 = append(dictMonoid.Semigroup0());
+      var append7 = append(dictMonoid.Semigroup0());
       var mempty2 = mempty(dictMonoid);
       return function(f) {
         return foldr22(function(x) {
           return function(acc) {
-            return append6(f(x))(acc);
+            return append7(f(x))(acc);
           };
         })(mempty2);
       };
@@ -3250,7 +3453,7 @@
     },
     foldMap: function(dictMonoid) {
       var mempty2 = mempty(dictMonoid);
-      var append12 = append(dictMonoid.Semigroup0());
+      var append13 = append(dictMonoid.Semigroup0());
       return function(f) {
         var go2 = function(v) {
           if (v instanceof Leaf) {
@@ -3258,7 +3461,7 @@
           }
           ;
           if (v instanceof Node) {
-            return append12(go2(v.value4))(append12(f(v.value3))(go2(v.value5)));
+            return append13(go2(v.value4))(append13(f(v.value3))(go2(v.value5)));
           }
           ;
           throw new Error("Failed pattern match at Data.Map.Internal (line 181, column 10 - line 184, column 28): " + [v.constructor.name]);
@@ -3550,6 +3753,12 @@
   var length4 = function(xs) {
     return xs.length;
   };
+  var unconsImpl = function(empty8, next, xs) {
+    return xs.length === 0 ? empty8({}) : next(xs[0])(xs.slice(1));
+  };
+  var indexImpl = function(just, nothing, xs, i2) {
+    return i2 < 0 || i2 >= xs.length ? nothing : just(xs[i2]);
+  };
   var findIndexImpl = function(just, nothing, f, xs) {
     for (var i2 = 0, l = xs.length; i2 < l; i2++) {
       if (f(xs[i2]))
@@ -3609,6 +3818,9 @@
       return out;
     };
   }();
+  var sliceImpl = function(s, e, l) {
+    return l.slice(s, e);
+  };
 
   // output/Data.Array.ST/foreign.js
   function unsafeFreezeThawImpl(xs) {
@@ -3699,6 +3911,15 @@
   var push = /* @__PURE__ */ runSTFn2(pushImpl);
 
   // output/Data.Function.Uncurried/foreign.js
+  var runFn3 = function(fn) {
+    return function(a2) {
+      return function(b2) {
+        return function(c) {
+          return fn(a2, b2, c);
+        };
+      };
+    };
+  };
   var runFn4 = function(fn) {
     return function(a2) {
       return function(b2) {
@@ -3714,17 +3935,51 @@
   // output/Data.Array/index.js
   var fromJust2 = /* @__PURE__ */ fromJust();
   var fold1 = /* @__PURE__ */ fold(foldableArray);
+  var uncons = /* @__PURE__ */ function() {
+    return runFn3(unconsImpl)($$const(Nothing.value))(function(x) {
+      return function(xs) {
+        return new Just({
+          head: x,
+          tail: xs
+        });
+      };
+    });
+  }();
   var snoc = function(xs) {
     return function(x) {
       return withArray(push(x))(xs)();
     };
   };
+  var slice = /* @__PURE__ */ runFn3(sliceImpl);
+  var take = function(n) {
+    return function(xs) {
+      var $152 = n < 1;
+      if ($152) {
+        return [];
+      }
+      ;
+      return slice(0)(n)(xs);
+    };
+  };
+  var index2 = /* @__PURE__ */ function() {
+    return runFn4(indexImpl)(Just.create)(Nothing.value);
+  }();
   var fold2 = function(dictMonoid) {
     return fold1(dictMonoid);
   };
   var findIndex = /* @__PURE__ */ function() {
     return runFn4(findIndexImpl)(Just.create)(Nothing.value);
   }();
+  var drop = function(n) {
+    return function(xs) {
+      var $173 = n < 1;
+      if ($173) {
+        return xs;
+      }
+      ;
+      return slice(n)(length4(xs))(xs);
+    };
+  };
   var deleteAt = /* @__PURE__ */ function() {
     return runFn4(_deleteAt)(Just.create)(Nothing.value);
   }();
@@ -4959,7 +5214,7 @@
     };
     return CatQueue2;
   }();
-  var uncons2 = function($copy_v) {
+  var uncons3 = function($copy_v) {
     var $tco_done = false;
     var $tco_result;
     function $tco_loop(v) {
@@ -5081,7 +5336,7 @@
             var $tco_done1 = false;
             var $tco_result;
             function $tco_loop(xs, ys) {
-              var v = uncons2(xs);
+              var v = uncons3(xs);
               if (v instanceof Nothing) {
                 $tco_done1 = true;
                 return foldl2(function(x) {
@@ -5111,7 +5366,7 @@
       };
     };
   };
-  var uncons3 = function(v) {
+  var uncons4 = function(v) {
     if (v instanceof CatNil) {
       return Nothing.value;
     }
@@ -5207,7 +5462,7 @@
         };
       };
       if (v.value0 instanceof Return) {
-        var v2 = uncons3(v.value1);
+        var v2 = uncons4(v.value1);
         if (v2 instanceof Nothing) {
           $tco_done = true;
           return new Return(v.value0.value0);
@@ -6815,14 +7070,95 @@
     };
   }();
 
+  // output/Data.Show.Generic/foreign.js
+  var intercalate2 = function(separator) {
+    return function(xs) {
+      return xs.join(separator);
+    };
+  };
+
+  // output/Data.Show.Generic/index.js
+  var append5 = /* @__PURE__ */ append(semigroupArray);
+  var genericShowArgsNoArguments = {
+    genericShowArgs: function(v) {
+      return [];
+    }
+  };
+  var genericShowArgsArgument = function(dictShow) {
+    var show3 = show(dictShow);
+    return {
+      genericShowArgs: function(v) {
+        return [show3(v)];
+      }
+    };
+  };
+  var genericShowArgs = function(dict) {
+    return dict.genericShowArgs;
+  };
+  var genericShowConstructor = function(dictGenericShowArgs) {
+    var genericShowArgs1 = genericShowArgs(dictGenericShowArgs);
+    return function(dictIsSymbol) {
+      var reflectSymbol2 = reflectSymbol(dictIsSymbol);
+      return {
+        "genericShow'": function(v) {
+          var ctor = reflectSymbol2($$Proxy.value);
+          var v1 = genericShowArgs1(v);
+          if (v1.length === 0) {
+            return ctor;
+          }
+          ;
+          return "(" + (intercalate2(" ")(append5([ctor])(v1)) + ")");
+        }
+      };
+    };
+  };
+  var genericShow$prime = function(dict) {
+    return dict["genericShow'"];
+  };
+  var genericShowSum = function(dictGenericShow) {
+    var genericShow$prime1 = genericShow$prime(dictGenericShow);
+    return function(dictGenericShow1) {
+      var genericShow$prime2 = genericShow$prime(dictGenericShow1);
+      return {
+        "genericShow'": function(v) {
+          if (v instanceof Inl) {
+            return genericShow$prime1(v.value0);
+          }
+          ;
+          if (v instanceof Inr) {
+            return genericShow$prime2(v.value0);
+          }
+          ;
+          throw new Error("Failed pattern match at Data.Show.Generic (line 26, column 1 - line 28, column 40): " + [v.constructor.name]);
+        }
+      };
+    };
+  };
+  var genericShow = function(dictGeneric) {
+    var from3 = from(dictGeneric);
+    return function(dictGenericShow) {
+      var genericShow$prime1 = genericShow$prime(dictGenericShow);
+      return function(x) {
+        return genericShow$prime1(from3(x));
+      };
+    };
+  };
+
   // output/Sexpze.Utility/index.js
   var todo = function(msg) {
     return function(v) {
       return unsafeCrashWith("[todo] " + msg);
     };
   };
+  var bug = function(src9) {
+    return function(msg) {
+      return unsafeCrashWith("[bug at " + (src9 + ("] " + msg)));
+    };
+  };
 
   // output/Sexpze.Component.State/index.js
+  var genericShowConstructor2 = /* @__PURE__ */ genericShowConstructor(genericShowArgsNoArguments);
+  var unwrap4 = /* @__PURE__ */ unwrap();
   var wrap3 = /* @__PURE__ */ wrap();
   var mapWithIndex2 = /* @__PURE__ */ mapWithIndex(functorWithIndexArray);
   var SpanCursor = /* @__PURE__ */ function() {
@@ -6882,9 +7218,84 @@
     Close2.value = new Close2();
     return Close2;
   }();
+  var showIndex = showInt;
   var semiringPoint = semiringInt;
   var length8 = /* @__PURE__ */ length(foldableArray)(semiringPoint);
+  var add1 = /* @__PURE__ */ add(semiringPoint);
+  var one1 = /* @__PURE__ */ one(semiringPoint);
+  var semigroupSpan = semigroupArray;
+  var append12 = /* @__PURE__ */ append(semigroupSpan);
+  var ringPoint = ringInt;
+  var sub1 = /* @__PURE__ */ sub(ringPoint);
+  var ordPoint = ordInt;
+  var lessThanOrEq2 = /* @__PURE__ */ lessThanOrEq(ordPoint);
+  var genericAtom_ = {
+    to: function(x) {
+      if (x instanceof Inl) {
+        return new Lit(x.value0);
+      }
+      ;
+      if (x instanceof Inr && x.value0 instanceof Inl) {
+        return Open.value;
+      }
+      ;
+      if (x instanceof Inr && x.value0 instanceof Inr) {
+        return Close.value;
+      }
+      ;
+      throw new Error("Failed pattern match at Sexpze.Component.State (line 104, column 1 - line 104, column 31): " + [x.constructor.name]);
+    },
+    from: function(x) {
+      if (x instanceof Lit) {
+        return new Inl(x.value0);
+      }
+      ;
+      if (x instanceof Open) {
+        return new Inr(new Inl(NoArguments.value));
+      }
+      ;
+      if (x instanceof Close) {
+        return new Inr(new Inr(NoArguments.value));
+      }
+      ;
+      throw new Error("Failed pattern match at Sexpze.Component.State (line 104, column 1 - line 104, column 31): " + [x.constructor.name]);
+    }
+  };
+  var genericShow3 = /* @__PURE__ */ genericShow(genericAtom_)(/* @__PURE__ */ genericShowSum(/* @__PURE__ */ genericShowConstructor(/* @__PURE__ */ genericShowArgsArgument(showString))({
+    reflectSymbol: function() {
+      return "Lit";
+    }
+  }))(/* @__PURE__ */ genericShowSum(/* @__PURE__ */ genericShowConstructor2({
+    reflectSymbol: function() {
+      return "Open";
+    }
+  }))(/* @__PURE__ */ genericShowConstructor2({
+    reflectSymbol: function() {
+      return "Close";
+    }
+  }))));
+  var showAtom = {
+    show: function(x) {
+      return genericShow3(x);
+    }
+  };
+  var showSpan = /* @__PURE__ */ showArray(showAtom);
+  var show2 = /* @__PURE__ */ show(/* @__PURE__ */ showRecord()()(/* @__PURE__ */ showRecordFieldsCons({
+    reflectSymbol: function() {
+      return "i";
+    }
+  })(/* @__PURE__ */ showRecordFieldsConsNil({
+    reflectSymbol: function() {
+      return "s";
+    }
+  })(showSpan))(showIndex)));
   var eqPoint = eqInt;
+  var getIndexRightBeforePoint = function(i2) {
+    return wrap3(unwrap4(i2) - 1 | 0);
+  };
+  var getIndexRightAfterPoint = function(i2) {
+    return wrap3(unwrap4(i2));
+  };
   var foldMapPointsAndWithIndex = function(dictMonoid) {
     var fold3 = fold2(dictMonoid);
     var append22 = append(dictMonoid.Semigroup0());
@@ -6900,9 +7311,201 @@
       };
     };
   };
+  var countUnopenedAndUnclosedParens = function(v) {
+    var go2 = function(unopened) {
+      return function(unclosed) {
+        return function($291) {
+          return function(v1) {
+            if (v1 instanceof Nothing) {
+              return {
+                unopened,
+                unclosed
+              };
+            }
+            ;
+            if (v1 instanceof Just && v1.value0.head instanceof Lit) {
+              return go2(unopened)(unclosed)(v1.value0.tail);
+            }
+            ;
+            if (v1 instanceof Just && v1.value0.head instanceof Open) {
+              return go2(unopened)(unclosed + 1 | 0)(v1.value0.tail);
+            }
+            ;
+            if (v1 instanceof Just && v1.value0.head instanceof Close) {
+              return function() {
+                var $243 = unclosed > 0;
+                if ($243) {
+                  return go2(unopened)(unclosed - 1 | 0);
+                }
+                ;
+                return go2(unopened + 1 | 0)(unclosed);
+              }()(v1.value0.tail);
+            }
+            ;
+            throw new Error("Failed pattern match at Sexpze.Component.State (line 248, column 43 - line 252, column 125): " + [v1.constructor.name]);
+          }(uncons($291));
+        };
+      };
+    };
+    return go2(0)(0)(v);
+  };
+  var beforePoint = function(p2) {
+    return function(s) {
+      return wrap3(take(unwrap4(p2))(unwrap4(s)));
+    };
+  };
+  var atIndex = function(i2) {
+    return function(s) {
+      return fromMaybe$prime(function(v) {
+        return bug("atIndex")("index out of bounds: " + show2({
+          i: i2,
+          s
+        }));
+      })(index2(unwrap4(s))(unwrap4(i2)));
+    };
+  };
+  var getPointRightAfterNthNextUnopenedParenStartingFromPoint = function(n0) {
+    return function(p0) {
+      return function(xs) {
+        var go2 = function($copy_n) {
+          return function($copy_p) {
+            var $tco_var_n = $copy_n;
+            var $tco_done = false;
+            var $tco_result;
+            function $tco_loop(n, p2) {
+              var v = atIndex(getIndexRightAfterPoint(p2))(xs);
+              if (v instanceof Lit) {
+                $tco_var_n = n;
+                $copy_p = add1(p2)(one1);
+                return;
+              }
+              ;
+              if (v instanceof Open) {
+                $tco_var_n = n + 1 | 0;
+                $copy_p = add1(p2)(one1);
+                return;
+              }
+              ;
+              if (v instanceof Close && n === 1) {
+                $tco_done = true;
+                return add1(p2)(one1);
+              }
+              ;
+              if (v instanceof Close) {
+                $tco_var_n = n - 1 | 0;
+                $copy_p = add1(p2)(one1);
+                return;
+              }
+              ;
+              throw new Error("Failed pattern match at Sexpze.Component.State (line 209, column 12 - line 213, column 36): " + [v.constructor.name]);
+            }
+            ;
+            while (!$tco_done) {
+              $tco_result = $tco_loop($tco_var_n, $copy_p);
+            }
+            ;
+            return $tco_result;
+          };
+        };
+        return go2(n0)(p0);
+      };
+    };
+  };
+  var getPointRightBeforeNthPrevUnclosedParenStartingFromPoint = function(n0) {
+    return function(p0) {
+      return function(xs) {
+        var go2 = function($copy_n) {
+          return function($copy_p) {
+            var $tco_var_n = $copy_n;
+            var $tco_done = false;
+            var $tco_result;
+            function $tco_loop(n, p2) {
+              var v = atIndex(getIndexRightBeforePoint(p2))(xs);
+              if (v instanceof Lit) {
+                $tco_var_n = n;
+                $copy_p = sub1(p2)(one1);
+                return;
+              }
+              ;
+              if (v instanceof Close) {
+                $tco_var_n = n + 1 | 0;
+                $copy_p = sub1(p2)(one1);
+                return;
+              }
+              ;
+              if (v instanceof Open && n === 1) {
+                $tco_done = true;
+                return sub1(p2)(one1);
+              }
+              ;
+              if (v instanceof Open) {
+                $tco_var_n = n - 1 | 0;
+                $copy_p = sub1(p2)(one1);
+                return;
+              }
+              ;
+              throw new Error("Failed pattern match at Sexpze.Component.State (line 229, column 12 - line 233, column 35): " + [v.constructor.name]);
+            }
+            ;
+            while (!$tco_done) {
+              $tco_result = $tco_loop($tco_var_n, $copy_p);
+            }
+            ;
+            return $tco_result;
+          };
+        };
+        return go2(n0)(p0);
+      };
+    };
+  };
+  var afterPoint = function(p2) {
+    return function(s) {
+      return wrap3(drop(unwrap4(p2))(unwrap4(s)));
+    };
+  };
+  var atSpanCursor = function(v) {
+    return function(e) {
+      return new Tuple(function(es$prime) {
+        return append12(beforePoint(v.value0)(e))(append12(es$prime)(afterPoint(v.value1)(e)));
+      }, wrap3(slice(unwrap4(v.value0))(unwrap4(v.value1))(unwrap4(e))));
+    };
+  };
+  var makeSpanCursorFromDrag = function(p1) {
+    return function(p2) {
+      return function(e) {
+        var v = function() {
+          var $279 = lessThanOrEq2(p1)(p2);
+          if ($279) {
+            return new Tuple(p1, p2);
+          }
+          ;
+          return new Tuple(p2, p1);
+        }();
+        var e$prime = snd(atSpanCursor(new SpanCursor(v.value0, v.value1))(e));
+        var v1 = countUnopenedAndUnclosedParens(e$prime);
+        var pr$prime = function() {
+          var $282 = v1.unclosed === 0;
+          if ($282) {
+            return v.value1;
+          }
+          ;
+          return getPointRightAfterNthNextUnopenedParenStartingFromPoint(v1.unclosed)(v.value1)(e);
+        }();
+        var pl$prime = function() {
+          var $283 = v1.unopened === 0;
+          if ($283) {
+            return v.value0;
+          }
+          ;
+          return getPointRightBeforeNthPrevUnclosedParenStartingFromPoint(v1.unopened)(v.value0)(e);
+        }();
+        return new SpanCursor(pl$prime, pr$prime);
+      };
+    };
+  };
 
   // output/Sexpze.Component.Editor/index.js
-  var append5 = /* @__PURE__ */ append(semigroupArray);
+  var append6 = /* @__PURE__ */ append(semigroupArray);
   var eq2 = /* @__PURE__ */ eq(eqPoint);
   var foldMapPointsAndWithIndex2 = /* @__PURE__ */ foldMapPointsAndWithIndex(monoidArray);
   var empty7 = /* @__PURE__ */ empty(plusMaybe);
@@ -6910,6 +7513,8 @@
   var pure13 = /* @__PURE__ */ pure(applicativeMaybe);
   var discard5 = /* @__PURE__ */ discard(discardUnit)(bindHalogenM);
   var modify_3 = /* @__PURE__ */ modify_2(monadStateHalogenM);
+  var bind5 = /* @__PURE__ */ bind(bindHalogenM);
+  var get2 = /* @__PURE__ */ get(monadStateHalogenM);
   var KeyboardEvent_Query = /* @__PURE__ */ function() {
     function KeyboardEvent_Query2(value0, value1) {
       this.value0 = value0;
@@ -6960,21 +7565,21 @@
       var renderPoint = function(p2) {
         var template = function(cns) {
           return function(sym) {
-            return [div2([classes(append5(["Point"])(cns)), onMouseDown($$const(new StartDrag(p2))), onMouseUp($$const(new EndDrag(p2)))])([text5(sym)])];
+            return [div2([classes(append6(["Point"])(cns)), onMouseDown($$const(new StartDrag(p2))), onMouseUp($$const(new EndDrag(p2)))])([text5(sym)])];
           };
         };
-        var $22 = eq2(p2)(v.value0) && eq2(p2)(v.value1);
-        if ($22) {
+        var $25 = eq2(p2)(v.value0) && eq2(p2)(v.value1);
+        if ($25) {
           return template(["Cursor"])("|");
         }
         ;
-        var $23 = eq2(p2)(v.value0);
-        if ($23) {
+        var $26 = eq2(p2)(v.value0);
+        if ($26) {
           return template(["Cursor", "SpanCursor", "left"])("[");
         }
         ;
-        var $24 = eq2(p2)(v.value1);
-        if ($24) {
+        var $27 = eq2(p2)(v.value1);
+        if ($27) {
           return template(["Cursor", "SpanCursor", "right"])("]");
         }
         ;
@@ -6984,7 +7589,7 @@
         return function(a2) {
           var template = function(cns) {
             return function(sym) {
-              return [div2([classes(append5(["Atom"])(cns))])([text5(sym)])];
+              return [div2([classes(append6(["Atom"])(cns))])([text5(sym)])];
             };
           };
           if (a2 instanceof Lit) {
@@ -6999,7 +7604,7 @@
             return template(["Paren", "Close"])(")");
           }
           ;
-          throw new Error("Failed pattern match at Sexpze.Component.Editor (line 122, column 7 - line 125, column 77): " + [a2.constructor.name]);
+          throw new Error("Failed pattern match at Sexpze.Component.Editor (line 125, column 7 - line 128, column 77): " + [a2.constructor.name]);
         };
       };
       return div2([classes(["Span"])])(foldMapPointsAndWithIndex2(renderPoint)(renderAtom)(v1));
@@ -7014,7 +7619,7 @@
       return renderZipperCursorAndSpan(v.value0);
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 83, column 1 - line 83, column 46): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 86, column 1 - line 86, column 46): " + [v.constructor.name]);
   };
   var component = /* @__PURE__ */ function() {
     var render = function(state3) {
@@ -7024,7 +7629,8 @@
       return {
         cursor: v.cursor,
         span: v.span,
-        mb_clipboard: empty7
+        mb_clipboard: empty7,
+        mb_dragOrigin: empty7
       };
     };
     var handleQuery = function(v) {
@@ -7036,27 +7642,48 @@
       }
       ;
       if (v instanceof StartDrag) {
-        return pure9(unit);
-      }
-      ;
-      if (v instanceof EndDrag) {
         return discard5(modify_3(function(v1) {
-          var $40 = {};
-          for (var $41 in v1) {
-            if ({}.hasOwnProperty.call(v1, $41)) {
-              $40[$41] = v1[$41];
+          var $42 = {};
+          for (var $43 in v1) {
+            if ({}.hasOwnProperty.call(v1, $43)) {
+              $42[$43] = v1[$43];
             }
             ;
           }
           ;
-          $40.cursor = new MakeSpanCursor(new SpanCursor(v.value0, v.value0));
-          return $40;
+          $42.mb_dragOrigin = pure13(v.value0);
+          return $42;
         }))(function() {
           return pure9(unit);
         });
       }
       ;
-      throw new Error("Failed pattern match at Sexpze.Component.Editor (line 62, column 3 - line 62, column 36): " + [v.constructor.name]);
+      if (v instanceof EndDrag) {
+        return bind5(get2)(function(state3) {
+          if (state3.mb_dragOrigin instanceof Nothing) {
+            return pure9(unit);
+          }
+          ;
+          if (state3.mb_dragOrigin instanceof Just) {
+            return modify_3(function(v1) {
+              var $47 = {};
+              for (var $48 in v1) {
+                if ({}.hasOwnProperty.call(v1, $48)) {
+                  $47[$48] = v1[$48];
+                }
+                ;
+              }
+              ;
+              $47.cursor = new MakeSpanCursor(makeSpanCursorFromDrag(state3.mb_dragOrigin.value0)(v.value0)(state3.span));
+              return $47;
+            });
+          }
+          ;
+          throw new Error("Failed pattern match at Sexpze.Component.Editor (line 71, column 5 - line 73, column 97): " + [state3.mb_dragOrigin.constructor.name]);
+        });
+      }
+      ;
+      throw new Error("Failed pattern match at Sexpze.Component.Editor (line 63, column 3 - line 63, column 36): " + [v.constructor.name]);
     };
     var $$eval = mkEval({
       receive: defaultEval.receive,
@@ -7083,7 +7710,7 @@
   };
   var slot2 = /* @__PURE__ */ slot()(editorIsSymbol)(ordUnit);
   var wrap4 = /* @__PURE__ */ wrap();
-  var bind5 = /* @__PURE__ */ bind(bindHalogenM);
+  var bind6 = /* @__PURE__ */ bind(bindHalogenM);
   var liftEffect7 = /* @__PURE__ */ liftEffect(/* @__PURE__ */ monadEffectHalogenM(monadEffectAff));
   var bind15 = /* @__PURE__ */ bind(bindEffect);
   var map18 = /* @__PURE__ */ map(functorMaybe);
@@ -7128,7 +7755,7 @@
     };
     var handleAction = function(v) {
       if (v instanceof Initialize3) {
-        return bind5(liftEffect7(bind15(windowImpl)(document)))(function(document2) {
+        return bind6(liftEffect7(bind15(windowImpl)(document)))(function(document2) {
           return subscribe$prime(function(v1) {
             return eventListener2(keyup)(toEventTarget(document2))(function() {
               var $21 = map18(KeyboardAction.create);

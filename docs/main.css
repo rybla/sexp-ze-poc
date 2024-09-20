@@ -27,6 +27,16 @@ body {
   flex-direction: row;
 }
 
+.Point {
+  user-select: none;
+  color: rgb(190, 190, 190);
+}
+
 .Cursor {
   color: red;
+}
+
+.Atom {
+  color: green;
+  user-select: none;
 }

@@ -3,7 +3,7 @@ module Sexpze.Component.Editor where
 import Prelude
 import Sexpze.Component.State
 
-import Control.Monad.State (modify_)
+import Control.Monad.State (get, modify_)
 import Control.Plus (empty)
 import Data.Foldable (foldMap)
 import Data.Maybe (Maybe(..))
@@ -51,6 +51,7 @@ component = H.mkComponent { initialState, eval, render }
     { cursor
     , span
     , mb_clipboard: empty
+    , mb_dragOrigin: empty
     }
 
   eval = H.mkEval H.defaultEval { handleQuery = handleQuery, handleAction = handleAction, initialize = Just Initialize }
@@ -63,11 +64,13 @@ component = H.mkComponent { initialState, eval, render }
   handleAction Initialize = do
     pure unit
   handleAction (StartDrag p) = do
+    modify_ _ { mb_dragOrigin = pure p }
     pure unit
-  handleAction (EndDrag p) = do
-    modify_ _ { cursor = MakeSpanCursor $ SpanCursor p p }
-    pure unit
-
+  handleAction (EndDrag p1) = do
+    state <- get
+    case state.mb_dragOrigin of
+      Nothing -> pure unit
+      Just p0 -> modify_ _ { cursor = MakeSpanCursor $ makeSpanCursorFromDrag p0 p1 state.span }
   render state =
     HH.div
       [ HP.classes [ HH.ClassName "Editor" ] ]
