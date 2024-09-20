@@ -229,9 +229,11 @@ component = H.mkComponent { initialState, eval, render }
           [ HH.div
               [ HP.classes [ HH.ClassName "block" ] ]
               [ HH.div [ HP.classes [ HH.ClassName "title" ] ] [ HH.text "concepts" ]
-              , HH.div [] [ HH.text "there are two types of cursors: span cursors and zipper cursors" ]
-              , HH.div [] [ HH.text "a span cursor looks like `... [ ... ] ...`; a span cursor is on the enclosed expression" ]
-              , HH.div [] [ HH.text "a zipper cursor looks like `... { ... [ ... ] ... } ...`; a zipper cursor is on the enclosed one-hole context" ]
+              , HH.span [] [ HH.text "there are two types of cursors: span cursors and zipper cursors" ]
+              , HH.span [] $ [ HH.text "a " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "span cursor" ] ] <> [ HH.text " looks like " ] <> [ HH.span [ HP.classes [ HH.ClassName "code" ] ] [ HH.text "... [ ... ] ..." ] ]
+              , HH.span [] $ [ HH.text "a " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "span cursor" ] ] <> [ HH.text " is on the enclosed expression" ]
+              , HH.span [] $ [ HH.text "a " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "zipper cursor" ] ] <> [ HH.text " looks like " ] <> [ HH.span [ HP.classes [ HH.ClassName "code" ] ] [ HH.text "... { ... [ ... ] ... } ..." ] ]
+              , HH.span [] $ [ HH.text "a " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "zipper cursor" ] ] <> [ HH.text " is on the enclosed one-hole context" ]
               ]
           , HH.div
               [ HP.classes [ HH.ClassName "block" ] ]

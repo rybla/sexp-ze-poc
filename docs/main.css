@@ -29,7 +29,7 @@ body {
   gap: 1em;
   overflow-y: scroll;
   padding: 1em;
-  height: 400px;
+  height: 600px;
 }
 
 .Editor>.information .block {
@@ -64,6 +64,14 @@ body {
 .Editor>.information td {
   padding: 0.5em;
   border: 1px solid #ddd;
+}
+
+.Editor>.information .code {
+  font-family: monospace;
+}
+
+.Editor>.information .keyword {
+  font-weight: bold;
 }
 
 /* Term */

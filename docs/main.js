@@ -6245,6 +6245,7 @@
   var element2 = /* @__PURE__ */ function() {
     return element(Nothing.value);
   }();
+  var span3 = /* @__PURE__ */ element2("span");
   var table = /* @__PURE__ */ element2("table");
   var table_ = /* @__PURE__ */ table([]);
   var tbody = /* @__PURE__ */ element2("tbody");
@@ -8139,7 +8140,7 @@
                 return ["Paren", "Close"];
               }
               ;
-              throw new Error("Failed pattern match at Sexpze.Component.Editor (line 414, column 25 - line 417, column 82): " + [a2.constructor.name]);
+              throw new Error("Failed pattern match at Sexpze.Component.Editor (line 416, column 25 - line 419, column 82): " + [a2.constructor.name]);
             }())(cns)))])([text5(function() {
               if (a2 instanceof Lit) {
                 return a2.value0;
@@ -8153,7 +8154,7 @@
                 return ")";
               }
               ;
-              throw new Error("Failed pattern match at Sexpze.Component.Editor (line 422, column 23 - line 425, column 29): " + [a2.constructor.name]);
+              throw new Error("Failed pattern match at Sexpze.Component.Editor (line 424, column 23 - line 427, column 29): " + [a2.constructor.name]);
             }())])];
           };
           var $162 = ltPointAndIndex(v.value0)(i2) && ltIndexAndPoint(i2)(v.value1);
@@ -8283,7 +8284,7 @@
                   return ["Paren", "Close"];
                 }
                 ;
-                throw new Error("Failed pattern match at Sexpze.Component.Editor (line 336, column 25 - line 339, column 82): " + [a2.constructor.name]);
+                throw new Error("Failed pattern match at Sexpze.Component.Editor (line 338, column 25 - line 341, column 82): " + [a2.constructor.name]);
               }())(cns)))])([text5(function() {
                 if (a2 instanceof Lit) {
                   return a2.value0;
@@ -8297,7 +8298,7 @@
                   return ")";
                 }
                 ;
-                throw new Error("Failed pattern match at Sexpze.Component.Editor (line 344, column 23 - line 347, column 29): " + [a2.constructor.name]);
+                throw new Error("Failed pattern match at Sexpze.Component.Editor (line 346, column 23 - line 349, column 29): " + [a2.constructor.name]);
               }())])];
             };
             var v2 = function(v3) {
@@ -8352,11 +8353,11 @@
       return renderZipperCursorStateAndSpan(v.value0);
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 283, column 1 - line 283, column 56): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 285, column 1 - line 285, column 56): " + [v.constructor.name]);
   };
   var component = /* @__PURE__ */ function() {
     var render = function(state3) {
-      return div2([classes(["Editor"])])([div2([classes(["content"])])([renderCursorStateAndSpan(state3.cursorState)(state3.span)]), div2([classes(["information"])])([div2([classes(["block"])])([div2([classes(["title"])])([text5("concepts")]), div2([])([text5("there are two types of cursors: span cursors and zipper cursors")]), div2([])([text5("a span cursor looks like `... [ ... ] ...`; a span cursor is on the enclosed expression")]), div2([])([text5("a zipper cursor looks like `... { ... [ ... ] ... } ...`; a zipper cursor is on the enclosed one-hole context")])]), div2([classes(["block"])])([div2([classes(["title"])])([text5("controls")]), table_([thead_([tr_([th_([text5("cursor")]), th_([text5("input")]), th_([text5("effect")])])]), tbody_([tr_([td_([text5("span")]), td_([text5("<char>")]), td_([text5("insert atom right before cursor")])]), tr_([td_([text5("span")]), td_([text5("( | )")]), td_([text5("insert group around cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2192")]), td_([text5("move the right edge of the span to the right")])]), tr_([td_([text5("span")]), td_([text5("\u21E7\u2192")]), td_([text5("move the left edge of the span to the right")])]), tr_([td_([text5("span")]), td_([text5("\u2192")]), td_([text5("move the left edge of the span to the left")])]), tr_([td_([text5("span")]), td_([text5("\u21E7\u2192")]), td_([text5("move the right edge of the span to the left")])]), tr_([td_([text5("span")]), td_([text5("Space")]), td_([text5("if no marker, set marker here")])]), tr_([td_([text5("span")]), td_([text5("Space")]), td_([text5("if have marker, place zipper cursor between markers")])]), tr_([td_([text5("span")]), td_([text5("Escape")]), td_([text5("if no marker, shrink cursor to point cursor (empty span cursor)")])]), tr_([td_([text5("span")]), td_([text5("Escape")]), td_([text5("if have marker, set cursor to marker and clear marker")])]), tr_([td_([text5("zipper")]), td_([text5("Escape")]), td_([text5("set marker to outer side of zipper and cursor to inner side of zipper")])]), tr_([td_([text5("span")]), td_([text5("\u232B")]), td_([text5("delete the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("\u232B")]), td_([text5("delete the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2318c")]), td_([text5("copy the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("\u2318c")]), td_([text5("copy the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2318x")]), td_([text5("cut the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("\u2318x")]), td_([text5("cut the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2318v")]), td_([text5("paste a span clipboard in place of the cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2318v")]), td_([text5("paste a zipper clipboard around the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("\u2318v")]), td_([text5("paste a zipper clipboard in place of the cursor")])])])])]), div2([classes(["block"])])([div2([classes(["title"])])([text5("problems")]), div2([])([text5("with just keyboard, can't navigate span cursor inside of parentheses (can do this with mouse ofc)")])])])]);
+      return div2([classes(["Editor"])])([div2([classes(["content"])])([renderCursorStateAndSpan(state3.cursorState)(state3.span)]), div2([classes(["information"])])([div2([classes(["block"])])([div2([classes(["title"])])([text5("concepts")]), span3([])([text5("there are two types of cursors: span cursors and zipper cursors")]), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("span cursor")])])(append6([text5(" looks like ")])([span3([classes(["code"])])([text5("... [ ... ] ...")])])))), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("span cursor")])])([text5(" is on the enclosed expression")]))), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("zipper cursor")])])(append6([text5(" looks like ")])([span3([classes(["code"])])([text5("... { ... [ ... ] ... } ...")])])))), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("zipper cursor")])])([text5(" is on the enclosed one-hole context")])))]), div2([classes(["block"])])([div2([classes(["title"])])([text5("controls")]), table_([thead_([tr_([th_([text5("cursor")]), th_([text5("input")]), th_([text5("effect")])])]), tbody_([tr_([td_([text5("span")]), td_([text5("<char>")]), td_([text5("insert atom right before cursor")])]), tr_([td_([text5("span")]), td_([text5("( | )")]), td_([text5("insert group around cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2192")]), td_([text5("move the right edge of the span to the right")])]), tr_([td_([text5("span")]), td_([text5("\u21E7\u2192")]), td_([text5("move the left edge of the span to the right")])]), tr_([td_([text5("span")]), td_([text5("\u2192")]), td_([text5("move the left edge of the span to the left")])]), tr_([td_([text5("span")]), td_([text5("\u21E7\u2192")]), td_([text5("move the right edge of the span to the left")])]), tr_([td_([text5("span")]), td_([text5("Space")]), td_([text5("if no marker, set marker here")])]), tr_([td_([text5("span")]), td_([text5("Space")]), td_([text5("if have marker, place zipper cursor between markers")])]), tr_([td_([text5("span")]), td_([text5("Escape")]), td_([text5("if no marker, shrink cursor to point cursor (empty span cursor)")])]), tr_([td_([text5("span")]), td_([text5("Escape")]), td_([text5("if have marker, set cursor to marker and clear marker")])]), tr_([td_([text5("zipper")]), td_([text5("Escape")]), td_([text5("set marker to outer side of zipper and cursor to inner side of zipper")])]), tr_([td_([text5("span")]), td_([text5("\u232B")]), td_([text5("delete the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("\u232B")]), td_([text5("delete the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2318c")]), td_([text5("copy the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("\u2318c")]), td_([text5("copy the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2318x")]), td_([text5("cut the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("\u2318x")]), td_([text5("cut the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2318v")]), td_([text5("paste a span clipboard in place of the cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2318v")]), td_([text5("paste a zipper clipboard around the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("\u2318v")]), td_([text5("paste a zipper clipboard in place of the cursor")])])])])]), div2([classes(["block"])])([div2([classes(["title"])])([text5("problems")]), div2([])([text5("with just keyboard, can't navigate span cursor inside of parentheses (can do this with mouse ofc)")])])])]);
     };
     var initialState = function(v) {
       return {
