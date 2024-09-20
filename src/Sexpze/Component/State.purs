@@ -3,6 +3,7 @@ module Sexpze.Component.State where
 import Prelude
 
 import Data.Array as Array
+import Data.Array as String
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), fromMaybe')
@@ -101,6 +102,25 @@ derive newtype instance Eq Span
 data Zipper = Zipper Span Span
 
 --------------------------------------------------------------------------------
+-- make
+--------------------------------------------------------------------------------
+
+makeSpanCursor :: Point -> Point -> Cursor
+makeSpanCursor pl pr = MakeSpanCursor $ SpanCursor pl pr
+
+--------------------------------------------------------------------------------
+-- pretty
+--------------------------------------------------------------------------------
+
+prettySpan :: Span -> String
+prettySpan = unwrap >>> map prettyAtom >>> String.intercalate " "
+
+prettyAtom :: Atom -> String
+prettyAtom (Lit str) = str
+prettyAtom Open = "("
+prettyAtom Close = ")"
+
+--------------------------------------------------------------------------------
 -- drag
 --------------------------------------------------------------------------------
 
@@ -108,21 +128,21 @@ dragFromPoint :: Point -> Point -> Span -> Cursor
 dragFromPoint p1_top p2_top e =
   let
     pl_top /\ pr_top = if p1_top < p2_top then p1_top /\ p2_top else p2_top /\ p1_top
-    s = e # atSpanCursor (SpanCursor pl_top pr_top)
-    { unopened, unclosed } = s # countUnopenedAndUnclosedParens
+    e' = e # atSpanCursor (SpanCursor pl_top pr_top)
+    { unopened, unclosed } = e' # countUnopenedAndUnclosedParens
   in
     if unopened > 0 && unclosed > 0 then
       -- ==> span that needs to expand out to nearest valid parent
       let
-        pl = getPointRightAfterNthPrevUnclosedParenStartingFromPoint 1 pl_top s - one
-        pr = getPointRightAfterNthPrevUnclosedParenStartingFromPoint 1 pr_top s + one
+        pl = getPointRightAfterNthPrevUnclosedParenStartingFromPoint 1 pl_top e - one
+        pr = getPointRightBeforeNthNextUnopenedParenStartingFromPoint 1 pr_top e + one
       in
         MakeSpanCursor $ SpanCursor pl pr
     else if unopened > 0 then
       -- ==> zippr_topr with second half on the left
       let
-        pol = getPointRightAfterNthPrevUnclosedParenStartingFromPoint unopened pl_top s - one
-        pil = getPointRightAfterNthPrevUnclosedParenStartingFromPoint 1 pl_top s
+        pol = getPointRightAfterNthPrevUnclosedParenStartingFromPoint unopened pl_top e - one
+        pil = getPointRightAfterNthPrevUnclosedParenStartingFromPoint 1 pl_top e
         pir = pl_top
         por = pr_top
       in
@@ -132,8 +152,8 @@ dragFromPoint p1_top p2_top e =
       let
         pol = pl_top
         pil = pr_top
-        pir = getPointRightBeforeNthNextUnopenedParenStartingFromPoint unclosed pr_top s
-        por = getPointRightBeforeNthNextUnopenedParenStartingFromPoint unopened pr_top s + one
+        pir = getPointRightBeforeNthNextUnopenedParenStartingFromPoint unclosed pr_top e
+        por = getPointRightBeforeNthNextUnopenedParenStartingFromPoint unopened pr_top e + one
       in
         MakeZipperCursor $ ZipperCursor pol pil pir por
     else
