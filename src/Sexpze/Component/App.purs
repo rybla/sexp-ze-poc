@@ -49,8 +49,8 @@ component = H.mkComponent { initialState, eval, render }
   render _state =
     HH.div []
       [ HH.slot (Proxy :: Proxy "editor") unit Editor.component
-          { span: Span [ Lit "a", Open, Lit "b", Open, Lit "c", Close, Lit "d", Close, Lit "e" ]
-          , cursor: MakeSpanCursor $ SpanCursor (wrap 0) (wrap 0)
+          -- { span: Span [ Lit "a", Open, Lit "b", Open, Lit "c", Close, Lit "d", Close, Lit "e" ]
+          { span: Span [ Lit "a", Lit "b", Lit "c", Lit "d", Lit "e" ]
           }
           EditorOutput
       ]

@@ -37,6 +37,10 @@ body {
   font-weight: bold;
 }
 
+.Cursor.Marker {
+  color: rgb(115, 115, 255);
+}
+
 .Atom {
   color: black;
   user-select: none;

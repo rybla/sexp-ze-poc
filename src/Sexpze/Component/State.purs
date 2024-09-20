@@ -8,7 +8,6 @@ import Data.Eq.Generic (genericEq)
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), fromMaybe')
-import Data.Monoid (mempty)
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..), fst, snd)
@@ -47,6 +46,12 @@ instance Show SpanCursor where
 instance Eq SpanCursor where
   eq x = genericEq x
 
+endpointLeft :: SpanCursor -> Point
+endpointLeft (SpanCursor p _) = p
+
+endpointRight :: SpanCursor -> Point
+endpointRight (SpanCursor _ p) = p
+
 data ZipperCursor = ZipperCursor Point Point Point Point
 
 derive instance Generic ZipperCursor _
@@ -62,6 +67,18 @@ data Cursor
   | MakeZipperCursor ZipperCursor
 
 derive instance Generic Cursor _
+
+endpointOuterLeft :: ZipperCursor -> Point
+endpointOuterLeft (ZipperCursor p _ _ _) = p
+
+endpointInnerLeft :: ZipperCursor -> Point
+endpointInnerLeft (ZipperCursor _ p _ _) = p
+
+endpointInnerRight :: ZipperCursor -> Point
+endpointInnerRight (ZipperCursor _ _ p _) = p
+
+endpointOuterRight :: ZipperCursor -> Point
+endpointOuterRight (ZipperCursor _ _ _ p) = p
 
 instance Show Cursor where
   show x = genericShow x
@@ -124,12 +141,29 @@ lengthLeft (Zipper ls _) = length ls
 lengthRight :: Zipper -> Int
 lengthRight (Zipper _ rs) = length rs
 
+data CursorState
+  = SpanCursorState (Maybe SpanCursor) SpanCursor
+  | ZipperCursorState ZipperCursor
+
+derive instance Generic CursorState _
+
+instance Show CursorState where
+  show x = genericShow x
+
+instance Eq CursorState where
+  eq x = genericEq x
+
 --------------------------------------------------------------------------------
 -- make
 --------------------------------------------------------------------------------
 
+makeSpanCursor :: Point -> Point -> Cursor
 makeSpanCursor pl pr = MakeSpanCursor $ SpanCursor pl pr
+
+makeZipperCursor :: Point -> Point -> Point -> Point -> Cursor
 makeZipperCursor pol pil pir por = MakeZipperCursor $ ZipperCursor pol pil pir por
+
+makePointCursor :: Point -> Cursor
 makePointCursor p = MakeSpanCursor $ SpanCursor p p
 
 --------------------------------------------------------------------------------
@@ -167,6 +201,18 @@ makeSpanCursorFromDrag p1 p2 e =
         getPointRightAfterNthNextUnopenedParenStartingFromPoint unclosed pr e
   in
     SpanCursor pl' pr'
+
+--------------------------------------------------------------------------------
+-- makeZipperCursorFromSpanCursors
+--------------------------------------------------------------------------------
+
+-- | Assumes the two spans are valid
+makeZipperCursorFromSpanCursors :: SpanCursor -> SpanCursor -> Span -> ZipperCursor
+makeZipperCursorFromSpanCursors (SpanCursor pol por) (SpanCursor pil pir) _e | pol <= pil && pir <= por = ZipperCursor pol pil pir por
+makeZipperCursorFromSpanCursors (SpanCursor pil pir) (SpanCursor pol por) _e | pol <= pil && pir <= por = ZipperCursor pol pil pir por
+makeZipperCursorFromSpanCursors (SpanCursor pol pir) (SpanCursor pil por) _e | pol <= pil && pir <= por = ZipperCursor pol pil pir por
+makeZipperCursorFromSpanCursors (SpanCursor pil por) (SpanCursor pol pir) _e | pol <= pil && pir <= por = ZipperCursor pol pil pir por
+makeZipperCursorFromSpanCursors (SpanCursor _pl1 _pr1) (SpanCursor _pl2 _pr2) _e = bug "makeZipperCursorFromSpanCursors" "impossible"
 
 --------------------------------------------------------------------------------
 -- dragFromPoint
