@@ -397,3 +397,11 @@ ltIndexAndPoint i p = unwrap i < unwrap p
 
 gtIndexAndPoint :: Index -> Point -> Boolean
 gtIndexAndPoint i p = unwrap i > unwrap p
+
+fromCursorStateToEmptySpanCursor :: CursorState -> SpanCursor
+fromCursorStateToEmptySpanCursor (SpanCursorState _ c) = let i = endpointLeft c in SpanCursor i i
+fromCursorStateToEmptySpanCursor (ZipperCursorState c) = let i = endpointInnerLeft c in SpanCursor i i
+
+fromCursorStateToPoint :: CursorState -> Point
+fromCursorStateToPoint (SpanCursorState _ c) = endpointLeft c
+fromCursorStateToPoint (ZipperCursorState c) = endpointInnerLeft c

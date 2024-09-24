@@ -13,23 +13,25 @@ body {
   flex-direction: column;
   gap: 1em;
   padding: 1em;
-  width: 600px;
   margin: auto;
+  width: 700px;
+  height: calc(100vh - 2em);
 }
 
 .Editor>.content {
-  margin: auto;
+  flex-grow: 1;
   padding: 1em 0;
-  font-size: 1.5em;
+  font-size: 2em;
+  margin: auto;
 }
 
 .Editor>.information {
+  flex-grow: 0;
+  overflow-y: scroll;
   display: flex;
   flex-direction: column;
   gap: 1em;
-  overflow-y: scroll;
   padding: 1em;
-  height: 600px;
 }
 
 .Editor>.information .block {

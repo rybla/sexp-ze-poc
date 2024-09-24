@@ -94,45 +94,55 @@ component = H.mkComponent { initialState, eval, render }
 
     case unit of
 
-      _ | SpanCursorState Nothing (SpanCursor p _) <- state.cursorState, key == "Escape" -> do
-        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        modify_ _ { cursorState = SpanCursorState Nothing (SpanCursor p p) }
+      -- _ | SpanCursorState Nothing (SpanCursor p _) <- state.cursorState, key == "Escape" -> do
+      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+      --   modify_ _ { cursorState = SpanCursorState Nothing (SpanCursor p p) }
 
-      _ | SpanCursorState (Just c) _ <- state.cursorState, key == "Escape" -> do
-        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        modify_ _ { cursorState = SpanCursorState Nothing c }
+      -- _ | SpanCursorState (Just c) _ <- state.cursorState, key == "Escape" -> do
+      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+      --   modify_ _ { cursorState = SpanCursorState Nothing c }
 
-      _ | ZipperCursorState (ZipperCursor pol pil pir por) <- state.cursorState, key == "Escape" -> do
-        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        modify_ _ { cursorState = SpanCursorState (Just (SpanCursor pol por)) (SpanCursor pil pir) }
+      -- _ | ZipperCursorState (ZipperCursor pol pil pir por) <- state.cursorState, key == "Escape" -> do
+      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+      --   modify_ _ { cursorState = SpanCursorState (Just (SpanCursor pol por)) (SpanCursor pil pir) }
 
-      -- interact with Marker
+      -- -- interact with Marker
 
-      _ | SpanCursorState Nothing c <- state.cursorState, key == " " -> do
-        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        modify_ _ { cursorState = SpanCursorState (pure c) c }
+      -- _ | SpanCursorState Nothing c <- state.cursorState, key == " " -> do
+      --   modify_ _ { cursorState = SpanCursorState (pure c) c }
 
-      _ | SpanCursorState (Just m) c <- state.cursorState, key == " " -> do
-        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        modify_ _ { cursorState = ZipperCursorState (state.span # makeZipperCursorFromSpanCursors m c) }
+      -- _ | SpanCursorState (Just m) c <- state.cursorState, key == " " -> do
+      --   modify_ _ { cursorState = ZipperCursorState (state.span # makeZipperCursorFromSpanCursors m c) }
 
-      -- adjust cursor with arrow keys
+      -- -- adjust cursor with arrow keys
 
-      _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" && shift -> do
-        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        when (pl <= pr - one) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag pl (pr - one)) }
+      -- _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" && shift -> do
+      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+      --   when (pl <= pr - one) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag pl (pr - one)) }
 
-      _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" -> do
-        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        when (wrap 0 <= pl - one) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag (pl - one) pr) }
+      -- _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" -> do
+      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+      --   when (wrap 0 <= pl - one) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag (pl - one) pr) }
 
-      _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" && shift -> do
-        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        when (pl + one <= pr) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag (pl + one) pr) }
+      -- _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" && shift -> do
+      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+      --   when (pl + one <= pr) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag (pl + one) pr) }
 
-      _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" -> do
-        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        when (pr + one <= wrap (length state.span)) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag pl (pr + one)) }
+      -- _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" -> do
+      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+      --   when (pr + one <= wrap (length state.span)) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag pl (pr + one)) }
+
+      -- move point cursor (i.e. empty span cursor) with arrow keys
+
+      _ | key == "ArrowLeft" -> do
+        let p = state.cursorState # fromCursorStateToPoint # shiftPoint (-1)
+        when (wrap 0 <= p) do
+          modify_ _ { cursorState = SpanCursorState empty (SpanCursor p p) }
+
+      _ | key == "ArrowRight" -> do
+        let p = state.cursorState # fromCursorStateToPoint # shiftPoint 1
+        when (p <= wrap (length state.span)) do
+          modify_ _ { cursorState = SpanCursorState empty (SpanCursor p p) }
 
       -- cut 
 
@@ -260,13 +270,13 @@ component = H.mkComponent { initialState, eval, render }
                       -- misc
                       , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⌫" ], HH.td_ [ HH.text "delete the expression under the cursor" ] ]
                       , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "⌫" ], HH.td_ [ HH.text "delete the zipper under the cursor" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⌘c" ], HH.td_ [ HH.text "copy the expression under the cursor" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "⌘c" ], HH.td_ [ HH.text "copy the zipper under the cursor" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⌘x" ], HH.td_ [ HH.text "cut the expression under the cursor" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "⌘x" ], HH.td_ [ HH.text "cut the zipper under the cursor" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⌘v" ], HH.td_ [ HH.text "paste a span clipboard in place of the cursor" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⌘v" ], HH.td_ [ HH.text "paste a zipper clipboard around the cursor" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "⌘v" ], HH.td_ [ HH.text "paste a zipper clipboard in place of the cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "^c" ], HH.td_ [ HH.text "copy the expression under the cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "^c" ], HH.td_ [ HH.text "copy the zipper under the cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "^x" ], HH.td_ [ HH.text "cut the expression under the cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "^x" ], HH.td_ [ HH.text "cut the zipper under the cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "^v" ], HH.td_ [ HH.text "paste a span clipboard in place of the cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "^v" ], HH.td_ [ HH.text "paste a zipper clipboard around the cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "^v" ], HH.td_ [ HH.text "paste a zipper clipboard in place of the cursor" ] ]
                       ]
                   ]
               ]
