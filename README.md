@@ -41,3 +41,4 @@ A standalone zipper is encoded by:
 - an unclosed number
 - a point into the expression (which is where the hole of the one-hole context
   is)
+
