@@ -23,6 +23,7 @@ import Data.Newtype (unwrap, wrap)
 import Data.String as String
 import Data.Tuple (snd)
 import Data.Tuple.Nested ((/\))
+import Debug as Debug
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
@@ -30,7 +31,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Sexpze.Utility (todo)
+import Sexpze.Utility (bug, todo)
 import Web.Event.Event as Event
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.KeyboardEvent as KeyboardEvent
@@ -132,6 +133,67 @@ component = H.mkComponent { initialState, eval, render }
       --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
       --   when (pr + one <= wrap (length state.span)) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag pl (pr + one)) }
 
+      _ | SpanCursorState Nothing c <- state.cursorState, key == "Escape" -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+        let p = endpointLeft c
+        modify_ _ { cursorState = SpanCursorState Nothing (SpanCursor p p) }
+
+      _ | SpanCursorState (Just c) _ <- state.cursorState, key == "Escape" -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+        modify_ _ { cursorState = SpanCursorState Nothing c }
+
+      _ | ZipperCursorState c <- state.cursorState, key == "Escape" -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+        let p = endpointInnerLeft c
+        modify_ _ { cursorState = SpanCursorState Nothing (SpanCursor p p) }
+
+      -- expand span cursor
+
+      _ | SpanCursorState _mb_mark (SpanCursor pl pr) <- state.cursorState, shift && key == "ArrowLeft" -> do
+        let p1 = pl # shiftPoint (-1)
+        when (wrap 0 <= p1) do
+          let { unopened, unclosed } = state.span # atSpanCursor (SpanCursor p1 pr) # snd # countUnopenedAndUnclosedParens
+          if unopened == 0 && unclosed == 0 then do
+            -- a normal span
+            modify_ _ { cursorState = SpanCursorState empty (SpanCursor p1 pr) }
+          else do
+            -- must be a zipper
+            case state.span # atIndex (getIndexRightAfterPoint p1) of
+              Open -> do
+                -- find matching close paren to the right of pr
+                let p2 = state.span # getPointRightBeforeNthNextUnopenedParenStartingFromPoint 1 pr
+                let p3 = p2 # shiftPoint 1
+                modify_ _ { cursorState = ZipperCursorState (ZipperCursor p1 pr p2 p3) }
+              Close -> do
+                -- find matching open paren to the left of p1
+                let p2 = state.span # getPointRightBeforeNthPrevUnclosedParenStartingFromPoint 1 p1
+                let p3 = p2 # shiftPoint 1
+                modify_ _ { cursorState = ZipperCursorState (ZipperCursor p2 p3 p1 pr) }
+              _ -> bug "Editor.component.handleAction" "impossible, since would imply unclosed == unclosed == 0"
+
+      _ | SpanCursorState _mb_mark (SpanCursor pl pr) <- state.cursorState, shift && key == "ArrowRight" -> do
+        let p1 = pr # shiftPoint 1
+        when (p1 <= wrap (length state.span)) do
+          -- just a normal span
+          let { unopened, unclosed } = state.span # atSpanCursor (SpanCursor pl p1) # snd # countUnopenedAndUnclosedParens
+          if unopened == 0 && unclosed == 0 then do
+            -- a normal span 
+            modify_ _ { cursorState = SpanCursorState empty (SpanCursor pl p1) }
+          else do
+            -- must be a zipper
+            case state.span # atIndex (getIndexRightBeforePoint p1) of
+              Open -> do
+                -- find matching close paren to the right of p1
+                let p2 = state.span # getPointRightBeforeNthNextUnopenedParenStartingFromPoint 1 p1
+                let p3 = p2 # shiftPoint 1
+                modify_ _ { cursorState = ZipperCursorState (ZipperCursor pl p1 p2 p3) }
+              Close -> do
+                -- find matching open paren to the left of pl
+                let p2 = state.span # getPointRightBeforeNthPrevUnclosedParenStartingFromPoint 1 pl
+                let p3 = p2 # shiftPoint 1
+                modify_ _ { cursorState = ZipperCursorState (ZipperCursor p2 p3 pl p1) }
+              _ -> bug "Editor.component.handleAction" "impossible, since would imply unclosed == unclosed == 0"
+
       -- move point cursor (i.e. empty span cursor) with arrow keys
 
       _ | key == "ArrowLeft" -> do
@@ -228,7 +290,7 @@ component = H.mkComponent { initialState, eval, render }
       -- Just p0 -> modify_ _ { cursor = MakeSpanCursor $ makeSpanCursorFromDrag p0 p1 state.span }
       Just p0 /\ SpanCursorState mb_mark _ -> modify_ _ { cursorState = SpanCursorState mb_mark $ makeSpanCursorFromDrag p0 p1 state.span }
       Just p0 /\ ZipperCursorState _ -> modify_ _ { cursorState = SpanCursorState empty $ makeSpanCursorFromDrag p0 p1 state.span }
-  render state =
+  render state = Debug.trace (show state) \_ ->
     HH.div
       [ HP.classes [ HH.ClassName "Editor" ] ]
       [ HH.div
@@ -396,7 +458,9 @@ renderZipperCursorStateAndSpan (ZipperCursor pol pil pir por) (Span es) =
         ]
     in
       if p == pol && p == pil && p == pir && p == por then
-        template [ HH.ClassName "Cursor" ] "||"
+        template [ HH.ClassName "Cursor" ] "|"
+      else if p == pil && p == pir then
+        template [ HH.ClassName "Cursor" ] "|"
       else if p == pol && p == pil then
         template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "{"
       else if p == pol then

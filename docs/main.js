@@ -271,7 +271,7 @@
         }
       };
     }();
-    function Supervisor(util) {
+    function Supervisor(util2) {
       var fibers = {};
       var fiberId = 0;
       var count = 0;
@@ -305,9 +305,9 @@
                 return function() {
                   delete kills[fid];
                   killCount--;
-                  if (util.isLeft(result) && util.fromLeft(result)) {
+                  if (util2.isLeft(result) && util2.fromLeft(result)) {
                     setTimeout(function() {
-                      throw util.fromLeft(result);
+                      throw util2.fromLeft(result);
                     }, 0);
                   }
                   if (killCount === 0) {
@@ -345,7 +345,7 @@
     var PENDING = 4;
     var RETURN = 5;
     var COMPLETED = 6;
-    function Fiber(util, supervisor, aff) {
+    function Fiber(util2, supervisor, aff) {
       var runTick = 0;
       var status = SUSPENDED;
       var step3 = aff;
@@ -377,12 +377,12 @@
                 }
               } catch (e) {
                 status = RETURN;
-                fail2 = util.left(e);
+                fail2 = util2.left(e);
                 step3 = null;
               }
               break;
             case STEP_RESULT:
-              if (util.isLeft(step3)) {
+              if (util2.isLeft(step3)) {
                 status = RETURN;
                 fail2 = step3;
                 step3 = null;
@@ -390,7 +390,7 @@
                 status = RETURN;
               } else {
                 status = STEP_BIND;
-                step3 = util.fromRight(step3);
+                step3 = util2.fromRight(step3);
               }
               break;
             case CONTINUE:
@@ -406,7 +406,7 @@
                 case PURE:
                   if (bhead === null) {
                     status = RETURN;
-                    step3 = util.right(step3._1);
+                    step3 = util2.right(step3._1);
                   } else {
                     status = STEP_BIND;
                     step3 = step3._1;
@@ -414,11 +414,11 @@
                   break;
                 case SYNC:
                   status = STEP_RESULT;
-                  step3 = runSync(util.left, util.right, step3._1);
+                  step3 = runSync(util2.left, util2.right, step3._1);
                   break;
                 case ASYNC:
                   status = PENDING;
-                  step3 = runAsync(util.left, step3._1, function(result2) {
+                  step3 = runAsync(util2.left, step3._1, function(result2) {
                     return function() {
                       if (runTick !== localRunTick) {
                         return;
@@ -437,7 +437,7 @@
                   return;
                 case THROW:
                   status = RETURN;
-                  fail2 = util.left(step3._1);
+                  fail2 = util2.left(step3._1);
                   step3 = null;
                   break;
                 case CATCH:
@@ -465,18 +465,18 @@
                   break;
                 case FORK:
                   status = STEP_RESULT;
-                  tmp = Fiber(util, supervisor, step3._2);
+                  tmp = Fiber(util2, supervisor, step3._2);
                   if (supervisor) {
                     supervisor.register(tmp);
                   }
                   if (step3._1) {
                     tmp.run();
                   }
-                  step3 = util.right(tmp);
+                  step3 = util2.right(tmp);
                   break;
                 case SEQ:
                   status = CONTINUE;
-                  step3 = sequential3(util, supervisor, step3._1);
+                  step3 = sequential3(util2, supervisor, step3._1);
                   break;
               }
               break;
@@ -496,7 +496,7 @@
                       status = RETURN;
                     } else if (fail2) {
                       status = CONTINUE;
-                      step3 = attempt._2(util.fromLeft(fail2));
+                      step3 = attempt._2(util2.fromLeft(fail2));
                       fail2 = null;
                     }
                     break;
@@ -507,13 +507,13 @@
                       bhead = attempt._1;
                       btail = attempt._2;
                       status = STEP_BIND;
-                      step3 = util.fromRight(step3);
+                      step3 = util2.fromRight(step3);
                     }
                     break;
                   case BRACKET:
                     bracketCount--;
                     if (fail2 === null) {
-                      result = util.fromRight(step3);
+                      result = util2.fromRight(step3);
                       attempts = new Aff2(CONS, new Aff2(RELEASE, attempt._2, result), attempts, tmp);
                       if (interrupt === tmp || bracketCount > 0) {
                         status = CONTINUE;
@@ -525,11 +525,11 @@
                     attempts = new Aff2(CONS, new Aff2(FINALIZED, step3, fail2), attempts, interrupt);
                     status = CONTINUE;
                     if (interrupt && interrupt !== tmp && bracketCount === 0) {
-                      step3 = attempt._1.killed(util.fromLeft(interrupt))(attempt._2);
+                      step3 = attempt._1.killed(util2.fromLeft(interrupt))(attempt._2);
                     } else if (fail2) {
-                      step3 = attempt._1.failed(util.fromLeft(fail2))(attempt._2);
+                      step3 = attempt._1.failed(util2.fromLeft(fail2))(attempt._2);
                     } else {
-                      step3 = attempt._1.completed(util.fromRight(step3))(attempt._2);
+                      step3 = attempt._1.completed(util2.fromRight(step3))(attempt._2);
                     }
                     fail2 = null;
                     bracketCount++;
@@ -559,12 +559,12 @@
               joins = null;
               if (interrupt && fail2) {
                 setTimeout(function() {
-                  throw util.fromLeft(fail2);
+                  throw util2.fromLeft(fail2);
                 }, 0);
-              } else if (util.isLeft(step3) && rethrow) {
+              } else if (util2.isLeft(step3) && rethrow) {
                 setTimeout(function() {
                   if (rethrow) {
-                    throw util.fromLeft(step3);
+                    throw util2.fromLeft(step3);
                   }
                 }, 0);
               }
@@ -598,26 +598,26 @@
       function kill2(error4, cb) {
         return function() {
           if (status === COMPLETED) {
-            cb(util.right(void 0))();
+            cb(util2.right(void 0))();
             return function() {
             };
           }
           var canceler = onComplete({
             rethrow: false,
             handler: function() {
-              return cb(util.right(void 0));
+              return cb(util2.right(void 0));
             }
           })();
           switch (status) {
             case SUSPENDED:
-              interrupt = util.left(error4);
+              interrupt = util2.left(error4);
               status = COMPLETED;
               step3 = interrupt;
               run3(runTick);
               break;
             case PENDING:
               if (interrupt === null) {
-                interrupt = util.left(error4);
+                interrupt = util2.left(error4);
               }
               if (bracketCount === 0) {
                 if (status === PENDING) {
@@ -631,7 +631,7 @@
               break;
             default:
               if (interrupt === null) {
-                interrupt = util.left(error4);
+                interrupt = util2.left(error4);
               }
               if (bracketCount === 0) {
                 status = RETURN;
@@ -674,7 +674,7 @@
         }
       };
     }
-    function runPar(util, supervisor, par, cb) {
+    function runPar(util2, supervisor, par, cb) {
       var fiberId = 0;
       var fibers = {};
       var killId = 0;
@@ -730,7 +730,7 @@
             }
           }
         if (count === 0) {
-          cb2(util.right(void 0))();
+          cb2(util2.right(void 0))();
         } else {
           kid = 0;
           tmp = count;
@@ -742,7 +742,7 @@
       }
       function join3(result, head2, tail) {
         var fail2, step3, lhs, rhs, tmp, kid;
-        if (util.isLeft(result)) {
+        if (util2.isLeft(result)) {
           fail2 = result;
           step3 = null;
         } else {
@@ -768,7 +768,7 @@
             switch (head2.tag) {
               case MAP:
                 if (fail2 === null) {
-                  head2._3 = util.right(head2._1(util.fromRight(step3)));
+                  head2._3 = util2.right(head2._1(util2.fromRight(step3)));
                   step3 = head2._3;
                 } else {
                   head2._3 = fail2;
@@ -800,17 +800,17 @@
                 } else if (lhs === EMPTY || rhs === EMPTY) {
                   return;
                 } else {
-                  step3 = util.right(util.fromRight(lhs)(util.fromRight(rhs)));
+                  step3 = util2.right(util2.fromRight(lhs)(util2.fromRight(rhs)));
                   head2._3 = step3;
                 }
                 break;
               case ALT:
                 lhs = head2._1._3;
                 rhs = head2._2._3;
-                if (lhs === EMPTY && util.isLeft(rhs) || rhs === EMPTY && util.isLeft(lhs)) {
+                if (lhs === EMPTY && util2.isLeft(rhs) || rhs === EMPTY && util2.isLeft(lhs)) {
                   return;
                 }
-                if (lhs !== EMPTY && util.isLeft(lhs) && rhs !== EMPTY && util.isLeft(rhs)) {
+                if (lhs !== EMPTY && util2.isLeft(lhs) && rhs !== EMPTY && util2.isLeft(rhs)) {
                   fail2 = step3 === lhs ? rhs : lhs;
                   step3 = null;
                   head2._3 = fail2;
@@ -893,7 +893,7 @@
                     status = RETURN;
                     tmp = step3;
                     step3 = new Aff2(FORKED, fid, new Aff2(CONS, head2, tail), EMPTY);
-                    tmp = Fiber(util, supervisor, tmp);
+                    tmp = Fiber(util2, supervisor, tmp);
                     tmp.onComplete({
                       rethrow: false,
                       handler: resolve(step3)
@@ -931,7 +931,7 @@
         }
       }
       function cancel(error4, cb2) {
-        interrupt = util.left(error4);
+        interrupt = util2.left(error4);
         var innerKills;
         for (var kid in kills) {
           if (kills.hasOwnProperty(kid)) {
@@ -967,10 +967,10 @@
         });
       };
     }
-    function sequential3(util, supervisor, par) {
+    function sequential3(util2, supervisor, par) {
       return new Aff2(ASYNC, function(cb) {
         return function() {
-          return runPar(util, supervisor, par, cb);
+          return runPar(util2, supervisor, par, cb);
         };
       });
     }
@@ -1040,9 +1040,9 @@
       };
     };
   }
-  function _makeFiber(util, aff) {
+  function _makeFiber(util2, aff) {
     return function() {
-      return Aff.Fiber(util, null, aff);
+      return Aff.Fiber(util2, null, aff);
     };
   }
   var _delay = function() {
@@ -1425,14 +1425,14 @@
     return function(dictShowRecordFields) {
       var showRecordFields1 = showRecordFields(dictShowRecordFields);
       return function(dictShow) {
-        var show12 = show(dictShow);
+        var show13 = show(dictShow);
         return {
           showRecordFields: function(v) {
             return function(record) {
               var tail = showRecordFields1($$Proxy.value)(record);
               var key2 = reflectSymbol2($$Proxy.value);
               var focus3 = unsafeGet(key2)(record);
-              return " " + (key2 + (": " + (show12(focus3) + ("," + tail))));
+              return " " + (key2 + (": " + (show13(focus3) + ("," + tail))));
             };
           }
         };
@@ -1442,13 +1442,13 @@
   var showRecordFieldsConsNil = function(dictIsSymbol) {
     var reflectSymbol2 = reflectSymbol(dictIsSymbol);
     return function(dictShow) {
-      var show12 = show(dictShow);
+      var show13 = show(dictShow);
       return {
         showRecordFields: function(v) {
           return function(record) {
             var key2 = reflectSymbol2($$Proxy.value);
             var focus3 = unsafeGet(key2)(record);
-            return " " + (key2 + (": " + (show12(focus3) + " ")));
+            return " " + (key2 + (": " + (show13(focus3) + " ")));
           };
         }
       };
@@ -1475,6 +1475,19 @@
       return new Inr2(value0);
     };
     return Inr2;
+  }();
+  var Product = /* @__PURE__ */ function() {
+    function Product2(value0, value1) {
+      this.value0 = value0;
+      this.value1 = value1;
+    }
+    ;
+    Product2.create = function(value0) {
+      return function(value1) {
+        return new Product2(value0, value1);
+      };
+    };
+    return Product2;
   }();
   var NoArguments = /* @__PURE__ */ function() {
     function NoArguments2() {
@@ -1506,6 +1519,22 @@
     };
     return Just2;
   }();
+  var showMaybe = function(dictShow) {
+    var show4 = show(dictShow);
+    return {
+      show: function(v) {
+        if (v instanceof Just) {
+          return "(Just " + (show4(v.value0) + ")");
+        }
+        ;
+        if (v instanceof Nothing) {
+          return "Nothing";
+        }
+        ;
+        throw new Error("Failed pattern match at Data.Maybe (line 223, column 1 - line 225, column 28): " + [v.constructor.name]);
+      }
+    };
+  };
   var maybe$prime = function(v) {
     return function(v1) {
       return function(v2) {
@@ -6309,8 +6338,8 @@
         var query22 = query1(dictOrd);
         return function(slot3) {
           return function(label5) {
-            return function(req) {
-              return $$void5(query22(slot3)(label5)(req(unit)));
+            return function(req2) {
+              return $$void5(query22(slot3)(label5)(req2(unit)));
             };
           };
         };
@@ -7332,6 +7361,47 @@
     return length3(toCodePointArray($74));
   };
 
+  // output/Debug/foreign.js
+  var req = typeof module === "undefined" ? void 0 : module.require;
+  var util = function() {
+    try {
+      return req === void 0 ? void 0 : req("util");
+    } catch (e) {
+      return void 0;
+    }
+  }();
+  function _trace(x, k) {
+    if (util !== void 0) {
+      console.log(util.inspect(x, { depth: null, colors: true }));
+    } else {
+      console.log(x);
+    }
+    return k({});
+  }
+  var now = function() {
+    var perf;
+    if (typeof performance !== "undefined") {
+      perf = performance;
+    } else if (req) {
+      try {
+        perf = req("perf_hooks").performance;
+      } catch (e) {
+      }
+    }
+    return function() {
+      return (perf || Date).now();
+    };
+  }();
+
+  // output/Debug/index.js
+  var trace = function() {
+    return function(a2) {
+      return function(k) {
+        return _trace(a2, k);
+      };
+    };
+  };
+
   // output/Effect.Class.Console/index.js
   var log3 = function(dictMonadEffect) {
     var $67 = liftEffect(dictMonadEffect);
@@ -7400,6 +7470,17 @@
   };
   var genericShowArgs = function(dict) {
     return dict.genericShowArgs;
+  };
+  var genericShowArgsProduct = function(dictGenericShowArgs) {
+    var genericShowArgs1 = genericShowArgs(dictGenericShowArgs);
+    return function(dictGenericShowArgs1) {
+      var genericShowArgs2 = genericShowArgs(dictGenericShowArgs1);
+      return {
+        genericShowArgs: function(v) {
+          return append5(genericShowArgs1(v.value0))(genericShowArgs2(v.value1));
+        }
+      };
+    };
   };
   var genericShowConstructor = function(dictGenericShowArgs) {
     var genericShowArgs1 = genericShowArgs(dictGenericShowArgs);
@@ -7575,6 +7656,10 @@
     };
     return ZipperClipboard2;
   }();
+  var showPoint = showInt;
+  var genericShowArgsArgument2 = /* @__PURE__ */ genericShowArgsArgument(showPoint);
+  var genericShowArgsProduct2 = /* @__PURE__ */ genericShowArgsProduct(genericShowArgsArgument2);
+  var genericShowArgsProduct1 = /* @__PURE__ */ genericShowArgsProduct2(genericShowArgsArgument2);
   var showIndex = showInt;
   var semiringPoint = semiringInt;
   var add1 = /* @__PURE__ */ add(semiringPoint);
@@ -7603,6 +7688,114 @@
     };
   }();
   var mempty1 = /* @__PURE__ */ mempty(monoidZipper);
+  var genericZipper_ = {
+    to: function(x) {
+      return new Zipper(x.value0, x.value1);
+    },
+    from: function(x) {
+      return new Product(x.value0, x.value1);
+    }
+  };
+  var genericZipperCursor_ = {
+    to: function(x) {
+      return new ZipperCursor(x.value0, x.value1.value0, x.value1.value1.value0, x.value1.value1.value1);
+    },
+    from: function(x) {
+      return new Product(x.value0, new Product(x.value1, new Product(x.value2, x.value3)));
+    }
+  };
+  var genericShow2 = /* @__PURE__ */ genericShow(genericZipperCursor_)(/* @__PURE__ */ genericShowConstructor(/* @__PURE__ */ genericShowArgsProduct2(/* @__PURE__ */ genericShowArgsProduct2(genericShowArgsProduct1)))({
+    reflectSymbol: function() {
+      return "ZipperCursor";
+    }
+  }));
+  var showZipperCursor = {
+    show: function(x) {
+      return genericShow2(x);
+    }
+  };
+  var genericShowConstructor1 = /* @__PURE__ */ genericShowConstructor(/* @__PURE__ */ genericShowArgsArgument(showZipperCursor));
+  var genericSpanCursor_ = {
+    to: function(x) {
+      return new SpanCursor(x.value0, x.value1);
+    },
+    from: function(x) {
+      return new Product(x.value0, x.value1);
+    }
+  };
+  var genericShow1 = /* @__PURE__ */ genericShow(genericSpanCursor_)(/* @__PURE__ */ genericShowConstructor(genericShowArgsProduct1)({
+    reflectSymbol: function() {
+      return "SpanCursor";
+    }
+  }));
+  var showSpanCursor = {
+    show: function(x) {
+      return genericShow1(x);
+    }
+  };
+  var genericShowArgsArgument1 = /* @__PURE__ */ genericShowArgsArgument(showSpanCursor);
+  var genericCursorState_ = {
+    to: function(x) {
+      if (x instanceof Inl) {
+        return new SpanCursorState(x.value0.value0, x.value0.value1);
+      }
+      ;
+      if (x instanceof Inr) {
+        return new ZipperCursorState(x.value0);
+      }
+      ;
+      throw new Error("Failed pattern match at Sexpze.Component.State (line 148, column 1 - line 148, column 38): " + [x.constructor.name]);
+    },
+    from: function(x) {
+      if (x instanceof SpanCursorState) {
+        return new Inl(new Product(x.value0, x.value1));
+      }
+      ;
+      if (x instanceof ZipperCursorState) {
+        return new Inr(x.value0);
+      }
+      ;
+      throw new Error("Failed pattern match at Sexpze.Component.State (line 148, column 1 - line 148, column 38): " + [x.constructor.name]);
+    }
+  };
+  var genericShow3 = /* @__PURE__ */ genericShow(genericCursorState_)(/* @__PURE__ */ genericShowSum(/* @__PURE__ */ genericShowConstructor(/* @__PURE__ */ genericShowArgsProduct(/* @__PURE__ */ genericShowArgsArgument(/* @__PURE__ */ showMaybe(showSpanCursor)))(genericShowArgsArgument1))({
+    reflectSymbol: function() {
+      return "SpanCursorState";
+    }
+  }))(/* @__PURE__ */ genericShowConstructor1({
+    reflectSymbol: function() {
+      return "ZipperCursorState";
+    }
+  })));
+  var showCursorState = {
+    show: function(x) {
+      return genericShow3(x);
+    }
+  };
+  var genericClipboard_ = {
+    to: function(x) {
+      if (x instanceof Inl) {
+        return new SpanClipboard(x.value0);
+      }
+      ;
+      if (x instanceof Inr) {
+        return new ZipperClipboard(x.value0);
+      }
+      ;
+      throw new Error("Failed pattern match at Sexpze.Component.State (line 93, column 1 - line 93, column 36): " + [x.constructor.name]);
+    },
+    from: function(x) {
+      if (x instanceof SpanClipboard) {
+        return new Inl(x.value0);
+      }
+      ;
+      if (x instanceof ZipperClipboard) {
+        return new Inr(x.value0);
+      }
+      ;
+      throw new Error("Failed pattern match at Sexpze.Component.State (line 93, column 1 - line 93, column 36): " + [x.constructor.name]);
+    }
+  };
   var genericAtom_ = {
     to: function(x) {
       if (x instanceof Inl) {
@@ -7654,6 +7847,12 @@
     }
   };
   var showSpan = /* @__PURE__ */ showArray(showAtom);
+  var genericShowArgsArgument22 = /* @__PURE__ */ genericShowArgsArgument(showSpan);
+  var genericShow5 = /* @__PURE__ */ genericShow(genericZipper_)(/* @__PURE__ */ genericShowConstructor(/* @__PURE__ */ genericShowArgsProduct(genericShowArgsArgument22)(genericShowArgsArgument22))({
+    reflectSymbol: function() {
+      return "Zipper";
+    }
+  }));
   var show1 = /* @__PURE__ */ show(/* @__PURE__ */ showRecord()()(/* @__PURE__ */ showRecordFieldsCons({
     reflectSymbol: function() {
       return "i";
@@ -7663,6 +7862,25 @@
       return "s";
     }
   })(showSpan))(showIndex)));
+  var showZipper = {
+    show: function(x) {
+      return genericShow5(x);
+    }
+  };
+  var genericShow6 = /* @__PURE__ */ genericShow(genericClipboard_)(/* @__PURE__ */ genericShowSum(/* @__PURE__ */ genericShowConstructor(genericShowArgsArgument22)({
+    reflectSymbol: function() {
+      return "SpanClipboard";
+    }
+  }))(/* @__PURE__ */ genericShowConstructor(/* @__PURE__ */ genericShowArgsArgument(showZipper))({
+    reflectSymbol: function() {
+      return "ZipperClipboard";
+    }
+  })));
+  var showClipboard = {
+    show: function(x) {
+      return genericShow6(x);
+    }
+  };
   var eqPoint = eqInt;
   var shiftPoint = function(dx) {
     return function(v) {
@@ -7843,6 +8061,53 @@
       };
     };
   };
+  var getPointRightBeforeNthNextUnopenedParenStartingFromPoint = function(n0) {
+    return function(p0) {
+      return function(xs) {
+        var go2 = function($copy_n) {
+          return function($copy_p) {
+            var $tco_var_n = $copy_n;
+            var $tco_done = false;
+            var $tco_result;
+            function $tco_loop(n, p2) {
+              var v = atIndex(getIndexRightAfterPoint(p2))(xs);
+              if (v instanceof Lit) {
+                $tco_var_n = n;
+                $copy_p = add1(p2)(one1);
+                return;
+              }
+              ;
+              if (v instanceof Open) {
+                $tco_var_n = n + 1 | 0;
+                $copy_p = add1(p2)(one1);
+                return;
+              }
+              ;
+              if (v instanceof Close && n === 1) {
+                $tco_done = true;
+                return p2;
+              }
+              ;
+              if (v instanceof Close) {
+                $tco_var_n = n - 1 | 0;
+                $copy_p = add1(p2)(one1);
+                return;
+              }
+              ;
+              throw new Error("Failed pattern match at Sexpze.Component.State (line 271, column 12 - line 275, column 36): " + [v.constructor.name]);
+            }
+            ;
+            while (!$tco_done) {
+              $tco_result = $tco_loop($tco_var_n, $copy_p);
+            }
+            ;
+            return $tco_result;
+          };
+        };
+        return go2(n0)(p0);
+      };
+    };
+  };
   var getPointRightBeforeNthPrevUnclosedParenStartingFromPoint = function(n0) {
     return function(p0) {
       return function(xs) {
@@ -7990,6 +8255,25 @@
   var lessThanOrEq2 = /* @__PURE__ */ lessThanOrEq(ordPoint);
   var foldMapPointsAndWithIndex2 = /* @__PURE__ */ foldMapPointsAndWithIndex(monoidArray);
   var lessThan2 = /* @__PURE__ */ lessThan(ordPoint);
+  var trace2 = /* @__PURE__ */ trace();
+  var showRecord2 = /* @__PURE__ */ showRecord()();
+  var show3 = /* @__PURE__ */ show(/* @__PURE__ */ showRecord2(/* @__PURE__ */ showRecordFieldsCons({
+    reflectSymbol: function() {
+      return "cursorState";
+    }
+  })(/* @__PURE__ */ showRecordFieldsCons({
+    reflectSymbol: function() {
+      return "mb_clipboard";
+    }
+  })(/* @__PURE__ */ showRecordFieldsCons({
+    reflectSymbol: function() {
+      return "mb_dragOrigin";
+    }
+  })(/* @__PURE__ */ showRecordFieldsConsNil({
+    reflectSymbol: function() {
+      return "span";
+    }
+  })(showSpan))(/* @__PURE__ */ showMaybe(showPoint)))(/* @__PURE__ */ showMaybe(showClipboard)))(showCursorState)));
   var empty7 = /* @__PURE__ */ empty(plusMaybe);
   var wrap4 = /* @__PURE__ */ wrap();
   var bind5 = /* @__PURE__ */ bind(bindHalogenM);
@@ -7997,9 +8281,10 @@
   var discard5 = /* @__PURE__ */ discard(discardUnit)(bindHalogenM);
   var when4 = /* @__PURE__ */ when(applicativeHalogenM);
   var modify_3 = /* @__PURE__ */ modify_2(monadStateHalogenM);
+  var pure9 = /* @__PURE__ */ pure(applicativeHalogenM);
   var monadEffectHalogenM2 = /* @__PURE__ */ monadEffectHalogenM(monadEffectAff);
   var log4 = /* @__PURE__ */ log3(monadEffectHalogenM2);
-  var show3 = /* @__PURE__ */ show(/* @__PURE__ */ showRecord()()(/* @__PURE__ */ showRecordFieldsCons({
+  var show12 = /* @__PURE__ */ show(/* @__PURE__ */ showRecord2(/* @__PURE__ */ showRecordFieldsCons({
     reflectSymbol: function() {
       return "ctrl";
     }
@@ -8016,7 +8301,6 @@
       return "shift";
     }
   })(showBoolean))(showBoolean))(showString))(showBoolean)));
-  var pure9 = /* @__PURE__ */ pure(applicativeHalogenM);
   var mempty3 = /* @__PURE__ */ mempty(monoidSpan);
   var liftEffect7 = /* @__PURE__ */ liftEffect(monadEffectHalogenM2);
   var pure13 = /* @__PURE__ */ pure(applicativeMaybe);
@@ -8068,48 +8352,53 @@
             return [div2([classes(append6(["Point"])(cns)), onMouseDown($$const(new StartDrag(p2))), onMouseUp($$const(new EndDrag(p2)))])([text5(sym)])];
           };
         };
-        var $122 = eq2(p2)(v.value0) && (eq2(p2)(v.value1) && (eq2(p2)(v.value2) && eq2(p2)(v.value3)));
-        if ($122) {
-          return template(["Cursor"])("||");
+        var $162 = eq2(p2)(v.value0) && (eq2(p2)(v.value1) && (eq2(p2)(v.value2) && eq2(p2)(v.value3)));
+        if ($162) {
+          return template(["Cursor"])("|");
         }
         ;
-        var $123 = eq2(p2)(v.value0) && eq2(p2)(v.value1);
-        if ($123) {
+        var $163 = eq2(p2)(v.value1) && eq2(p2)(v.value2);
+        if ($163) {
+          return template(["Cursor"])("|");
+        }
+        ;
+        var $164 = eq2(p2)(v.value0) && eq2(p2)(v.value1);
+        if ($164) {
           return template(["Cursor", "ZipperCursor"])("{");
         }
         ;
-        var $124 = eq2(p2)(v.value0);
-        if ($124) {
+        var $165 = eq2(p2)(v.value0);
+        if ($165) {
           return template(["Cursor", "ZipperCursor"])("{");
         }
         ;
-        var $125 = eq2(p2)(v.value1);
-        if ($125) {
+        var $166 = eq2(p2)(v.value1);
+        if ($166) {
           return template(["Cursor", "ZipperCursor"])("[");
         }
         ;
-        var $126 = eq2(p2)(v.value2) && eq2(p2)(v.value3);
-        if ($126) {
+        var $167 = eq2(p2)(v.value2) && eq2(p2)(v.value3);
+        if ($167) {
           return template(["Cursor", "ZipperCursor"])("}");
         }
         ;
-        var $127 = eq2(p2)(v.value2);
-        if ($127) {
+        var $168 = eq2(p2)(v.value2);
+        if ($168) {
           return template(["Cursor", "ZipperCursor"])("]");
         }
         ;
-        var $128 = eq2(p2)(v.value3);
-        if ($128) {
+        var $169 = eq2(p2)(v.value3);
+        if ($169) {
           return template(["Cursor", "ZipperCursor"])("}");
         }
         ;
-        var $129 = lessThanOrEq2(v.value0)(p2) && lessThanOrEq2(p2)(v.value1);
-        if ($129) {
+        var $170 = lessThanOrEq2(v.value0)(p2) && lessThanOrEq2(p2)(v.value1);
+        if ($170) {
           return template(["inside-ZipperCursor"])("\u2022");
         }
         ;
-        var $130 = lessThanOrEq2(v.value2)(p2) && lessThanOrEq2(p2)(v.value3);
-        if ($130) {
+        var $171 = lessThanOrEq2(v.value2)(p2) && lessThanOrEq2(p2)(v.value3);
+        if ($171) {
           return template(["inside-ZipperCursor"])("\u2022");
         }
         ;
@@ -8131,7 +8420,7 @@
                 return ["Paren", "Close"];
               }
               ;
-              throw new Error("Failed pattern match at Sexpze.Component.Editor (line 426, column 25 - line 429, column 82): " + [a2.constructor.name]);
+              throw new Error("Failed pattern match at Sexpze.Component.Editor (line 498, column 25 - line 501, column 82): " + [a2.constructor.name]);
             }())(cns)))])([text5(function() {
               if (a2 instanceof Lit) {
                 return a2.value0;
@@ -8145,16 +8434,16 @@
                 return ")";
               }
               ;
-              throw new Error("Failed pattern match at Sexpze.Component.Editor (line 434, column 23 - line 437, column 29): " + [a2.constructor.name]);
+              throw new Error("Failed pattern match at Sexpze.Component.Editor (line 506, column 23 - line 509, column 29): " + [a2.constructor.name]);
             }())])];
           };
-          var $135 = ltPointAndIndex(v.value0)(i2) && ltIndexAndPoint(i2)(v.value1);
-          if ($135) {
+          var $176 = ltPointAndIndex(v.value0)(i2) && ltIndexAndPoint(i2)(v.value1);
+          if ($176) {
             return template(["inside-ZipperCursor"]);
           }
           ;
-          var $136 = ltPointAndIndex(v.value2)(i2) && ltIndexAndPoint(i2)(v.value3);
-          if ($136) {
+          var $177 = ltPointAndIndex(v.value2)(i2) && ltIndexAndPoint(i2)(v.value3);
+          if ($177) {
             return template(["inside-ZipperCursor"]);
           }
           ;
@@ -8194,8 +8483,8 @@
                       return template([])("\u2022");
                     };
                     if (mb_mark instanceof Just) {
-                      var $147 = lessThanOrEq2(mb_mark.value0.value0)(v.value0) && lessThanOrEq2(v.value1)(mb_mark.value0.value1) && (lessThan2(mb_mark.value0.value0)(p2) && lessThan2(p2)(v.value0) || lessThan2(v.value1)(p2) && lessThan2(p2)(mb_mark.value0.value1)) || lessThanOrEq2(v.value0)(mb_mark.value0.value0) && lessThanOrEq2(mb_mark.value0.value1)(v.value1) && (lessThan2(mb_mark.value0.value0)(p2) && lessThan2(p2)(mb_mark.value0.value1));
-                      if ($147) {
+                      var $188 = lessThanOrEq2(mb_mark.value0.value0)(v.value0) && lessThanOrEq2(v.value1)(mb_mark.value0.value1) && (lessThan2(mb_mark.value0.value0)(p2) && lessThan2(p2)(v.value0) || lessThan2(v.value1)(p2) && lessThan2(p2)(mb_mark.value0.value1)) || lessThanOrEq2(v.value0)(mb_mark.value0.value0) && lessThanOrEq2(mb_mark.value0.value1)(v.value1) && (lessThan2(mb_mark.value0.value0)(p2) && lessThan2(p2)(mb_mark.value0.value1));
+                      if ($188) {
                         return template(["inside-marker-SpanCursor"])("\u2022");
                       }
                       ;
@@ -8205,8 +8494,8 @@
                     return v12(true);
                   };
                   if (mb_mark instanceof Just) {
-                    var $153 = lessThanOrEq2(v.value0)(mb_mark.value0.value0) && lessThanOrEq2(mb_mark.value0.value1)(v.value1) && (lessThan2(v.value0)(p2) && lessThan2(p2)(mb_mark.value0.value0) || lessThan2(mb_mark.value0.value1)(p2) && lessThan2(p2)(v.value1)) || lessThanOrEq2(mb_mark.value0.value0)(v.value0) && lessThanOrEq2(v.value1)(mb_mark.value0.value1) && (lessThan2(v.value0)(p2) && lessThan2(p2)(v.value1));
-                    if ($153) {
+                    var $194 = lessThanOrEq2(v.value0)(mb_mark.value0.value0) && lessThanOrEq2(mb_mark.value0.value1)(v.value1) && (lessThan2(v.value0)(p2) && lessThan2(p2)(mb_mark.value0.value0) || lessThan2(mb_mark.value0.value1)(p2) && lessThan2(p2)(v.value1)) || lessThanOrEq2(mb_mark.value0.value0)(v.value0) && lessThanOrEq2(v.value1)(mb_mark.value0.value1) && (lessThan2(v.value0)(p2) && lessThan2(p2)(v.value1));
+                    if ($194) {
                       return template(["inside-active-SpanCursor"])("\u2022");
                     }
                     ;
@@ -8216,8 +8505,8 @@
                   return v10(true);
                 };
                 if (mb_mark instanceof Nothing) {
-                  var $159 = lessThan2(v.value0)(p2) && lessThan2(p2)(v.value1);
-                  if ($159) {
+                  var $200 = lessThan2(v.value0)(p2) && lessThan2(p2)(v.value1);
+                  if ($200) {
                     return template(["inside-active-SpanCursor"])("\u2022");
                   }
                   ;
@@ -8227,8 +8516,8 @@
                 return v8(true);
               };
               if (mb_mark instanceof Just) {
-                var $162 = eq2(p2)(mb_mark.value0.value1);
-                if ($162) {
+                var $203 = eq2(p2)(mb_mark.value0.value1);
+                if ($203) {
                   return template(["Cursor", "SpanCursor", "Marker"])("]");
                 }
                 ;
@@ -8238,8 +8527,8 @@
               return v6(true);
             };
             if (mb_mark instanceof Just) {
-              var $168 = eq2(p2)(mb_mark.value0.value0);
-              if ($168) {
+              var $209 = eq2(p2)(mb_mark.value0.value0);
+              if ($209) {
                 return template(["Cursor", "SpanCursor", "Marker"])("[");
               }
               ;
@@ -8249,8 +8538,8 @@
             return v4(true);
           };
           if (mb_mark instanceof Just) {
-            var $174 = eq2(p2)(mb_mark.value0.value0) && eq2(p2)(mb_mark.value0.value1);
-            if ($174) {
+            var $215 = eq2(p2)(mb_mark.value0.value0) && eq2(p2)(mb_mark.value0.value1);
+            if ($215) {
               return template(["Cursor", "PointCursor", "Marker"])("|");
             }
             ;
@@ -8275,7 +8564,7 @@
                   return ["Paren", "Close"];
                 }
                 ;
-                throw new Error("Failed pattern match at Sexpze.Component.Editor (line 348, column 25 - line 351, column 82): " + [a2.constructor.name]);
+                throw new Error("Failed pattern match at Sexpze.Component.Editor (line 418, column 25 - line 421, column 82): " + [a2.constructor.name]);
               }())(cns)))])([text5(function() {
                 if (a2 instanceof Lit) {
                   return a2.value0;
@@ -8289,7 +8578,7 @@
                   return ")";
                 }
                 ;
-                throw new Error("Failed pattern match at Sexpze.Component.Editor (line 356, column 23 - line 359, column 29): " + [a2.constructor.name]);
+                throw new Error("Failed pattern match at Sexpze.Component.Editor (line 426, column 23 - line 429, column 29): " + [a2.constructor.name]);
               }())])];
             };
             var v2 = function(v3) {
@@ -8298,8 +8587,8 @@
                   return template([]);
                 };
                 if (mb_mark instanceof Just) {
-                  var $184 = lessThanOrEq2(mb_mark.value0.value0)(v.value0) && lessThanOrEq2(v.value1)(mb_mark.value0.value1) && (ltPointAndIndex(mb_mark.value0.value0)(i2) && ltIndexAndPoint(i2)(v.value0) || ltPointAndIndex(v.value1)(i2) && ltIndexAndPoint(i2)(mb_mark.value0.value1)) || lessThanOrEq2(v.value0)(mb_mark.value0.value0) && lessThanOrEq2(mb_mark.value0.value1)(v.value1) && (ltPointAndIndex(mb_mark.value0.value0)(i2) && ltIndexAndPoint(i2)(mb_mark.value0.value1));
-                  if ($184) {
+                  var $225 = lessThanOrEq2(mb_mark.value0.value0)(v.value0) && lessThanOrEq2(v.value1)(mb_mark.value0.value1) && (ltPointAndIndex(mb_mark.value0.value0)(i2) && ltIndexAndPoint(i2)(v.value0) || ltPointAndIndex(v.value1)(i2) && ltIndexAndPoint(i2)(mb_mark.value0.value1)) || lessThanOrEq2(v.value0)(mb_mark.value0.value0) && lessThanOrEq2(mb_mark.value0.value1)(v.value1) && (ltPointAndIndex(mb_mark.value0.value0)(i2) && ltIndexAndPoint(i2)(mb_mark.value0.value1));
+                  if ($225) {
                     return template(["inside-marker-SpanCursor"]);
                   }
                   ;
@@ -8309,8 +8598,8 @@
                 return v6(true);
               };
               if (mb_mark instanceof Just) {
-                var $190 = lessThanOrEq2(v.value0)(mb_mark.value0.value0) && lessThanOrEq2(mb_mark.value0.value1)(v.value1) && (ltPointAndIndex(v.value0)(i2) && ltIndexAndPoint(i2)(mb_mark.value0.value0) || ltPointAndIndex(mb_mark.value0.value1)(i2) && ltIndexAndPoint(i2)(v.value1)) || lessThanOrEq2(mb_mark.value0.value0)(v.value0) && lessThanOrEq2(v.value1)(mb_mark.value0.value1) && (ltPointAndIndex(v.value0)(i2) && ltIndexAndPoint(i2)(v.value1));
-                if ($190) {
+                var $231 = lessThanOrEq2(v.value0)(mb_mark.value0.value0) && lessThanOrEq2(mb_mark.value0.value1)(v.value1) && (ltPointAndIndex(v.value0)(i2) && ltIndexAndPoint(i2)(mb_mark.value0.value0) || ltPointAndIndex(mb_mark.value0.value1)(i2) && ltIndexAndPoint(i2)(v.value1)) || lessThanOrEq2(mb_mark.value0.value0)(v.value0) && lessThanOrEq2(v.value1)(mb_mark.value0.value1) && (ltPointAndIndex(v.value0)(i2) && ltIndexAndPoint(i2)(v.value1));
+                if ($231) {
                   return template(["inside-active-SpanCursor"]);
                 }
                 ;
@@ -8320,8 +8609,8 @@
               return v4(true);
             };
             if (mb_mark instanceof Nothing) {
-              var $196 = ltPointAndIndex(v.value0)(i2) && ltIndexAndPoint(i2)(v.value1);
-              if ($196) {
+              var $237 = ltPointAndIndex(v.value0)(i2) && ltIndexAndPoint(i2)(v.value1);
+              if ($237) {
                 return template(["inside-active-SpanCursor"]);
               }
               ;
@@ -8344,11 +8633,13 @@
       return renderZipperCursorStateAndSpan(v.value0);
     }
     ;
-    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 295, column 1 - line 295, column 56): " + [v.constructor.name]);
+    throw new Error("Failed pattern match at Sexpze.Component.Editor (line 365, column 1 - line 365, column 56): " + [v.constructor.name]);
   };
   var component = /* @__PURE__ */ function() {
     var render = function(state3) {
-      return div2([classes(["Editor"])])([div2([classes(["content"])])([renderCursorStateAndSpan(state3.cursorState)(state3.span)]), div2([classes(["information"])])([div2([classes(["block"])])([div2([classes(["title"])])([text5("concepts")]), span3([])([text5("there are two types of cursors: span cursors and zipper cursors")]), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("span cursor")])])(append6([text5(" looks like ")])([span3([classes(["code"])])([text5("... [ ... ] ...")])])))), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("span cursor")])])([text5(" is on the enclosed expression")]))), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("zipper cursor")])])(append6([text5(" looks like ")])([span3([classes(["code"])])([text5("... { ... [ ... ] ... } ...")])])))), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("zipper cursor")])])([text5(" is on the enclosed one-hole context")])))]), div2([classes(["block"])])([div2([classes(["title"])])([text5("controls")]), table_([thead_([tr_([th_([text5("cursor")]), th_([text5("input")]), th_([text5("effect")])])]), tbody_([tr_([td_([text5("span")]), td_([text5("<char>")]), td_([text5("insert atom right before cursor")])]), tr_([td_([text5("span")]), td_([text5("( | )")]), td_([text5("insert group around cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2192")]), td_([text5("move the right edge of the span to the right")])]), tr_([td_([text5("span")]), td_([text5("\u21E7\u2192")]), td_([text5("move the left edge of the span to the right")])]), tr_([td_([text5("span")]), td_([text5("\u2192")]), td_([text5("move the left edge of the span to the left")])]), tr_([td_([text5("span")]), td_([text5("\u21E7\u2192")]), td_([text5("move the right edge of the span to the left")])]), tr_([td_([text5("span")]), td_([text5("Space")]), td_([text5("if no marker, set marker here")])]), tr_([td_([text5("span")]), td_([text5("Space")]), td_([text5("if have marker, place zipper cursor between markers")])]), tr_([td_([text5("span")]), td_([text5("Escape")]), td_([text5("if no marker, shrink cursor to point cursor (empty span cursor)")])]), tr_([td_([text5("span")]), td_([text5("Escape")]), td_([text5("if have marker, set cursor to marker and clear marker")])]), tr_([td_([text5("zipper")]), td_([text5("Escape")]), td_([text5("set marker to outer side of zipper and cursor to inner side of zipper")])]), tr_([td_([text5("span")]), td_([text5("\u232B")]), td_([text5("delete the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("\u232B")]), td_([text5("delete the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("^c")]), td_([text5("copy the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("^c")]), td_([text5("copy the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("^x")]), td_([text5("cut the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("^x")]), td_([text5("cut the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("^v")]), td_([text5("paste a span clipboard in place of the cursor")])]), tr_([td_([text5("span")]), td_([text5("^v")]), td_([text5("paste a zipper clipboard around the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("^v")]), td_([text5("paste a zipper clipboard in place of the cursor")])])])])]), div2([classes(["block"])])([div2([classes(["title"])])([text5("problems")]), div2([])([text5("with just keyboard, can't navigate span cursor inside of parentheses (can do this with mouse ofc)")])])])]);
+      return trace2(show3(state3))(function(v) {
+        return div2([classes(["Editor"])])([div2([classes(["content"])])([renderCursorStateAndSpan(state3.cursorState)(state3.span)]), div2([classes(["information"])])([div2([classes(["block"])])([div2([classes(["title"])])([text5("concepts")]), span3([])([text5("there are two types of cursors: span cursors and zipper cursors")]), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("span cursor")])])(append6([text5(" looks like ")])([span3([classes(["code"])])([text5("... [ ... ] ...")])])))), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("span cursor")])])([text5(" is on the enclosed expression")]))), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("zipper cursor")])])(append6([text5(" looks like ")])([span3([classes(["code"])])([text5("... { ... [ ... ] ... } ...")])])))), span3([])(append6([text5("a ")])(append6([span3([classes(["keyword"])])([text5("zipper cursor")])])([text5(" is on the enclosed one-hole context")])))]), div2([classes(["block"])])([div2([classes(["title"])])([text5("controls")]), table_([thead_([tr_([th_([text5("cursor")]), th_([text5("input")]), th_([text5("effect")])])]), tbody_([tr_([td_([text5("span")]), td_([text5("<char>")]), td_([text5("insert atom right before cursor")])]), tr_([td_([text5("span")]), td_([text5("( | )")]), td_([text5("insert group around cursor")])]), tr_([td_([text5("span")]), td_([text5("\u2192")]), td_([text5("move the right edge of the span to the right")])]), tr_([td_([text5("span")]), td_([text5("\u21E7\u2192")]), td_([text5("move the left edge of the span to the right")])]), tr_([td_([text5("span")]), td_([text5("\u2192")]), td_([text5("move the left edge of the span to the left")])]), tr_([td_([text5("span")]), td_([text5("\u21E7\u2192")]), td_([text5("move the right edge of the span to the left")])]), tr_([td_([text5("span")]), td_([text5("Space")]), td_([text5("if no marker, set marker here")])]), tr_([td_([text5("span")]), td_([text5("Space")]), td_([text5("if have marker, place zipper cursor between markers")])]), tr_([td_([text5("span")]), td_([text5("Escape")]), td_([text5("if no marker, shrink cursor to point cursor (empty span cursor)")])]), tr_([td_([text5("span")]), td_([text5("Escape")]), td_([text5("if have marker, set cursor to marker and clear marker")])]), tr_([td_([text5("zipper")]), td_([text5("Escape")]), td_([text5("set marker to outer side of zipper and cursor to inner side of zipper")])]), tr_([td_([text5("span")]), td_([text5("\u232B")]), td_([text5("delete the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("\u232B")]), td_([text5("delete the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("^c")]), td_([text5("copy the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("^c")]), td_([text5("copy the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("^x")]), td_([text5("cut the expression under the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("^x")]), td_([text5("cut the zipper under the cursor")])]), tr_([td_([text5("span")]), td_([text5("^v")]), td_([text5("paste a span clipboard in place of the cursor")])]), tr_([td_([text5("span")]), td_([text5("^v")]), td_([text5("paste a zipper clipboard around the cursor")])]), tr_([td_([text5("zipper")]), td_([text5("^v")]), td_([text5("paste a zipper clipboard in place of the cursor")])])])])]), div2([classes(["block"])])([div2([classes(["title"])])([text5("problems")]), div2([])([text5("with just keyboard, can't navigate span cursor inside of parentheses (can do this with mouse ofc)")])])])]);
+      });
     };
     var initialState = function(v) {
       return {
@@ -8366,75 +8657,296 @@
       var cmd = ctrl || meta2;
       return bind5(get2)(function(state3) {
         return discard5(function() {
-          if (key2 === "ArrowLeft") {
-            var p2 = shiftPoint(-1 | 0)(fromCursorStateToPoint(state3.cursorState));
-            return when4(lessThanOrEq2(wrap4(0))(p2))(modify_3(function(v12) {
-              var $207 = {};
-              for (var $208 in v12) {
-                if ({}.hasOwnProperty.call(v12, $208)) {
-                  $207[$208] = v12[$208];
-                }
-                ;
-              }
-              ;
-              $207.cursorState = new SpanCursorState(empty7, new SpanCursor(p2, p2));
-              return $207;
-            }));
-          }
-          ;
-          if (key2 === "ArrowRight") {
-            var p2 = shiftPoint(1)(fromCursorStateToPoint(state3.cursorState));
-            return when4(lessThanOrEq2(p2)(wrap4(length9(state3.span))))(modify_3(function(v12) {
-              var $210 = {};
-              for (var $211 in v12) {
-                if ({}.hasOwnProperty.call(v12, $211)) {
-                  $210[$211] = v12[$211];
-                }
-                ;
-              }
-              ;
-              $210.cursorState = new SpanCursorState(empty7, new SpanCursor(p2, p2));
-              return $210;
-            }));
-          }
-          ;
           var v1 = function(v2) {
             var v3 = function(v4) {
-              var v5 = function(v62) {
-                var v7 = function(v82) {
+              var v5 = function(v6) {
+                if (shift && key2 === "ArrowLeft") {
+                  if (state3.cursorState instanceof SpanCursorState) {
+                    var p1 = shiftPoint(-1 | 0)(state3.cursorState.value1.value0);
+                    return when4(lessThanOrEq2(wrap4(0))(p1))(function() {
+                      var v72 = countUnopenedAndUnclosedParens(snd(atSpanCursor(new SpanCursor(p1, state3.cursorState.value1.value1))(state3.span)));
+                      var $250 = v72.unopened === 0 && v72.unclosed === 0;
+                      if ($250) {
+                        return modify_3(function(v82) {
+                          var $251 = {};
+                          for (var $252 in v82) {
+                            if ({}.hasOwnProperty.call(v82, $252)) {
+                              $251[$252] = v82[$252];
+                            }
+                            ;
+                          }
+                          ;
+                          $251.cursorState = new SpanCursorState(empty7, new SpanCursor(p1, state3.cursorState.value1.value1));
+                          return $251;
+                        });
+                      }
+                      ;
+                      var v8 = atIndex(getIndexRightAfterPoint(p1))(state3.span);
+                      if (v8 instanceof Open) {
+                        var p22 = getPointRightBeforeNthNextUnopenedParenStartingFromPoint(1)(state3.cursorState.value1.value1)(state3.span);
+                        var p3 = shiftPoint(1)(p22);
+                        return modify_3(function(v9) {
+                          var $255 = {};
+                          for (var $256 in v9) {
+                            if ({}.hasOwnProperty.call(v9, $256)) {
+                              $255[$256] = v9[$256];
+                            }
+                            ;
+                          }
+                          ;
+                          $255.cursorState = new ZipperCursorState(new ZipperCursor(p1, state3.cursorState.value1.value1, p22, p3));
+                          return $255;
+                        });
+                      }
+                      ;
+                      if (v8 instanceof Close) {
+                        var p22 = getPointRightBeforeNthPrevUnclosedParenStartingFromPoint(1)(p1)(state3.span);
+                        var p3 = shiftPoint(1)(p22);
+                        return modify_3(function(v9) {
+                          var $258 = {};
+                          for (var $259 in v9) {
+                            if ({}.hasOwnProperty.call(v9, $259)) {
+                              $258[$259] = v9[$259];
+                            }
+                            ;
+                          }
+                          ;
+                          $258.cursorState = new ZipperCursorState(new ZipperCursor(p22, p3, p1, state3.cursorState.value1.value1));
+                          return $258;
+                        });
+                      }
+                      ;
+                      return bug("Editor.component.handleAction")("impossible, since would imply unclosed == unclosed == 0");
+                    }());
+                  }
+                  ;
+                  if (state3.cursorState instanceof ZipperCursorState) {
+                    return pure9(unit);
+                  }
+                  ;
+                  throw new Error("Failed pattern match at Sexpze.Component.Editor (line 153, column 9 - line 176, column 22): " + [state3.cursorState.constructor.name]);
+                }
+                ;
+                if (shift && key2 === "ArrowRight") {
+                  if (state3.cursorState instanceof SpanCursorState) {
+                    var p1 = shiftPoint(1)(state3.cursorState.value1.value1);
+                    return when4(lessThanOrEq2(p1)(wrap4(length9(state3.span))))(function() {
+                      var v72 = countUnopenedAndUnclosedParens(snd(atSpanCursor(new SpanCursor(state3.cursorState.value1.value0, p1))(state3.span)));
+                      var $270 = v72.unopened === 0 && v72.unclosed === 0;
+                      if ($270) {
+                        return modify_3(function(v82) {
+                          var $271 = {};
+                          for (var $272 in v82) {
+                            if ({}.hasOwnProperty.call(v82, $272)) {
+                              $271[$272] = v82[$272];
+                            }
+                            ;
+                          }
+                          ;
+                          $271.cursorState = new SpanCursorState(empty7, new SpanCursor(state3.cursorState.value1.value0, p1));
+                          return $271;
+                        });
+                      }
+                      ;
+                      var v8 = atIndex(getIndexRightBeforePoint(p1))(state3.span);
+                      if (v8 instanceof Open) {
+                        var p22 = getPointRightBeforeNthNextUnopenedParenStartingFromPoint(1)(p1)(state3.span);
+                        var p3 = shiftPoint(1)(p22);
+                        return modify_3(function(v9) {
+                          var $275 = {};
+                          for (var $276 in v9) {
+                            if ({}.hasOwnProperty.call(v9, $276)) {
+                              $275[$276] = v9[$276];
+                            }
+                            ;
+                          }
+                          ;
+                          $275.cursorState = new ZipperCursorState(new ZipperCursor(state3.cursorState.value1.value0, p1, p22, p3));
+                          return $275;
+                        });
+                      }
+                      ;
+                      if (v8 instanceof Close) {
+                        var p22 = getPointRightBeforeNthPrevUnclosedParenStartingFromPoint(1)(state3.cursorState.value1.value0)(state3.span);
+                        var p3 = shiftPoint(1)(p22);
+                        return modify_3(function(v9) {
+                          var $278 = {};
+                          for (var $279 in v9) {
+                            if ({}.hasOwnProperty.call(v9, $279)) {
+                              $278[$279] = v9[$279];
+                            }
+                            ;
+                          }
+                          ;
+                          $278.cursorState = new ZipperCursorState(new ZipperCursor(p22, p3, state3.cursorState.value1.value0, p1));
+                          return $278;
+                        });
+                      }
+                      ;
+                      return bug("Editor.component.handleAction")("impossible, since would imply unclosed == unclosed == 0");
+                    }());
+                  }
+                  ;
+                  if (state3.cursorState instanceof ZipperCursorState) {
+                    return pure9(unit);
+                  }
+                  ;
+                  throw new Error("Failed pattern match at Sexpze.Component.Editor (line 179, column 9 - line 203, column 22): " + [state3.cursorState.constructor.name]);
+                }
+                ;
+                if (key2 === "ArrowLeft") {
+                  var p2 = shiftPoint(-1 | 0)(fromCursorStateToPoint(state3.cursorState));
+                  return when4(lessThanOrEq2(wrap4(0))(p2))(modify_3(function(v72) {
+                    var $288 = {};
+                    for (var $289 in v72) {
+                      if ({}.hasOwnProperty.call(v72, $289)) {
+                        $288[$289] = v72[$289];
+                      }
+                      ;
+                    }
+                    ;
+                    $288.cursorState = new SpanCursorState(empty7, new SpanCursor(p2, p2));
+                    return $288;
+                  }));
+                }
+                ;
+                if (key2 === "ArrowRight") {
+                  var p2 = shiftPoint(1)(fromCursorStateToPoint(state3.cursorState));
+                  return when4(lessThanOrEq2(p2)(wrap4(length9(state3.span))))(modify_3(function(v72) {
+                    var $291 = {};
+                    for (var $292 in v72) {
+                      if ({}.hasOwnProperty.call(v72, $292)) {
+                        $291[$292] = v72[$292];
+                      }
+                      ;
+                    }
+                    ;
+                    $291.cursorState = new SpanCursorState(empty7, new SpanCursor(p2, p2));
+                    return $291;
+                  }));
+                }
+                ;
+                var v7 = function(v8) {
                   var v9 = function(v10) {
-                    var v11 = function(v12) {
-                      var v13 = function(v14) {
+                    var v11 = function(v122) {
+                      var v13 = function(v142) {
                         var v15 = function(v16) {
                           var v17 = function(v18) {
-                            var v19 = function(v202) {
-                              var v21 = function(v222) {
-                                return discard5(log4("unrecognized keyboard event: " + show3({
-                                  key: key2,
-                                  shift,
-                                  ctrl,
-                                  meta: meta2
-                                })))(function() {
-                                  return pure9(unit);
-                                });
-                              };
-                              if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
-                                var $215 = length7(key2) === 1 && !cmd;
-                                if ($215) {
-                                  var v22 = insertAtSpanCursor(new Zipper([new Lit(key2)], mempty3))(new Tuple(state3.cursorState.value1, state3.span));
-                                  return modify_3(function(v23) {
-                                    var $217 = {};
-                                    for (var $218 in v23) {
-                                      if ({}.hasOwnProperty.call(v23, $218)) {
-                                        $217[$218] = v23[$218];
+                            var v19 = function(v20) {
+                              var v21 = function(v22) {
+                                var v23 = function(v24) {
+                                  var v25 = function(v262) {
+                                    var v27 = function(v282) {
+                                      return discard5(log4("unrecognized keyboard event: " + show12({
+                                        key: key2,
+                                        shift,
+                                        ctrl,
+                                        meta: meta2
+                                      })))(function() {
+                                        return pure9(unit);
+                                      });
+                                    };
+                                    if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
+                                      var $296 = length7(key2) === 1 && !cmd;
+                                      if ($296) {
+                                        var v28 = insertAtSpanCursor(new Zipper([new Lit(key2)], mempty3))(new Tuple(state3.cursorState.value1, state3.span));
+                                        return modify_3(function(v29) {
+                                          var $298 = {};
+                                          for (var $299 in v29) {
+                                            if ({}.hasOwnProperty.call(v29, $299)) {
+                                              $298[$299] = v29[$299];
+                                            }
+                                            ;
+                                          }
+                                          ;
+                                          $298.cursorState = new SpanCursorState(Nothing.value, v28.value0);
+                                          $298.span = v28.value1;
+                                          return $298;
+                                        });
                                       }
                                       ;
+                                      return v27(true);
                                     }
                                     ;
-                                    $217.cursorState = new SpanCursorState(Nothing.value, v22.value0);
-                                    $217.span = v22.value1;
-                                    return $217;
-                                  });
+                                    return v27(true);
+                                  };
+                                  if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
+                                    var $307 = key2 === "(" || key2 === ")" && !cmd;
+                                    if ($307) {
+                                      var v26 = insertAtSpanCursor(new Zipper([Open.value], [Close.value]))(new Tuple(state3.cursorState.value1, state3.span));
+                                      return modify_3(function(v27) {
+                                        var $309 = {};
+                                        for (var $310 in v27) {
+                                          if ({}.hasOwnProperty.call(v27, $310)) {
+                                            $309[$310] = v27[$310];
+                                          }
+                                          ;
+                                        }
+                                        ;
+                                        $309.cursorState = new SpanCursorState(Nothing.value, v26.value0);
+                                        $309.span = v26.value1;
+                                        return $309;
+                                      });
+                                    }
+                                    ;
+                                    return v25(true);
+                                  }
+                                  ;
+                                  return v25(true);
+                                };
+                                if (state3.cursorState instanceof ZipperCursorState) {
+                                  if (state3.mb_clipboard instanceof Just && state3.mb_clipboard.value0 instanceof ZipperClipboard) {
+                                    var $319 = key2 === "v" && cmd;
+                                    if ($319) {
+                                      return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
+                                        var v24 = replaceAtZipperCursor(state3.mb_clipboard.value0.value0)(new Tuple(state3.cursorState.value0, state3.span));
+                                        return modify_3(function(v25) {
+                                          var $321 = {};
+                                          for (var $322 in v25) {
+                                            if ({}.hasOwnProperty.call(v25, $322)) {
+                                              $321[$322] = v25[$322];
+                                            }
+                                            ;
+                                          }
+                                          ;
+                                          $321.cursorState = new SpanCursorState(empty7, v24.value0);
+                                          $321.span = v24.value1;
+                                          return $321;
+                                        });
+                                      });
+                                    }
+                                    ;
+                                    return v23(true);
+                                  }
+                                  ;
+                                  return v23(true);
+                                }
+                                ;
+                                return v23(true);
+                              };
+                              if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
+                                if (state3.mb_clipboard instanceof Just && state3.mb_clipboard.value0 instanceof ZipperClipboard) {
+                                  var $332 = key2 === "v" && cmd;
+                                  if ($332) {
+                                    return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
+                                      var v22 = insertAtSpanCursor(state3.mb_clipboard.value0.value0)(new Tuple(state3.cursorState.value1, state3.span));
+                                      return modify_3(function(v23) {
+                                        var $334 = {};
+                                        for (var $335 in v23) {
+                                          if ({}.hasOwnProperty.call(v23, $335)) {
+                                            $334[$335] = v23[$335];
+                                          }
+                                          ;
+                                        }
+                                        ;
+                                        $334.cursorState = new SpanCursorState(Nothing.value, v22.value0);
+                                        $334.span = v22.value1;
+                                        return $334;
+                                      });
+                                    });
+                                  }
+                                  ;
+                                  return v21(true);
                                 }
                                 ;
                                 return v21(true);
@@ -8443,22 +8955,28 @@
                               return v21(true);
                             };
                             if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
-                              var $226 = key2 === "(" || key2 === ")" && !cmd;
-                              if ($226) {
-                                var v20 = insertAtSpanCursor(new Zipper([Open.value], [Close.value]))(new Tuple(state3.cursorState.value1, state3.span));
-                                return modify_3(function(v21) {
-                                  var $228 = {};
-                                  for (var $229 in v21) {
-                                    if ({}.hasOwnProperty.call(v21, $229)) {
-                                      $228[$229] = v21[$229];
-                                    }
-                                    ;
-                                  }
-                                  ;
-                                  $228.cursorState = new SpanCursorState(Nothing.value, v20.value0);
-                                  $228.span = v20.value1;
-                                  return $228;
-                                });
+                              if (state3.mb_clipboard instanceof Just && state3.mb_clipboard.value0 instanceof SpanClipboard) {
+                                var $346 = key2 === "v" && cmd;
+                                if ($346) {
+                                  return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
+                                    var v20 = replaceAtSpanCursor(new Zipper(state3.mb_clipboard.value0.value0, mempty3))(new Tuple(state3.cursorState.value1, state3.span));
+                                    return modify_3(function(v21) {
+                                      var $348 = {};
+                                      for (var $349 in v21) {
+                                        if ({}.hasOwnProperty.call(v21, $349)) {
+                                          $348[$349] = v21[$349];
+                                        }
+                                        ;
+                                      }
+                                      ;
+                                      $348.cursorState = new SpanCursorState(Nothing.value, v20.value0);
+                                      $348.span = v20.value1;
+                                      return $348;
+                                    });
+                                  });
+                                }
+                                ;
+                                return v19(true);
                               }
                               ;
                               return v19(true);
@@ -8467,28 +8985,23 @@
                             return v19(true);
                           };
                           if (state3.cursorState instanceof ZipperCursorState) {
-                            if (state3.mb_clipboard instanceof Just && state3.mb_clipboard.value0 instanceof ZipperClipboard) {
-                              var $238 = key2 === "v" && cmd;
-                              if ($238) {
-                                return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
-                                  var v18 = replaceAtZipperCursor(state3.mb_clipboard.value0.value0)(new Tuple(state3.cursorState.value0, state3.span));
-                                  return modify_3(function(v19) {
-                                    var $240 = {};
-                                    for (var $241 in v19) {
-                                      if ({}.hasOwnProperty.call(v19, $241)) {
-                                        $240[$241] = v19[$241];
-                                      }
-                                      ;
+                            var $359 = key2 === "c" && cmd;
+                            if ($359) {
+                              return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
+                                var z = snd(atZipperCursor(state3.cursorState.value0)(state3.span));
+                                return modify_3(function(v18) {
+                                  var $360 = {};
+                                  for (var $361 in v18) {
+                                    if ({}.hasOwnProperty.call(v18, $361)) {
+                                      $360[$361] = v18[$361];
                                     }
                                     ;
-                                    $240.cursorState = new SpanCursorState(empty7, v18.value0);
-                                    $240.span = v18.value1;
-                                    return $240;
-                                  });
+                                  }
+                                  ;
+                                  $360.mb_clipboard = pure13(new ZipperClipboard(z));
+                                  return $360;
                                 });
-                              }
-                              ;
-                              return v17(true);
+                              });
                             }
                             ;
                             return v17(true);
@@ -8496,29 +9009,24 @@
                           ;
                           return v17(true);
                         };
-                        if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
-                          if (state3.mb_clipboard instanceof Just && state3.mb_clipboard.value0 instanceof ZipperClipboard) {
-                            var $251 = key2 === "v" && cmd;
-                            if ($251) {
-                              return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
-                                var v16 = insertAtSpanCursor(state3.mb_clipboard.value0.value0)(new Tuple(state3.cursorState.value1, state3.span));
-                                return modify_3(function(v17) {
-                                  var $253 = {};
-                                  for (var $254 in v17) {
-                                    if ({}.hasOwnProperty.call(v17, $254)) {
-                                      $253[$254] = v17[$254];
-                                    }
-                                    ;
+                        if (state3.cursorState instanceof SpanCursorState) {
+                          var $366 = key2 === "c" && cmd;
+                          if ($366) {
+                            return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
+                              var e = snd(atSpanCursor(state3.cursorState.value1)(state3.span));
+                              return modify_3(function(v16) {
+                                var $367 = {};
+                                for (var $368 in v16) {
+                                  if ({}.hasOwnProperty.call(v16, $368)) {
+                                    $367[$368] = v16[$368];
                                   }
                                   ;
-                                  $253.cursorState = new SpanCursorState(Nothing.value, v16.value0);
-                                  $253.span = v16.value1;
-                                  return $253;
-                                });
+                                }
+                                ;
+                                $367.mb_clipboard = pure13(new SpanClipboard(e));
+                                return $367;
                               });
-                            }
-                            ;
-                            return v15(true);
+                            });
                           }
                           ;
                           return v15(true);
@@ -8526,29 +9034,23 @@
                         ;
                         return v15(true);
                       };
-                      if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
-                        if (state3.mb_clipboard instanceof Just && state3.mb_clipboard.value0 instanceof SpanClipboard) {
-                          var $265 = key2 === "v" && cmd;
-                          if ($265) {
-                            return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
-                              var v14 = replaceAtSpanCursor(new Zipper(state3.mb_clipboard.value0.value0, mempty3))(new Tuple(state3.cursorState.value1, state3.span));
-                              return modify_3(function(v15) {
-                                var $267 = {};
-                                for (var $268 in v15) {
-                                  if ({}.hasOwnProperty.call(v15, $268)) {
-                                    $267[$268] = v15[$268];
-                                  }
-                                  ;
-                                }
-                                ;
-                                $267.cursorState = new SpanCursorState(Nothing.value, v14.value0);
-                                $267.span = v14.value1;
-                                return $267;
-                              });
-                            });
-                          }
-                          ;
-                          return v13(true);
+                      if (state3.cursorState instanceof ZipperCursorState) {
+                        var $374 = key2 === "Backspace";
+                        if ($374) {
+                          var v14 = deleteAtZipperCursor(new Tuple(state3.cursorState.value0, state3.span));
+                          return modify_3(function(v15) {
+                            var $376 = {};
+                            for (var $377 in v15) {
+                              if ({}.hasOwnProperty.call(v15, $377)) {
+                                $376[$377] = v15[$377];
+                              }
+                              ;
+                            }
+                            ;
+                            $376.cursorState = new SpanCursorState(empty7, v14.value0);
+                            $376.span = v14.value1;
+                            return $376;
+                          });
                         }
                         ;
                         return v13(true);
@@ -8556,23 +9058,22 @@
                       ;
                       return v13(true);
                     };
-                    if (state3.cursorState instanceof ZipperCursorState) {
-                      var $278 = key2 === "c" && cmd;
-                      if ($278) {
-                        return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
-                          var z = snd(atZipperCursor(state3.cursorState.value0)(state3.span));
-                          return modify_3(function(v12) {
-                            var $279 = {};
-                            for (var $280 in v12) {
-                              if ({}.hasOwnProperty.call(v12, $280)) {
-                                $279[$280] = v12[$280];
-                              }
-                              ;
+                    if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
+                      var $384 = key2 === "Backspace";
+                      if ($384) {
+                        var v12 = deleteAtSpanCursor(new Tuple(state3.cursorState.value1, state3.span));
+                        return modify_3(function(v13) {
+                          var $386 = {};
+                          for (var $387 in v13) {
+                            if ({}.hasOwnProperty.call(v13, $387)) {
+                              $386[$387] = v13[$387];
                             }
                             ;
-                            $279.mb_clipboard = pure13(new ZipperClipboard(z));
-                            return $279;
-                          });
+                          }
+                          ;
+                          $386.cursorState = new SpanCursorState(Nothing.value, v12.value0);
+                          $386.span = v12.value1;
+                          return $386;
                         });
                       }
                       ;
@@ -8581,22 +9082,25 @@
                     ;
                     return v11(true);
                   };
-                  if (state3.cursorState instanceof SpanCursorState) {
-                    var $285 = key2 === "c" && cmd;
-                    if ($285) {
+                  if (state3.cursorState instanceof ZipperCursorState) {
+                    var $395 = key2 === "x" && cmd;
+                    if ($395) {
                       return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
-                        var e = snd(atSpanCursor(state3.cursorState.value1)(state3.span));
-                        return modify_3(function(v10) {
-                          var $286 = {};
-                          for (var $287 in v10) {
-                            if ({}.hasOwnProperty.call(v10, $287)) {
-                              $286[$287] = v10[$287];
+                        var z = snd(atZipperCursor(state3.cursorState.value0)(state3.span));
+                        var v10 = deleteAtZipperCursor(new Tuple(state3.cursorState.value0, state3.span));
+                        return modify_3(function(v11) {
+                          var $397 = {};
+                          for (var $398 in v11) {
+                            if ({}.hasOwnProperty.call(v11, $398)) {
+                              $397[$398] = v11[$398];
                             }
                             ;
                           }
                           ;
-                          $286.mb_clipboard = pure13(new SpanClipboard(e));
-                          return $286;
+                          $397.mb_clipboard = pure13(new ZipperClipboard(z));
+                          $397.cursorState = new SpanCursorState(empty7, v10.value0);
+                          $397.span = v10.value1;
+                          return $397;
                         });
                       });
                     }
@@ -8606,22 +9110,26 @@
                   ;
                   return v9(true);
                 };
-                if (state3.cursorState instanceof ZipperCursorState) {
-                  var $293 = key2 === "Backspace";
-                  if ($293) {
-                    var v8 = deleteAtZipperCursor(new Tuple(state3.cursorState.value0, state3.span));
-                    return modify_3(function(v9) {
-                      var $295 = {};
-                      for (var $296 in v9) {
-                        if ({}.hasOwnProperty.call(v9, $296)) {
-                          $295[$296] = v9[$296];
+                if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
+                  var $405 = key2 === "x" && cmd;
+                  if ($405) {
+                    return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
+                      var e = snd(atSpanCursor(state3.cursorState.value1)(state3.span));
+                      var v8 = deleteAtSpanCursor(new Tuple(state3.cursorState.value1, state3.span));
+                      return modify_3(function(v9) {
+                        var $407 = {};
+                        for (var $408 in v9) {
+                          if ({}.hasOwnProperty.call(v9, $408)) {
+                            $407[$408] = v9[$408];
+                          }
+                          ;
                         }
                         ;
-                      }
-                      ;
-                      $295.cursorState = new SpanCursorState(empty7, v8.value0);
-                      $295.span = v8.value1;
-                      return $295;
+                        $407.mb_clipboard = pure13(new SpanClipboard(e));
+                        $407.cursorState = new SpanCursorState(Nothing.value, v8.value0);
+                        $407.span = v8.value1;
+                        return $407;
+                      });
                     });
                   }
                   ;
@@ -8630,22 +9138,23 @@
                 ;
                 return v7(true);
               };
-              if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
-                var $303 = key2 === "Backspace";
-                if ($303) {
-                  var v6 = deleteAtSpanCursor(new Tuple(state3.cursorState.value1, state3.span));
-                  return modify_3(function(v7) {
-                    var $305 = {};
-                    for (var $306 in v7) {
-                      if ({}.hasOwnProperty.call(v7, $306)) {
-                        $305[$306] = v7[$306];
+              if (state3.cursorState instanceof ZipperCursorState) {
+                var $416 = key2 === "Escape";
+                if ($416) {
+                  return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
+                    var p2 = endpointInnerLeft(state3.cursorState.value0);
+                    return modify_3(function(v6) {
+                      var $417 = {};
+                      for (var $418 in v6) {
+                        if ({}.hasOwnProperty.call(v6, $418)) {
+                          $417[$418] = v6[$418];
+                        }
+                        ;
                       }
                       ;
-                    }
-                    ;
-                    $305.cursorState = new SpanCursorState(Nothing.value, v6.value0);
-                    $305.span = v6.value1;
-                    return $305;
+                      $417.cursorState = new SpanCursorState(Nothing.value, new SpanCursor(p2, p2));
+                      return $417;
+                    });
                   });
                 }
                 ;
@@ -8654,25 +9163,21 @@
               ;
               return v5(true);
             };
-            if (state3.cursorState instanceof ZipperCursorState) {
-              var $314 = key2 === "x" && cmd;
-              if ($314) {
+            if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Just) {
+              var $423 = key2 === "Escape";
+              if ($423) {
                 return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
-                  var z = snd(atZipperCursor(state3.cursorState.value0)(state3.span));
-                  var v4 = deleteAtZipperCursor(new Tuple(state3.cursorState.value0, state3.span));
-                  return modify_3(function(v5) {
-                    var $316 = {};
-                    for (var $317 in v5) {
-                      if ({}.hasOwnProperty.call(v5, $317)) {
-                        $316[$317] = v5[$317];
+                  return modify_3(function(v4) {
+                    var $424 = {};
+                    for (var $425 in v4) {
+                      if ({}.hasOwnProperty.call(v4, $425)) {
+                        $424[$425] = v4[$425];
                       }
                       ;
                     }
                     ;
-                    $316.mb_clipboard = pure13(new ZipperClipboard(z));
-                    $316.cursorState = new SpanCursorState(empty7, v4.value0);
-                    $316.span = v4.value1;
-                    return $316;
+                    $424.cursorState = new SpanCursorState(Nothing.value, state3.cursorState.value0.value0);
+                    return $424;
                   });
                 });
               }
@@ -8683,24 +9188,21 @@
             return v3(true);
           };
           if (state3.cursorState instanceof SpanCursorState && state3.cursorState.value0 instanceof Nothing) {
-            var $324 = key2 === "x" && cmd;
-            if ($324) {
+            var $432 = key2 === "Escape";
+            if ($432) {
               return discard5(liftEffect7(preventDefault(toEvent(v.value0))))(function() {
-                var e = snd(atSpanCursor(state3.cursorState.value1)(state3.span));
-                var v2 = deleteAtSpanCursor(new Tuple(state3.cursorState.value1, state3.span));
-                return modify_3(function(v3) {
-                  var $326 = {};
-                  for (var $327 in v3) {
-                    if ({}.hasOwnProperty.call(v3, $327)) {
-                      $326[$327] = v3[$327];
+                var p2 = endpointLeft(state3.cursorState.value1);
+                return modify_3(function(v2) {
+                  var $433 = {};
+                  for (var $434 in v2) {
+                    if ({}.hasOwnProperty.call(v2, $434)) {
+                      $433[$434] = v2[$434];
                     }
                     ;
                   }
                   ;
-                  $326.mb_clipboard = pure13(new SpanClipboard(e));
-                  $326.cursorState = new SpanCursorState(Nothing.value, v2.value0);
-                  $326.span = v2.value1;
-                  return $326;
+                  $433.cursorState = new SpanCursorState(Nothing.value, new SpanCursor(p2, p2));
+                  return $433;
                 });
               });
             }
@@ -8721,16 +9223,16 @@
       ;
       if (v instanceof StartDrag) {
         return discard5(modify_3(function(v1) {
-          var $336 = {};
-          for (var $337 in v1) {
-            if ({}.hasOwnProperty.call(v1, $337)) {
-              $336[$337] = v1[$337];
+          var $441 = {};
+          for (var $442 in v1) {
+            if ({}.hasOwnProperty.call(v1, $442)) {
+              $441[$442] = v1[$442];
             }
             ;
           }
           ;
-          $336.mb_dragOrigin = pure13(v.value0);
-          return $336;
+          $441.mb_dragOrigin = pure13(v.value0);
+          return $441;
         }))(function() {
           return pure9(unit);
         });
@@ -8745,39 +9247,39 @@
           ;
           if (v1.value0 instanceof Just && v1.value1 instanceof SpanCursorState) {
             return modify_3(function(v2) {
-              var $343 = {};
-              for (var $344 in v2) {
-                if ({}.hasOwnProperty.call(v2, $344)) {
-                  $343[$344] = v2[$344];
+              var $448 = {};
+              for (var $449 in v2) {
+                if ({}.hasOwnProperty.call(v2, $449)) {
+                  $448[$449] = v2[$449];
                 }
                 ;
               }
               ;
-              $343.cursorState = new SpanCursorState(v1.value1.value0, makeSpanCursorFromDrag(v1.value0.value0)(v.value0)(state3.span));
-              return $343;
+              $448.cursorState = new SpanCursorState(v1.value1.value0, makeSpanCursorFromDrag(v1.value0.value0)(v.value0)(state3.span));
+              return $448;
             });
           }
           ;
           if (v1.value0 instanceof Just && v1.value1 instanceof ZipperCursorState) {
             return modify_3(function(v2) {
-              var $351 = {};
-              for (var $352 in v2) {
-                if ({}.hasOwnProperty.call(v2, $352)) {
-                  $351[$352] = v2[$352];
+              var $456 = {};
+              for (var $457 in v2) {
+                if ({}.hasOwnProperty.call(v2, $457)) {
+                  $456[$457] = v2[$457];
                 }
                 ;
               }
               ;
-              $351.cursorState = new SpanCursorState(empty7, makeSpanCursorFromDrag(v1.value0.value0)(v.value0)(state3.span));
-              return $351;
+              $456.cursorState = new SpanCursorState(empty7, makeSpanCursorFromDrag(v1.value0.value0)(v.value0)(state3.span));
+              return $456;
             });
           }
           ;
-          throw new Error("Failed pattern match at Sexpze.Component.Editor (line 226, column 5 - line 230, column 132): " + [v1.constructor.name]);
+          throw new Error("Failed pattern match at Sexpze.Component.Editor (line 296, column 5 - line 300, column 132): " + [v1.constructor.name]);
         });
       }
       ;
-      throw new Error("Failed pattern match at Sexpze.Component.Editor (line 218, column 3 - line 218, column 36): " + [v.constructor.name]);
+      throw new Error("Failed pattern match at Sexpze.Component.Editor (line 288, column 3 - line 288, column 36): " + [v.constructor.name]);
     };
     var $$eval = mkEval({
       receive: defaultEval.receive,
