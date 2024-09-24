@@ -12,6 +12,7 @@ import Halogen.Query.Event as HQE
 import Sexpze.Component.Editor as Editor
 import Sexpze.Component.State (Atom(..), Cursor(..), Span(..), SpanCursor(..))
 import Type.Proxy (Proxy(..))
+import Web.Event.Event as Event
 import Web.HTML as Web.HTML
 import Web.HTML.HTMLDocument as HTMLDocument
 import Web.HTML.Window as Web.HTML.Window
@@ -36,11 +37,13 @@ component = H.mkComponent { initialState, eval, render }
       document <- Web.HTML.window >>= Web.HTML.Window.document # liftEffect
       H.subscribe' \_ ->
         HQE.eventListener
-          KET.keyup
+          KET.keydown
           (HTMLDocument.toEventTarget document)
           (map KeyboardAction <<< KeyboardEvent.fromEvent)
 
     KeyboardAction ke -> do
+      when (KeyboardEvent.key ke == " ") do
+        ke # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
       H.tell (Proxy :: Proxy "editor") unit $ Editor.KeyboardEvent_Query ke
 
     EditorOutput _out -> do
