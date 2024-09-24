@@ -194,6 +194,12 @@ component = H.mkComponent { initialState, eval, render }
                 modify_ _ { cursorState = ZipperCursorState (ZipperCursor p2 p3 pl p1) }
               _ -> bug "Editor.component.handleAction" "impossible, since would imply unclosed == unclosed == 0"
 
+      _ | ZipperCursorState c <- state.cursorState, shift && key == "ArrowLeft" -> do
+        pure unit
+
+      _ | ZipperCursorState c <- state.cursorState, shift && key == "ArrowRight" -> do
+        pure unit
+
       -- move point cursor (i.e. empty span cursor) with arrow keys
 
       _ | key == "ArrowLeft" -> do
