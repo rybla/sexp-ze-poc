@@ -443,3 +443,9 @@ fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ (Outer Start)) 
 fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ (Inner Start)) = (SpanCursor (endpointOfZipperCursor (Inner Start) c) (endpointOfZipperCursor (Inner End) c) /\ Start)
 fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ (Inner End)) = (SpanCursor (endpointOfZipperCursor (Inner Start) c) (endpointOfZipperCursor (Inner End) c) /\ End)
 fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ (Outer End)) = (SpanCursor (endpointOfZipperCursor (Outer Start) c) (endpointOfZipperCursor (Outer End) c) /\ End)
+
+fromZipperCursorOrientationToSpanCursorOrientation :: ZipperCursorOrientation -> SpanCursorOrientation
+fromZipperCursorOrientationToSpanCursorOrientation (Outer Start) = Start
+fromZipperCursorOrientationToSpanCursorOrientation (Inner Start) = Start
+fromZipperCursorOrientationToSpanCursorOrientation (Outer End) = End
+fromZipperCursorOrientationToSpanCursorOrientation (Inner End) = End
