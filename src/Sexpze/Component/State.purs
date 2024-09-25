@@ -2,6 +2,7 @@ module Sexpze.Component.State where
 
 import Prelude
 
+import Control.Alternative (guard)
 import Data.Array as Array
 import Data.Array as String
 import Data.Eq.Generic (genericEq)
@@ -224,12 +225,12 @@ makeSpanCursorFromDrag p1 p2 e =
     pl' =
       if unopened == 0 then pl
       else
-        -- need to expand left the number of unopened parens
+        -- need to shift left the number of unopened parens
         getPointRightBeforeNthPrevUnclosedParenStartingFromPoint unopened pl e
     pr' =
       if unclosed == 0 then pr
       else
-        -- need to expand right the number of unclosed parens
+        -- need to shift right the number of unclosed parens
         getPointRightAfterNthNextUnopenedParenStartingFromPoint unclosed pr e
   in
     SpanCursor pl' pr'
@@ -258,7 +259,7 @@ dragFromPoint p1_top p2_top e =
     { unopened, unclosed } = e' # countUnopenedAndUnclosedParens
   in
     if unopened > 0 && unclosed > 0 then
-      -- ==> span that needs to expand out to nearest valid parent
+      -- ==> span that needs to shift out to nearest valid parent
       let
         pl = getPointRightAfterNthPrevUnclosedParenStartingFromPoint 1 pl_top e - one
         pr = getPointRightBeforeNthNextUnopenedParenStartingFromPoint 1 pr_top e + one
@@ -435,8 +436,8 @@ fromCursorStateToEmptySpanCursor (SpanCursorState c o) = let i = endpointLeft c 
 fromCursorStateToEmptySpanCursor (ZipperCursorState c o) = let i = endpointInnerLeft c in SpanCursor i i
 
 fromCursorStateToPoint :: CursorState -> Point
-fromCursorStateToPoint (SpanCursorState c o) = endpointLeft c
-fromCursorStateToPoint (ZipperCursorState c o) = endpointInnerLeft c
+fromCursorStateToPoint (SpanCursorState c o) = endpointOfSpanCursor o c
+fromCursorStateToPoint (ZipperCursorState c o) = endpointOfZipperCursor o c
 
 fromZipperCursorWithOrientationToSpanCursorWithOrientation :: ZipperCursor /\ ZipperCursorOrientation -> SpanCursor /\ SpanCursorOrientation
 fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ (Outer Start)) = (SpanCursor (endpointOfZipperCursor (Outer Start) c) (endpointOfZipperCursor (Outer End) c) /\ Start)
@@ -449,3 +450,101 @@ fromZipperCursorOrientationToSpanCursorOrientation (Outer Start) = Start
 fromZipperCursorOrientationToSpanCursorOrientation (Inner Start) = Start
 fromZipperCursorOrientationToSpanCursorOrientation (Outer End) = End
 fromZipperCursorOrientationToSpanCursorOrientation (Inner End) = End
+
+endpointOfSpanCursor :: SpanCursorOrientation -> SpanCursor -> Point
+endpointOfSpanCursor Start (SpanCursor ps _pe) = ps
+endpointOfSpanCursor End (SpanCursor _ps pe) = pe
+
+--------------------------------------------------------------------------------
+-- shift SpanCursor
+--------------------------------------------------------------------------------
+
+shiftBackwardSpanCursorWithOrientation
+  :: SpanCursor
+  -> SpanCursorOrientation
+  -> Span
+  -> Maybe CursorState
+shiftBackwardSpanCursorWithOrientation (SpanCursor ps pe) Start e = do
+  let p1 = ps # shiftPoint (-1)
+  guard $ wrap 0 <= p1
+  let { unopened, unclosed } = e # atSpanCursor (SpanCursor p1 pe) # snd # countUnopenedAndUnclosedParens
+  if unopened == 0 && unclosed == 0 then do
+    -- a normal span
+    pure $ SpanCursorState (SpanCursor p1 pe) Start
+  else do
+    -- must be a zipper
+    case e # atIndex (getIndexRightAfterPoint p1) of
+      Open -> do
+        -- find matching close paren to the right of pe
+        -- let p2 = e # getPointRightBeforeNthNextUnopenedParenStartingFromPoint 1 pe
+        let p2 = e # getPointRightBeforeNthNextUnopenedParenStartingFromPoint 1 pe
+        let p3 = p2 # shiftPoint 1
+        pure $ ZipperCursorState (ZipperCursor p1 pe p2 p3) (Outer Start)
+      Close -> do
+        -- find matching open paren to the left of p1
+        let p2 = e # getPointRightBeforeNthPrevUnclosedParenStartingFromPoint 1 p1
+        let p3 = p2 # shiftPoint 1
+        pure $ ZipperCursorState (ZipperCursor p2 p3 p1 pe) (Inner End)
+      _ -> bug "Editor.component.handleAction" "impossible, since would imply unclosed == unclosed == 0"
+shiftBackwardSpanCursorWithOrientation (SpanCursor ps pe) End e = do
+  if ps == pe then do
+    shiftBackwardSpanCursorWithOrientation (SpanCursor ps pe) Start e
+  else do
+    -- ps .. p1 , pe
+    let p1 = pe # shiftPoint (-1)
+    let { unopened, unclosed } = e # atSpanCursor (SpanCursor p1 pe) # snd # countUnopenedAndUnclosedParens
+    if unopened == 0 && unclosed == 0 then do
+      -- a normal span 
+      pure $ SpanCursorState (SpanCursor ps p1) End
+    else do
+      -- must be a zipper
+      case e # atIndex (getIndexRightAfterPoint p1) of
+        Open -> bug "Editor.component.handleAction" "impossible"
+        Close -> do
+          -- find matching open paren to the left of p1
+          let p2 = e # getPointRightAfterNthPrevUnclosedParenStartingFromPoint 1 p1
+          pure $ ZipperCursorState (ZipperCursor ps p2 p1 pe) (Inner End)
+        _ -> bug "Editor.component.handleAction" "impossible, since would imply unclosed == unclosed == 0"
+
+shiftForwardSpanCursorWithOrientation :: SpanCursor -> SpanCursorOrientation -> Span -> Maybe CursorState
+shiftForwardSpanCursorWithOrientation (SpanCursor ps pe) Start e =
+  if ps == pe then do
+    shiftForwardSpanCursorWithOrientation (SpanCursor ps pe) End e
+  else do
+    -- ps, p1, ..., pe
+    let p1 = ps # shiftPoint 1
+    let { unopened, unclosed } = e # atSpanCursor (SpanCursor ps p1) # snd # countUnopenedAndUnclosedParens
+    if unopened == 0 && unclosed == 0 then do
+      -- a normal span 
+      pure $ SpanCursorState (SpanCursor p1 pe) Start
+    else do
+      -- must be a zipper 
+      case e # atIndex (getIndexRightBeforePoint p1) of
+        Close -> bug "Editor.component.handleAction" "impossible"
+        Open -> do
+          -- find matching close paren to the right of p1
+          let p2 = e # getPointRightBeforeNthNextUnopenedParenStartingFromPoint 1 p1
+          pure $ ZipperCursorState (ZipperCursor ps p1 p2 pe) (Inner Start)
+        _ -> bug "Editor.component.handleAction" "impossible, since would imply unclosed == unclosed == 0"
+shiftForwardSpanCursorWithOrientation (SpanCursor ps pe) End e = do
+  let p1 = pe # shiftPoint 1
+  guard $ p1 <= wrap (length e)
+  -- just a normal span
+  let { unopened, unclosed } = e # atSpanCursor (SpanCursor ps p1) # snd # countUnopenedAndUnclosedParens
+  if unopened == 0 && unclosed == 0 then do
+    -- a normal span 
+    pure $ SpanCursorState (SpanCursor ps p1) End
+  else do
+    -- must be a zipper
+    case e # atIndex (getIndexRightBeforePoint p1) of
+      Open -> do
+        -- find matching close paren to the right of p1
+        let p2 = e # getPointRightBeforeNthNextUnopenedParenStartingFromPoint 1 p1
+        let p3 = p2 # shiftPoint 1
+        pure $ ZipperCursorState (ZipperCursor ps p1 p2 p3) (Inner Start)
+      Close -> do
+        -- find matching open paren to the left of ps
+        let p2 = e # getPointRightBeforeNthPrevUnclosedParenStartingFromPoint 1 ps
+        let p3 = p2 # shiftPoint 1
+        pure $ ZipperCursorState (ZipperCursor p2 p3 ps p1) (Outer End)
+      _ -> bug "Editor.component.handleAction" "impossible, since would imply unclosed == unclosed == 0"
