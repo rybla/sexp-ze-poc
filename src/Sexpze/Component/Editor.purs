@@ -307,10 +307,10 @@ component = H.mkComponent { initialState, eval, render }
           [ HH.div
               [ HP.classes [ HH.ClassName "block" ] ]
               [ HH.div [ HP.classes [ HH.ClassName "title" ] ] [ HH.text "concepts" ]
-              , HH.span [] [ HH.text "there are two types of cursors: span cursors and zipper cursors" ]
-              , HH.span [] $ [ HH.text "a " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "span cursor" ] ] <> [ HH.text " looks like " ] <> [ HH.span [ HP.classes [ HH.ClassName "code" ] ] [ HH.text "... [ ... ] ..." ] ]
+              , HH.span [] $ [ HH.text "there are two types of cursors: " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "span cursors" ] ] <> [ HH.text " and " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "zipper cursors" ] ]
+              , HH.span [] $ [ HH.text "a " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "span cursor" ] ] <> [ HH.text " looks like " ] <> [ HH.span [ HP.classes [ HH.ClassName "code" ] ] [ HH.text "... { ... } ..." ] ]
               , HH.span [] $ [ HH.text "a " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "span cursor" ] ] <> [ HH.text " is on the enclosed expression" ]
-              , HH.span [] $ [ HH.text "a " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "zipper cursor" ] ] <> [ HH.text " looks like " ] <> [ HH.span [ HP.classes [ HH.ClassName "code" ] ] [ HH.text "... { ... [ ... ] ... } ..." ] ]
+              , HH.span [] $ [ HH.text "a " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "zipper cursor" ] ] <> [ HH.text " looks like " ] <> [ HH.span [ HP.classes [ HH.ClassName "code" ] ] [ HH.text "... { ... { ... } ... } ..." ] ]
               , HH.span [] $ [ HH.text "a " ] <> [ HH.span [ HP.classes [ HH.ClassName "keyword" ] ] [ HH.text "zipper cursor" ] ] <> [ HH.text " is on the enclosed one-hole context" ]
               ]
           , HH.div
@@ -322,19 +322,17 @@ component = H.mkComponent { initialState, eval, render }
                   , HH.tbody_
                       [ -- insertion
                         HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "<char>" ], HH.td_ [ HH.text "insert atom right before cursor" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "( | )" ], HH.td_ [ HH.text "insert group around cursor" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "(" ], HH.td_ [ HH.text "insert group around cursor" ] ]
                       -- movement
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "→" ], HH.td_ [ HH.text "move the right edge of the span to the right" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⇧→" ], HH.td_ [ HH.text "move the left edge of the span to the right" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "→" ], HH.td_ [ HH.text "move the left edge of the span to the left" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⇧→" ], HH.td_ [ HH.text "move the right edge of the span to the left" ] ]
-                      -- marking
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "Space" ], HH.td_ [ HH.text "if no marker, set marker here" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "Space" ], HH.td_ [ HH.text "if have marker, place zipper cursor between markers" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "→" ], HH.td_ [ HH.text "move point to right" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "←" ], HH.td_ [ HH.text "move point to left" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span | zipper" ], HH.td_ [ HH.text "⇧→" ], HH.td_ [ HH.text "shift active edge to right" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span | zipper" ], HH.td_ [ HH.text "⇧←" ], HH.td_ [ HH.text "shift active edge to left" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "⎇⇧→" ], HH.td_ [ HH.text "begin zipper from cursor and shift to right" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "⎇⇧←" ], HH.td_ [ HH.text "begin zipper from cursor and to left" ] ]
                       -- escape
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "Escape" ], HH.td_ [ HH.text "if no marker, shrink cursor to point cursor (empty span cursor)" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "Escape" ], HH.td_ [ HH.text "if have marker, set cursor to marker and clear marker" ] ]
-                      , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "Escape" ], HH.td_ [ HH.text "set marker to outer side of zipper and cursor to inner side of zipper" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "Escape" ], HH.td_ [ HH.text "shrink cursor to point" ] ]
+                      , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "Escape" ], HH.td_ [ HH.text "jump back to starting span cursor" ] ]
                       -- misc
                       , HH.tr_ [ HH.td_ [ HH.text "span" ], HH.td_ [ HH.text "⌫" ], HH.td_ [ HH.text "delete the expression under the cursor" ] ]
                       , HH.tr_ [ HH.td_ [ HH.text "zipper" ], HH.td_ [ HH.text "⌫" ], HH.td_ [ HH.text "delete the zipper under the cursor" ] ]
@@ -351,7 +349,7 @@ component = H.mkComponent { initialState, eval, render }
           , HH.div
               [ HP.classes [ HH.ClassName "block" ] ]
               [ HH.div [ HP.classes [ HH.ClassName "title" ] ] [ HH.text "problems" ]
-              , HH.div [] [ HH.text "with just keyboard, can't navigate span cursor inside of parentheses (can do this with mouse ofc)" ]
+              , HH.div [] [ HH.text """can't just "shift-then-move-over" with keyboard, since what are the intermediary states to that? would have to sort of "push" the RHS of inner zipper to the right in order to do this, but instead i have them swap positions. perhaps "pushing" like this is what should happen instead?""" ]
               ]
           ]
       ]

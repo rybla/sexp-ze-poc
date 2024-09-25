@@ -52,8 +52,8 @@ component = H.mkComponent { initialState, eval, render }
   render _state =
     HH.div []
       [ HH.slot (Proxy :: Proxy "editor") unit Editor.component
-          -- { span: Span [ Lit "a", Open, Lit "b", Open, Lit "c", Close, Lit "d", Close, Lit "e" ]
-          { span: Span [ Lit "a", Lit "b", Lit "c", Lit "d", Lit "e", Lit "f", Lit "g", Lit "h", Lit "i" ]
-          }
+          -- { span: Span [ Lit "a", Open, Lit "b", Open, Lit "c", Close, Lit "d", Close, Lit "e" ] }
+          -- { span: Span [ Lit "a", Lit "b", Lit "c", Lit "d", Lit "e", Lit "f", Lit "g", Lit "h", Lit "i" ] }
+          { span: Span [ Open, Lit "f", Lit "x", Lit "y", Close ] }
           EditorOutput
       ]
