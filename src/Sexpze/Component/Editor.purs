@@ -157,12 +157,12 @@ component = H.mkComponent { initialState, eval, render }
 
       -- shift zipper cursor
 
-      _ | ZipperCursorState c o <- state.cursorState, ctrl && key == "ArrowLeft" -> do
+      _ | ZipperCursorState c o <- state.cursorState, shift && key == "ArrowLeft" -> do
         case state.span # shiftBackwardZipperCursorWithOrientation c o of
           Nothing -> pure unit
           Just cs -> modify_ _ { cursorState = cs }
 
-      _ | ZipperCursorState c o <- state.cursorState, ctrl && key == "ArrowRight" -> do
+      _ | ZipperCursorState c o <- state.cursorState, shift && key == "ArrowRight" -> do
         case state.span # shiftForwardZipperCursorWithOrientation c o of
           Nothing -> pure unit
           Just cs -> modify_ _ { cursorState = cs }
