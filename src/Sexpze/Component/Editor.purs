@@ -163,7 +163,7 @@ component = H.mkComponent { initialState, eval, render }
       _ | ZipperCursorState c o <- state.cursorState, shift && key == "ArrowRight" -> do
         pure unit
 
-      -- move point cursor (i.e. empty span cursor) with arrow keys
+      -- shift point cursor
 
       _ | key == "ArrowLeft" -> do
         let p = state.cursorState # fromCursorStateToPoint
