@@ -96,44 +96,6 @@ component = H.mkComponent { initialState, eval, render }
 
     case unit of
 
-      -- _ | SpanCursorState Nothing (SpanCursor p _) <- state.cursorState, key == "Escape" -> do
-      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   modify_ _ { cursorState = SpanCursorState Nothing (SpanCursor p p) }
-
-      -- _ | SpanCursorState (Just c) _ <- state.cursorState, key == "Escape" -> do
-      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   modify_ _ { cursorState = SpanCursorState Nothing c }
-
-      -- _ | ZipperCursorState (ZipperCursor pol pil pir por) <- state.cursorState, key == "Escape" -> do
-      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   modify_ _ { cursorState = SpanCursorState (Just (SpanCursor pol por)) (SpanCursor pil pir) }
-
-      -- -- interact with Marker
-
-      -- _ | SpanCursorState Nothing c <- state.cursorState, key == " " -> do
-      --   modify_ _ { cursorState = SpanCursorState (pure c) c }
-
-      -- _ | SpanCursorState (Just m) c <- state.cursorState, key == " " -> do
-      --   modify_ _ { cursorState = ZipperCursorState (state.span # makeZipperCursorFromSpanCursors m c) }
-
-      -- -- adjust cursor with arrow keys
-
-      -- _ | SpanCursor (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" && shift -> do
-      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   when (pl <= pr - one) do modify_ _ { cursorState = SpanCursor (state.span # makeSpanCursorFromDrag pl (pr - one)) }
-
-      -- _ | SpanCursor (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" -> do
-      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   when (wrap 0 <= pl - one) do modify_ _ { cursorState = SpanCursor (state.span # makeSpanCursorFromDrag (pl - one) pr) }
-
-      -- _ | SpanCursor (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" && shift -> do
-      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   when (pl + one <= pr) do modify_ _ { cursorState = SpanCursor (state.span # makeSpanCursorFromDrag (pl + one) pr) }
-
-      -- _ | SpanCursor (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" -> do
-      --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   when (pr + one <= wrap (length state.span)) do modify_ _ { cursorState = SpanCursor (state.span # makeSpanCursorFromDrag pl (pr + one)) }
-
       _ | SpanCursorState c o <- state.cursorState, key == "Escape" -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let p = endpointOfSpanCursor o c
