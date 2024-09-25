@@ -87,6 +87,7 @@ component = H.mkComponent { initialState, eval, render }
   handleQuery (KeyboardEvent_Query event a) = do
     let
       key = event # KeyboardEvent.key
+      alt = event # KeyboardEvent.altKey
       shift = event # KeyboardEvent.shiftKey
       ctrl = event # KeyboardEvent.ctrlKey
       meta = event # KeyboardEvent.metaKey
@@ -142,6 +143,28 @@ component = H.mkComponent { initialState, eval, render }
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let c' /\ o' = fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ o)
         modify_ _ { cursorState = SpanCursorState c' o' }
+
+      -- convert span to zipper; shift zipper cursor
+
+      _ | SpanCursorState c o <- state.cursorState, shift && alt && key == "ArrowLeft" -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+        let
+          o' = case o of
+            Start -> Outer /\ Start
+            End -> Inner /\ End
+        case state.span # shiftBackwardZipperCursorWithOrientation (fromSpanCursorToEmptyZipperCursor c) o' of
+          Nothing -> pure unit
+          Just cs -> modify_ _ { cursorState = cs }
+
+      _ | SpanCursorState c o <- state.cursorState, shift && alt && key == "ArrowRight" -> do
+        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+        let
+          o' = case o of
+            Start -> Inner /\ Start
+            End -> Outer /\ End
+        case state.span # shiftForwardZipperCursorWithOrientation (fromSpanCursorToEmptyZipperCursor c) o' of
+          Nothing -> pure unit
+          Just cs -> modify_ _ { cursorState = cs }
 
       -- shift span cursor
 
@@ -364,9 +387,9 @@ renderSpanCursorStateAndSpan (SpanCursor pl pr) (Span es) =
         _ | p == pl && p == pr ->
           template [ HH.ClassName "Cursor", HH.ClassName "PointCursor" ] "|"
         _ | p == pl ->
-          template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Active" ] "["
+          template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Active" ] "{"
         _ | p == pr ->
-          template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Active" ] "]"
+          template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Active" ] "}"
         -- inside cursor
         _ | pl < p && p < pr ->
           template [ HH.ClassName "inside-active-SpanCursor" ] "•"
@@ -427,11 +450,11 @@ renderZipperCursorStateAndSpan (ZipperCursor pol pil pir por) (Span es) =
       else if p == pol then
         template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "{"
       else if p == pil then
-        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "["
+        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "{"
       else if p == pir && p == por then
         template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "}"
       else if p == pir then
-        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "]"
+        template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "}"
       else if p == por then
         template [ HH.ClassName "Cursor", HH.ClassName "ZipperCursor" ] "}"
       else if pol <= p && p <= pil then

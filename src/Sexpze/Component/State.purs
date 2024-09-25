@@ -2,13 +2,12 @@ module Sexpze.Component.State where
 
 import Prelude
 
-import Control.Alternative (empty, guard)
+import Control.Alternative (guard)
 import Data.Array as Array
 import Data.Array as String
 import Data.Eq.Generic (genericEq)
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
-import Data.HeytingAlgebra (implies)
 import Data.Maybe (Maybe(..), fromMaybe')
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Show.Generic (genericShow)
@@ -435,8 +434,8 @@ gtIndexAndPoint :: Index -> Point -> Boolean
 gtIndexAndPoint i p = unwrap i > unwrap p
 
 fromCursorStateToEmptySpanCursor :: CursorState -> SpanCursor
-fromCursorStateToEmptySpanCursor (SpanCursorState c o) = let i = endpointLeft c in SpanCursor i i
-fromCursorStateToEmptySpanCursor (ZipperCursorState c o) = let i = endpointInnerLeft c in SpanCursor i i
+fromCursorStateToEmptySpanCursor (SpanCursorState c _o) = let i = endpointLeft c in SpanCursor i i
+fromCursorStateToEmptySpanCursor (ZipperCursorState c _o) = let i = endpointInnerLeft c in SpanCursor i i
 
 fromCursorStateToPoint :: CursorState -> Point
 fromCursorStateToPoint (SpanCursorState c o) = endpointOfSpanCursor o c
@@ -554,10 +553,10 @@ shiftForwardSpanCursorWithOrientation (SpanCursor ps pe) End e = do
 
 -- backward
 shiftBackwardZipperCursorWithOrientation :: ZipperCursor -> ZipperCursorOrientation -> Span -> Maybe CursorState
-shiftBackwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Inner /\ Start) e = todo "" {}
-shiftBackwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Inner /\ End) e = todo "" {}
-shiftBackwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Outer /\ Start) e = todo "" {}
-shiftBackwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Outer /\ End) e = todo "" {}
+shiftBackwardZipperCursorWithOrientation (ZipperCursor _pol _pil _pir _por) (Inner /\ Start) _e = todo "" {}
+shiftBackwardZipperCursorWithOrientation (ZipperCursor _pol _pil _pir _por) (Inner /\ End) _e = todo "" {}
+shiftBackwardZipperCursorWithOrientation (ZipperCursor _pol _pil _pir _por) (Outer /\ Start) _e = todo "" {}
+shiftBackwardZipperCursorWithOrientation (ZipperCursor _pol _pil _pir _por) (Outer /\ End) _e = todo "" {}
 
 -- forward
 shiftForwardZipperCursorWithOrientation :: ZipperCursor -> ZipperCursorOrientation -> Span -> Maybe CursorState
@@ -570,6 +569,33 @@ shiftForwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Inner /\
       SpanCursorState (SpanCursor pil' pir') Start -> pure (ZipperCursorState (ZipperCursor pol pil' pir' por) (Inner /\ Start))
       SpanCursorState (SpanCursor pir' pil') End -> pure (ZipperCursorState (ZipperCursor pol pil' pir' por) (Inner /\ End))
       ZipperCursorState (ZipperCursor _pol' pil' pir' _por') o' -> pure (ZipperCursorState (ZipperCursor pol pil' pir' por) o')
-shiftForwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Inner /\ End) e = todo "" {}
-shiftForwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Outer /\ Start) e = todo "" {}
-shiftForwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Outer /\ End) e = todo "" {}
+-- 
+shiftForwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Inner /\ End) e = do
+  if pir == por then do
+    guard $ pol == pil
+    shiftForwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Outer /\ End) e
+  else
+    shiftForwardSpanCursorWithOrientation (SpanCursor pil pir) End e >>= case _ of
+      SpanCursorState (SpanCursor pil' pir') Start -> pure (ZipperCursorState (ZipperCursor pol pil' pir' por) (Inner /\ Start))
+      SpanCursorState (SpanCursor pir' pil') End -> pure (ZipperCursorState (ZipperCursor pol pil' pir' por) (Inner /\ End))
+      ZipperCursorState (ZipperCursor _pol' pil' pir' _por') o' -> pure (ZipperCursorState (ZipperCursor pol pil' pir' por) o')
+-- 
+shiftForwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Outer /\ Start) e = do
+  if pol == pil then do
+    guard $ pir == por
+    shiftForwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Inner /\ Start) e
+  else
+    shiftForwardSpanCursorWithOrientation (SpanCursor pol por) Start e >>= case _ of
+      SpanCursorState (SpanCursor pol' por') Start -> pure (ZipperCursorState (ZipperCursor pol' pil pir por') (Outer /\ Start))
+      SpanCursorState (SpanCursor _pol' _por') End -> bug "shiftForwardZipperCursorWithOrientation" "impossible#1"
+      ZipperCursorState (ZipperCursor _ pol' por' _) (Outer /\ Start) -> pure (ZipperCursorState (ZipperCursor pol' pil pir por') (Outer /\ Start))
+      ZipperCursorState (ZipperCursor _pol' _pil' _pir' _por') _ -> bug "shiftForwardZipperCursorWithOrientation" "impossible#2"
+-- 
+shiftForwardZipperCursorWithOrientation (ZipperCursor pol pil pir por) (Outer /\ End) e = do
+  guard $ por < wrap (length e)
+  shiftForwardSpanCursorWithOrientation (SpanCursor pol por) End e >>= case _ of
+    SpanCursorState (SpanCursor _pol' _por') Start -> bug "shiftForwardZipperCursorWithOrientation" "impossible#3"
+    SpanCursorState (SpanCursor pol' por') End -> pure (ZipperCursorState (ZipperCursor pol' pil pir por') (Outer /\ End))
+    ZipperCursorState (ZipperCursor pol' _ _ por') (Outer /\ End) -> pure (ZipperCursorState (ZipperCursor pol' pil pir por') (Outer /\ End))
+    ZipperCursorState (ZipperCursor _pol' _pil' _pir' _por') _ -> bug "shiftForwardZipperCursorWithOrientation" "impossible#4"
+
