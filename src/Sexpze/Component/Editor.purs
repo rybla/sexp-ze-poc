@@ -75,7 +75,7 @@ component = H.mkComponent { initialState, eval, render }
   where
   initialState :: Input -> State
   initialState { span } =
-    { cursorState: SpanCursorState empty (SpanCursor (wrap 0) (wrap 0))
+    { cursorState: SpanCursorState (SpanCursor (wrap 0) (wrap 0)) End
     , span
     , mb_clipboard: empty
     , mb_dragOrigin: empty
@@ -117,45 +117,41 @@ component = H.mkComponent { initialState, eval, render }
 
       -- -- adjust cursor with arrow keys
 
-      -- _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" && shift -> do
+      -- _ | SpanCursor (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" && shift -> do
       --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   when (pl <= pr - one) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag pl (pr - one)) }
+      --   when (pl <= pr - one) do modify_ _ { cursorState = SpanCursor (state.span # makeSpanCursorFromDrag pl (pr - one)) }
 
-      -- _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" -> do
+      -- _ | SpanCursor (SpanCursor pl pr) <- state.cursorState, key == "ArrowLeft" -> do
       --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   when (wrap 0 <= pl - one) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag (pl - one) pr) }
+      --   when (wrap 0 <= pl - one) do modify_ _ { cursorState = SpanCursor (state.span # makeSpanCursorFromDrag (pl - one) pr) }
 
-      -- _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" && shift -> do
+      -- _ | SpanCursor (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" && shift -> do
       --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   when (pl + one <= pr) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag (pl + one) pr) }
+      --   when (pl + one <= pr) do modify_ _ { cursorState = SpanCursor (state.span # makeSpanCursorFromDrag (pl + one) pr) }
 
-      -- _ | SpanCursorState mb_mark (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" -> do
+      -- _ | SpanCursor (SpanCursor pl pr) <- state.cursorState, key == "ArrowRight" -> do
       --   event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      --   when (pr + one <= wrap (length state.span)) do modify_ _ { cursorState = SpanCursorState mb_mark (state.span # makeSpanCursorFromDrag pl (pr + one)) }
+      --   when (pr + one <= wrap (length state.span)) do modify_ _ { cursorState = SpanCursor (state.span # makeSpanCursorFromDrag pl (pr + one)) }
 
-      _ | SpanCursorState Nothing c <- state.cursorState, key == "Escape" -> do
+      _ | SpanCursorState c o <- state.cursorState, key == "Escape" -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let p = endpointLeft c
-        modify_ _ { cursorState = SpanCursorState Nothing (SpanCursor p p) }
+        modify_ _ { cursorState = SpanCursorState (SpanCursor p p) o }
 
-      _ | SpanCursorState (Just c) _ <- state.cursorState, key == "Escape" -> do
+      _ | ZipperCursorState c o <- state.cursorState, key == "Escape" -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        modify_ _ { cursorState = SpanCursorState Nothing c }
-
-      _ | ZipperCursorState c <- state.cursorState, key == "Escape" -> do
-        event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-        let p = endpointInnerLeft c
-        modify_ _ { cursorState = SpanCursorState Nothing (SpanCursor p p) }
+        let c' /\ o' = fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ o)
+        modify_ _ { cursorState = SpanCursorState c' o' }
 
       -- expand span cursor
 
-      _ | SpanCursorState _mb_mark (SpanCursor pl pr) <- state.cursorState, shift && key == "ArrowLeft" -> do
+      _ | SpanCursorState (SpanCursor pl pr) Start <- state.cursorState, shift && key == "ArrowLeft" -> do
         let p1 = pl # shiftPoint (-1)
         when (wrap 0 <= p1) do
           let { unopened, unclosed } = state.span # atSpanCursor (SpanCursor p1 pr) # snd # countUnopenedAndUnclosedParens
           if unopened == 0 && unclosed == 0 then do
             -- a normal span
-            modify_ _ { cursorState = SpanCursorState empty (SpanCursor p1 pr) }
+            modify_ _ { cursorState = SpanCursorState (SpanCursor p1 pr) ?a }
           else do
             -- must be a zipper
             case state.span # atIndex (getIndexRightAfterPoint p1) of
@@ -163,22 +159,22 @@ component = H.mkComponent { initialState, eval, render }
                 -- find matching close paren to the right of pr
                 let p2 = state.span # getPointRightBeforeNthNextUnopenedParenStartingFromPoint 1 pr
                 let p3 = p2 # shiftPoint 1
-                modify_ _ { cursorState = ZipperCursorState (ZipperCursor p1 pr p2 p3) }
+                modify_ _ { cursorState = ZipperCursorState (ZipperCursor p1 pr p2 p3) ?a }
               Close -> do
                 -- find matching open paren to the left of p1
                 let p2 = state.span # getPointRightBeforeNthPrevUnclosedParenStartingFromPoint 1 p1
                 let p3 = p2 # shiftPoint 1
-                modify_ _ { cursorState = ZipperCursorState (ZipperCursor p2 p3 p1 pr) }
+                modify_ _ { cursorState = ZipperCursorState (ZipperCursor p2 p3 p1 pr) ?a }
               _ -> bug "Editor.component.handleAction" "impossible, since would imply unclosed == unclosed == 0"
 
-      _ | SpanCursorState _mb_mark (SpanCursor pl pr) <- state.cursorState, shift && key == "ArrowRight" -> do
+      _ | SpanCursorState (SpanCursor pl pr) End <- state.cursorState, shift && key == "ArrowRight" -> do
         let p1 = pr # shiftPoint 1
         when (p1 <= wrap (length state.span)) do
           -- just a normal span
           let { unopened, unclosed } = state.span # atSpanCursor (SpanCursor pl p1) # snd # countUnopenedAndUnclosedParens
           if unopened == 0 && unclosed == 0 then do
             -- a normal span 
-            modify_ _ { cursorState = SpanCursorState empty (SpanCursor pl p1) }
+            modify_ _ { cursorState = SpanCursorState (SpanCursor pl p1) ?a }
           else do
             -- must be a zipper
             case state.span # atIndex (getIndexRightBeforePoint p1) of
@@ -186,18 +182,18 @@ component = H.mkComponent { initialState, eval, render }
                 -- find matching close paren to the right of p1
                 let p2 = state.span # getPointRightBeforeNthNextUnopenedParenStartingFromPoint 1 p1
                 let p3 = p2 # shiftPoint 1
-                modify_ _ { cursorState = ZipperCursorState (ZipperCursor pl p1 p2 p3) }
+                modify_ _ { cursorState = ZipperCursorState (ZipperCursor pl p1 p2 p3) ?a }
               Close -> do
                 -- find matching open paren to the left of pl
                 let p2 = state.span # getPointRightBeforeNthPrevUnclosedParenStartingFromPoint 1 pl
                 let p3 = p2 # shiftPoint 1
-                modify_ _ { cursorState = ZipperCursorState (ZipperCursor p2 p3 pl p1) }
+                modify_ _ { cursorState = ZipperCursorState (ZipperCursor p2 p3 pl p1) ?a }
               _ -> bug "Editor.component.handleAction" "impossible, since would imply unclosed == unclosed == 0"
 
-      _ | ZipperCursorState c <- state.cursorState, shift && key == "ArrowLeft" -> do
+      _ | ZipperCursorState c o <- state.cursorState, shift && key == "ArrowLeft" -> do
         pure unit
 
-      _ | ZipperCursorState c <- state.cursorState, shift && key == "ArrowRight" -> do
+      _ | ZipperCursorState c o <- state.cursorState, shift && key == "ArrowRight" -> do
         pure unit
 
       -- move point cursor (i.e. empty span cursor) with arrow keys
@@ -205,77 +201,77 @@ component = H.mkComponent { initialState, eval, render }
       _ | key == "ArrowLeft" -> do
         let p = state.cursorState # fromCursorStateToPoint # shiftPoint (-1)
         when (wrap 0 <= p) do
-          modify_ _ { cursorState = SpanCursorState empty (SpanCursor p p) }
+          modify_ _ { cursorState = SpanCursorState (SpanCursor p p) ?a }
 
       _ | key == "ArrowRight" -> do
         let p = state.cursorState # fromCursorStateToPoint # shiftPoint 1
         when (p <= wrap (length state.span)) do
-          modify_ _ { cursorState = SpanCursorState empty (SpanCursor p p) }
+          modify_ _ { cursorState = SpanCursorState (SpanCursor p p) ?a }
 
       -- cut 
 
-      _ | SpanCursorState Nothing c <- state.cursorState, key == "x" && cmd -> do
+      _ | SpanCursorState c o <- state.cursorState, key == "x" && cmd -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let e = state.span # atSpanCursor c # snd
         let c' /\ span' = deleteAtSpanCursor (c /\ state.span)
-        modify_ _ { mb_clipboard = pure (SpanClipboard e), cursorState = SpanCursorState Nothing c', span = span' }
+        modify_ _ { mb_clipboard = pure (SpanClipboard e), cursorState = SpanCursorState c' ?a, span = span' }
 
-      _ | ZipperCursorState c <- state.cursorState, key == "x" && cmd -> do
+      _ | ZipperCursorState c o <- state.cursorState, key == "x" && cmd -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let z = state.span # atZipperCursor c # snd
         let c' /\ span' = deleteAtZipperCursor (c /\ state.span)
-        modify_ _ { mb_clipboard = pure (ZipperClipboard z), cursorState = SpanCursorState empty c', span = span' }
+        modify_ _ { mb_clipboard = pure (ZipperClipboard z), cursorState = SpanCursorState c' ?a, span = span' }
 
       -- delete
 
-      _ | SpanCursorState Nothing c <- state.cursorState, key == "Backspace" -> do
+      _ | SpanCursorState c o <- state.cursorState, key == "Backspace" -> do
         let c' /\ span' = deleteAtSpanCursor (c /\ state.span)
-        modify_ _ { cursorState = SpanCursorState Nothing c', span = span' }
+        modify_ _ { cursorState = SpanCursorState c' o, span = span' }
 
-      _ | ZipperCursorState c <- state.cursorState, key == "Backspace" -> do
+      _ | ZipperCursorState c o <- state.cursorState, key == "Backspace" -> do
         let c' /\ span' = deleteAtZipperCursor (c /\ state.span)
-        modify_ _ { cursorState = SpanCursorState empty c', span = span' }
+        modify_ _ { cursorState = SpanCursorState c' ?a, span = span' }
 
       -- copy
 
-      _ | SpanCursorState mb_mark s <- state.cursorState, key == "c" && cmd -> do
+      _ | SpanCursorState s o <- state.cursorState, key == "c" && cmd -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let e = state.span # atSpanCursor s # snd
         modify_ _ { mb_clipboard = pure (SpanClipboard e) }
 
-      _ | ZipperCursorState c <- state.cursorState, key == "c" && cmd -> do
+      _ | ZipperCursorState c o <- state.cursorState, key == "c" && cmd -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let z = state.span # atZipperCursor c # snd
         modify_ _ { mb_clipboard = pure (ZipperClipboard z) }
 
       -- paste
 
-      _ | SpanCursorState Nothing c <- state.cursorState, Just (SpanClipboard e) <- state.mb_clipboard, key == "v" && cmd -> do
+      _ | SpanCursorState c o <- state.cursorState, Just (SpanClipboard e) <- state.mb_clipboard, key == "v" && cmd -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let c' /\ span' = replaceAtSpanCursor (Zipper e mempty) (c /\ state.span)
-        modify_ _ { cursorState = SpanCursorState Nothing c', span = span' }
+        modify_ _ { cursorState = SpanCursorState c' ?a, span = span' }
 
-      _ | SpanCursorState Nothing c <- state.cursorState, Just (ZipperClipboard z) <- state.mb_clipboard, key == "v" && cmd -> do
+      _ | SpanCursorState c o <- state.cursorState, Just (ZipperClipboard z) <- state.mb_clipboard, key == "v" && cmd -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let c' /\ span' = insertAtSpanCursor z (c /\ state.span)
-        modify_ _ { cursorState = SpanCursorState Nothing c', span = span' }
+        modify_ _ { cursorState = SpanCursorState c' ?a, span = span' }
 
-      _ | ZipperCursorState c <- state.cursorState, Just (ZipperClipboard z) <- state.mb_clipboard, key == "v" && cmd -> do
+      _ | ZipperCursorState c o <- state.cursorState, Just (ZipperClipboard z) <- state.mb_clipboard, key == "v" && cmd -> do
         event # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
         let c' /\ span' = replaceAtZipperCursor z (c /\ state.span)
-        modify_ _ { cursorState = SpanCursorState empty c', span = span' }
+        modify_ _ { cursorState = SpanCursorState c' ?a, span = span' }
 
       -- insert group
 
-      _ | SpanCursorState Nothing c <- state.cursorState, key == "(" || key == ")" && not cmd -> do
+      _ | SpanCursorState c o <- state.cursorState, key == "(" || key == ")" && not cmd -> do
         let c' /\ span' = insertAtSpanCursor (Zipper (Span [ Open ]) (Span [ Close ])) (c /\ state.span)
-        modify_ _ { cursorState = SpanCursorState Nothing c', span = span' }
+        modify_ _ { cursorState = SpanCursorState c' ?a, span = span' }
 
       -- insert atom
 
-      _ | SpanCursorState Nothing c <- state.cursorState, String.length key == 1 && not cmd -> do
+      _ | SpanCursorState c o <- state.cursorState, String.length key == 1 && not cmd -> do
         let c' /\ span' = insertAtSpanCursor (Zipper (Span [ Lit key ]) mempty) (c /\ state.span)
-        modify_ _ { cursorState = SpanCursorState Nothing c', span = span' }
+        modify_ _ { cursorState = SpanCursorState c' ?a, span = span' }
 
       _ -> do
         Console.log $ "unrecognized keyboard event: " <> show { key, shift, ctrl, meta }
@@ -294,8 +290,8 @@ component = H.mkComponent { initialState, eval, render }
     case state.mb_dragOrigin /\ state.cursorState of
       Nothing /\ _ -> pure unit
       -- Just p0 -> modify_ _ { cursor = MakeSpanCursor $ makeSpanCursorFromDrag p0 p1 state.span }
-      Just p0 /\ SpanCursorState mb_mark _ -> modify_ _ { cursorState = SpanCursorState mb_mark $ makeSpanCursorFromDrag p0 p1 state.span }
-      Just p0 /\ ZipperCursorState _ -> modify_ _ { cursorState = SpanCursorState empty $ makeSpanCursorFromDrag p0 p1 state.span }
+      Just p0 /\ SpanCursorState _ _ -> modify_ _ { cursorState = SpanCursorState (makeSpanCursorFromDrag p0 p1 state.span) ?a }
+      Just p0 /\ ZipperCursorState _ _ -> modify_ _ { cursorState = SpanCursorState (makeSpanCursorFromDrag p0 p1 state.span) ?a }
   render state = Debug.trace (show state) \_ ->
     HH.div
       [ HP.classes [ HH.ClassName "Editor" ] ]
@@ -361,11 +357,11 @@ component = H.mkComponent { initialState, eval, render }
 --------------------------------------------------------------------------------
 
 renderCursorStateAndSpan :: CursorState -> Span -> HTML
-renderCursorStateAndSpan (SpanCursorState mb_mark c) = renderSpanCursorStateAndSpan mb_mark c
-renderCursorStateAndSpan (ZipperCursorState c) = renderZipperCursorStateAndSpan c
+renderCursorStateAndSpan (SpanCursorState c o) = renderSpanCursorStateAndSpan c
+renderCursorStateAndSpan (ZipperCursorState c o) = renderZipperCursorStateAndSpan c
 
-renderSpanCursorStateAndSpan :: Maybe SpanCursor -> SpanCursor -> Span -> HTML
-renderSpanCursorStateAndSpan mb_mark (SpanCursor pl pr) (Span es) =
+renderSpanCursorStateAndSpan :: SpanCursor -> Span -> HTML
+renderSpanCursorStateAndSpan (SpanCursor pl pr) (Span es) =
   HH.div
     [ HP.classes [ HH.ClassName "Span" ] ]
     (es # foldMapPointsAndWithIndex renderPoint renderAtom)
@@ -390,19 +386,9 @@ renderSpanCursorStateAndSpan mb_mark (SpanCursor pl pr) (Span es) =
           template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Active" ] "["
         _ | p == pr ->
           template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Active" ] "]"
-        _ | Just (SpanCursor pl' pr') <- mb_mark, p == pl' && p == pr' ->
-          template [ HH.ClassName "Cursor", HH.ClassName "PointCursor", HH.ClassName "Marker" ] "|"
-        _ | Just (SpanCursor pl' pr') <- mb_mark, p == pl' ->
-          template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Marker" ] "["
-        _ | Just (SpanCursor pl' pr') <- mb_mark, p == pr' ->
-          template [ HH.ClassName "Cursor", HH.ClassName "SpanCursor", HH.ClassName "Marker" ] "]"
         -- inside cursor
-        _ | Nothing <- mb_mark, pl < p && p < pr ->
+        _ | pl < p && p < pr ->
           template [ HH.ClassName "inside-active-SpanCursor" ] "•"
-        _ | Just (SpanCursor pl' pr') <- mb_mark, ((pl <= pl' && pr' <= pr) && ((pl < p && p < pl') || (pr' < p && p < pr))) || ((pl' <= pl && pr <= pr') && (pl < p && p < pr)) ->
-          template [ HH.ClassName "inside-active-SpanCursor" ] "•"
-        _ | Just (SpanCursor pl' pr') <- mb_mark, ((pl' <= pl && pr <= pr') && ((pl' < p && p < pl) || (pr < p && p < pr'))) || ((pl <= pl' && pr' <= pr) && (pl' < p && p < pr')) ->
-          template [ HH.ClassName "inside-marker-SpanCursor" ] "•"
         _ ->
           template [] "•"
 
@@ -429,20 +415,8 @@ renderSpanCursorStateAndSpan mb_mark (SpanCursor pl pr) (Span es) =
         ]
     in
       case unit of
-        _ | Nothing <- mb_mark, pl `ltPointAndIndex` i && i `ltIndexAndPoint` pr ->
+        _ | pl `ltPointAndIndex` i && i `ltIndexAndPoint` pr ->
           template [ HH.ClassName "inside-active-SpanCursor" ]
-        _
-          | Just (SpanCursor pl' pr') <- mb_mark
-          , ((pl <= pl' && pr' <= pr) && ((pl `ltPointAndIndex` i && i `ltIndexAndPoint` pl') || (pr' `ltPointAndIndex` i && i `ltIndexAndPoint` pr))) || -- active around marker
-              ((pl' <= pl && pr <= pr') && (pl `ltPointAndIndex` i && i `ltIndexAndPoint` pr)) -> -- marker around active 
-
-              template [ HH.ClassName "inside-active-SpanCursor" ]
-        _
-          | Just (SpanCursor pl' pr') <- mb_mark
-          , ((pl' <= pl && pr <= pr') && ((pl' `ltPointAndIndex` i && i `ltIndexAndPoint` pl) || (pr `ltPointAndIndex` i && i `ltIndexAndPoint` pr'))) || -- marker around active
-              ((pl <= pl' && pr' <= pr) && (pl' `ltPointAndIndex` i && i `ltIndexAndPoint` pr')) -> -- active around marker
-
-              template [ HH.ClassName "inside-marker-SpanCursor" ]
         _ -> template []
 
 renderZipperCursorStateAndSpan :: ZipperCursor -> Span -> HTML

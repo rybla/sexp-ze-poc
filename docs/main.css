@@ -21,7 +21,7 @@ body {
 .Editor>.content {
   flex-grow: 1;
   padding: 1em 0;
-  font-size: 2em;
+  font-size: 1.5em;
   margin: auto;
 }
 

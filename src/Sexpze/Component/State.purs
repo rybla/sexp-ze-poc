@@ -68,6 +68,12 @@ data Cursor
 
 derive instance Generic Cursor _
 
+endpointOfZipperCursor :: ZipperCursorOrientation -> ZipperCursor -> Point
+endpointOfZipperCursor (Outer Start) (ZipperCursor pol _pil _pir _por) = pol
+endpointOfZipperCursor (Inner Start) (ZipperCursor _pol _pil pir _por) = pir
+endpointOfZipperCursor (Inner End) (ZipperCursor _pol pil _pir _por) = pil
+endpointOfZipperCursor (Outer End) (ZipperCursor _pol _pil _pir por) = por
+
 endpointOuterLeft :: ZipperCursor -> Point
 endpointOuterLeft (ZipperCursor p _ _ _) = p
 
@@ -141,9 +147,11 @@ lengthLeft (Zipper ls _) = length ls
 lengthRight :: Zipper -> Int
 lengthRight (Zipper _ rs) = length rs
 
+-- TODO: remove marker (Maybe SpanCursor)
+-- TODO: add orientation (which point is "focus") for sake of keyboard movement
 data CursorState
-  = SpanCursorState (Maybe SpanCursor) SpanCursor
-  | ZipperCursorState ZipperCursor
+  = SpanCursorState SpanCursor SpanCursorOrientation
+  | ZipperCursorState ZipperCursor ZipperCursorOrientation
 
 derive instance Generic CursorState _
 
@@ -151,6 +159,30 @@ instance Show CursorState where
   show x = genericShow x
 
 instance Eq CursorState where
+  eq x = genericEq x
+
+data SpanCursorOrientation
+  = Start
+  | End
+
+derive instance Generic SpanCursorOrientation _
+
+instance Show SpanCursorOrientation where
+  show x = genericShow x
+
+instance Eq SpanCursorOrientation where
+  eq x = genericEq x
+
+data ZipperCursorOrientation
+  = Inner SpanCursorOrientation
+  | Outer SpanCursorOrientation
+
+derive instance Generic ZipperCursorOrientation _
+
+instance Show ZipperCursorOrientation where
+  show x = genericShow x
+
+instance Eq ZipperCursorOrientation where
   eq x = genericEq x
 
 --------------------------------------------------------------------------------
@@ -399,9 +431,15 @@ gtIndexAndPoint :: Index -> Point -> Boolean
 gtIndexAndPoint i p = unwrap i > unwrap p
 
 fromCursorStateToEmptySpanCursor :: CursorState -> SpanCursor
-fromCursorStateToEmptySpanCursor (SpanCursorState _ c) = let i = endpointLeft c in SpanCursor i i
-fromCursorStateToEmptySpanCursor (ZipperCursorState c) = let i = endpointInnerLeft c in SpanCursor i i
+fromCursorStateToEmptySpanCursor (SpanCursorState c o) = let i = endpointLeft c in SpanCursor i i
+fromCursorStateToEmptySpanCursor (ZipperCursorState c o) = let i = endpointInnerLeft c in SpanCursor i i
 
 fromCursorStateToPoint :: CursorState -> Point
-fromCursorStateToPoint (SpanCursorState _ c) = endpointLeft c
-fromCursorStateToPoint (ZipperCursorState c) = endpointInnerLeft c
+fromCursorStateToPoint (SpanCursorState c o) = endpointLeft c
+fromCursorStateToPoint (ZipperCursorState c o) = endpointInnerLeft c
+
+fromZipperCursorWithOrientationToSpanCursorWithOrientation :: ZipperCursor /\ ZipperCursorOrientation -> SpanCursor /\ SpanCursorOrientation
+fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ (Outer Start)) = (SpanCursor (endpointOfZipperCursor (Outer Start) c) (endpointOfZipperCursor (Outer End) c) /\ Start)
+fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ (Inner Start)) = (SpanCursor (endpointOfZipperCursor (Inner Start) c) (endpointOfZipperCursor (Inner End) c) /\ Start)
+fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ (Inner End)) = (SpanCursor (endpointOfZipperCursor (Inner Start) c) (endpointOfZipperCursor (Inner End) c) /\ End)
+fromZipperCursorWithOrientationToSpanCursorWithOrientation (c /\ (Outer End)) = (SpanCursor (endpointOfZipperCursor (Outer Start) c) (endpointOfZipperCursor (Outer End) c) /\ End)
