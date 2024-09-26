@@ -43,7 +43,7 @@ component = H.mkComponent { initialState, eval, render }
           (map KeyDown_Action <<< KeyboardEvent.fromEvent)
       H.subscribe' \_ ->
         HQE.eventListener
-          KET.keydown
+          KET.keyup
           (HTMLDocument.toEventTarget document)
           (map KeyUp_Action <<< KeyboardEvent.fromEvent)
 

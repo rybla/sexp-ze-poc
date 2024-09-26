@@ -18,7 +18,7 @@ import Control.Monad.State (get, modify_)
 import Control.Plus (empty)
 import Data.Array as Array
 import Data.Foldable (foldMap)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), isNothing, maybe)
 import Data.Newtype (unwrap, wrap)
 import Data.String as String
 import Data.Tuple (snd)
@@ -56,9 +56,13 @@ type State =
   { cursorState :: CursorState
   , span :: Span
   , mb_clipboard :: Maybe Clipboard
-  , mb_dragOrigin :: Maybe { p :: Point, shift :: Boolean }
+  , mb_dragOrigin :: Maybe { origin :: DragOrigin, shift :: Boolean }
   , mb_ref_shift :: Maybe (Ref Boolean)
   }
+
+data DragOrigin
+  = SpanDragOrigin Point
+  | ZipperDragOrigin { pl :: Point, pr :: Point, p :: Point }
 
 data Action
   = Initialize
@@ -93,7 +97,7 @@ component = H.mkComponent { initialState, eval, render }
   handleQuery :: forall a. Query a -> HM (Maybe a)
   handleQuery (KeyUp_Query event a) = do
     state <- get
-    when (event # KeyboardEvent.shiftKey) do
+    when (KeyboardEvent.key event == "Shift") do
       state.mb_ref_shift # maybe mempty \ref_shift -> do
         ref_shift # Ref.write false # liftEffect
     pure (pure a)
@@ -107,7 +111,7 @@ component = H.mkComponent { initialState, eval, render }
       cmd = ctrl || meta
     state <- get
 
-    when shift do
+    when (KeyboardEvent.key event == "Shift") do
       state.mb_ref_shift # maybe mempty \ref_shift -> do
         ref_shift # Ref.write true # liftEffect
 
@@ -271,7 +275,15 @@ component = H.mkComponent { initialState, eval, render }
   handleAction (MouseDownOnPoint p) = do
     state <- get
     shift <- state.mb_ref_shift # maybe (pure false) Ref.read # liftEffect
-    modify_ _ { mb_dragOrigin = pure { p, shift } }
+    if shift then do
+      let
+        pl /\ pr = case state.cursorState of
+          SpanCursorState (SpanCursor p1 p2) _ -> p1 /\ p2
+          ZipperCursorState (ZipperCursor _pol pil pir _por) (Inner /\ _) -> pil /\ pir
+          ZipperCursorState (ZipperCursor pol _pil _pir por) (Outer /\ _) -> pol /\ por
+      modify_ _ { mb_dragOrigin = pure { origin: ZipperDragOrigin { pl, pr, p }, shift } }
+    else
+      modify_ _ { mb_dragOrigin = pure { origin: SpanDragOrigin p, shift } }
     pure unit
   handleAction MouseUp = do
     modify_ _ { mb_dragOrigin = empty }
@@ -279,16 +291,26 @@ component = H.mkComponent { initialState, eval, render }
     state <- get
     case state.mb_dragOrigin /\ state.cursorState of
       Nothing /\ _ -> pure unit
-      Just { p: p0, shift: false } /\ _ ->
-        modify_ _
-          { cursorState = SpanCursorState (makeSpanCursorFromDrag p0 p1 state.span) (if p0 < p1 then End else Start)
-          }
       -- was holding shift down when started drag
-      Just { p: p0, shift: true } /\ _ -> do
-        _ <- todo "" {}
-        modify_ _
-          { cursorState = SpanCursorState (makeSpanCursorFromDrag p0 p1 state.span) (if p0 < p1 then End else Start)
-          }
+      Just { origin: SpanDragOrigin p0, shift: true } /\ SpanCursorState (SpanCursor p2 p3) _o -> do
+        let SpanCursor p0' p1' = makeSpanCursorFromDrag p0 p1 state.span
+        if p0' <= p2 && p3 <= p1' then
+          modify_ _ { cursorState = ZipperCursorState (ZipperCursor p0' p2 p3 p1') (Outer /\ if p0 < p1 then End else Start) }
+        else if p2 < p0' && p1' <= p3 then
+          modify_ _ { cursorState = ZipperCursorState (ZipperCursor p2 p0' p1' p3) (Inner /\ if p0 < p1 then End else Start) }
+        else
+          pure unit -- invalid zipper
+      Just { origin: ZipperDragOrigin { pl: p2, pr: p3, p: p0 }, shift: true } /\ _ -> do
+        let SpanCursor p0' p1' = makeSpanCursorFromDrag p0 p1 state.span
+        if p0' <= p2 && p3 <= p1' then
+          modify_ _ { cursorState = ZipperCursorState (ZipperCursor p0' p2 p3 p1') (Outer /\ if p0 < p1 then End else Start) }
+        else if p2 < p0' && p1' <= p3 then
+          modify_ _ { cursorState = ZipperCursorState (ZipperCursor p2 p0' p1' p3) (Inner /\ if p0 < p1 then End else Start) }
+        else
+          pure unit -- invalid zipper
+      Just { origin: SpanDragOrigin p0 } /\ _ ->
+        modify_ _ { cursorState = SpanCursorState (makeSpanCursorFromDrag p0 p1 state.span) (if p0 < p1 then End else Start) }
+      _ -> pure unit -- TODO: ?
   render state = Debug.trace (show { cursor: state.cursorState, span: state.span }) \_ ->
     HH.div
       [ HP.classes [ HH.ClassName "Editor" ] ]
