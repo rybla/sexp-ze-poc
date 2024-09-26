@@ -22,7 +22,8 @@ import Web.UIEvent.KeyboardEvent.EventTypes as KET
 
 data Action
   = Initialize
-  | KeyboardAction KeyboardEvent
+  | KeyDown_Action KeyboardEvent
+  | KeyUp_Action KeyboardEvent
   | EditorOutput Editor.Output
 
 component :: forall query input output. H.Component query input output Aff
@@ -39,12 +40,22 @@ component = H.mkComponent { initialState, eval, render }
         HQE.eventListener
           KET.keydown
           (HTMLDocument.toEventTarget document)
-          (map KeyboardAction <<< KeyboardEvent.fromEvent)
+          (map KeyDown_Action <<< KeyboardEvent.fromEvent)
+      H.subscribe' \_ ->
+        HQE.eventListener
+          KET.keydown
+          (HTMLDocument.toEventTarget document)
+          (map KeyUp_Action <<< KeyboardEvent.fromEvent)
 
-    KeyboardAction ke -> do
+    KeyDown_Action ke -> do
       when (KeyboardEvent.key ke == " ") do
         ke # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
-      H.tell (Proxy :: Proxy "editor") unit $ Editor.KeyboardEvent_Query ke
+      H.tell (Proxy :: Proxy "editor") unit $ Editor.KeyDown_Query ke
+
+    KeyUp_Action ke -> do
+      when (KeyboardEvent.key ke == " ") do
+        ke # KeyboardEvent.toEvent # Event.preventDefault # liftEffect
+      H.tell (Proxy :: Proxy "editor") unit $ Editor.KeyUp_Query ke
 
     EditorOutput _out -> do
       pure unit -- TODO

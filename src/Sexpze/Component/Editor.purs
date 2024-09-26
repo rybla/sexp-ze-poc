@@ -18,7 +18,7 @@ import Control.Monad.State (get, modify_)
 import Control.Plus (empty)
 import Data.Array as Array
 import Data.Foldable (foldMap)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap, wrap)
 import Data.String as String
 import Data.Tuple (snd)
@@ -27,6 +27,8 @@ import Debug as Debug
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
+import Effect.Ref (Ref)
+import Effect.Ref as Ref
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -44,7 +46,9 @@ type Input =
   { span :: Span
   }
 
-data Query a = KeyboardEvent_Query KeyboardEvent a
+data Query a
+  = KeyDown_Query KeyboardEvent a
+  | KeyUp_Query KeyboardEvent a
 
 data Output = Output
 
@@ -52,13 +56,15 @@ type State =
   { cursorState :: CursorState
   , span :: Span
   , mb_clipboard :: Maybe Clipboard
-  , mb_dragOrigin :: Maybe Point
+  , mb_dragOrigin :: Maybe { p :: Point, shift :: Boolean }
+  , mb_ref_shift :: Maybe (Ref Boolean)
   }
 
 data Action
   = Initialize
-  | StartDrag Point
-  | EndDrag Point
+  | MouseDownOnPoint Point
+  | MouseUp
+  | MouseOverOnPoint Point
 
 type Slots = ()
 
@@ -79,12 +85,19 @@ component = H.mkComponent { initialState, eval, render }
     , span
     , mb_clipboard: empty
     , mb_dragOrigin: empty
+    , mb_ref_shift: empty
     }
 
   eval = H.mkEval H.defaultEval { handleQuery = handleQuery, handleAction = handleAction, initialize = Just Initialize }
 
   handleQuery :: forall a. Query a -> HM (Maybe a)
-  handleQuery (KeyboardEvent_Query event a) = do
+  handleQuery (KeyUp_Query event a) = do
+    state <- get
+    when (event # KeyboardEvent.shiftKey) do
+      state.mb_ref_shift # maybe mempty \ref_shift -> do
+        ref_shift # Ref.write false # liftEffect
+    pure (pure a)
+  handleQuery (KeyDown_Query event a) = do
     let
       key = event # KeyboardEvent.key
       alt = event # KeyboardEvent.altKey
@@ -93,6 +106,10 @@ component = H.mkComponent { initialState, eval, render }
       meta = event # KeyboardEvent.metaKey
       cmd = ctrl || meta
     state <- get
+
+    when shift do
+      state.mb_ref_shift # maybe mempty \ref_shift -> do
+        ref_shift # Ref.write true # liftEffect
 
     case unit of
 
@@ -249,20 +266,36 @@ component = H.mkComponent { initialState, eval, render }
 
   handleAction :: Action -> HM Unit
   handleAction Initialize = do
+    ref_shift <- Ref.new false # liftEffect
+    modify_ _ { mb_ref_shift = pure ref_shift }
+  handleAction (MouseDownOnPoint p) = do
+    state <- get
+    shift <- state.mb_ref_shift # maybe (pure false) Ref.read # liftEffect
+    modify_ _ { mb_dragOrigin = pure { p, shift } }
     pure unit
-  handleAction (StartDrag p) = do
-    modify_ _ { mb_dragOrigin = pure p }
-    pure unit
-  handleAction (EndDrag p1) = do
+  handleAction MouseUp = do
+    modify_ _ { mb_dragOrigin = empty }
+  handleAction (MouseOverOnPoint p1) = do
     state <- get
     case state.mb_dragOrigin /\ state.cursorState of
       Nothing /\ _ -> pure unit
-      Just p0 /\ _ -> modify_ _ { cursorState = SpanCursorState (makeSpanCursorFromDrag p0 p1 state.span) (if p0 < p1 then End else Start) }
-  render state = Debug.trace (show state) \_ ->
+      Just { p: p0, shift: false } /\ _ ->
+        modify_ _
+          { cursorState = SpanCursorState (makeSpanCursorFromDrag p0 p1 state.span) (if p0 < p1 then End else Start)
+          }
+      -- was holding shift down when started drag
+      Just { p: p0, shift: true } /\ _ -> do
+        _ <- todo "" {}
+        modify_ _
+          { cursorState = SpanCursorState (makeSpanCursorFromDrag p0 p1 state.span) (if p0 < p1 then End else Start)
+          }
+  render state = Debug.trace (show { cursor: state.cursorState, span: state.span }) \_ ->
     HH.div
       [ HP.classes [ HH.ClassName "Editor" ] ]
       [ HH.div
-          [ HP.classes [ HH.ClassName "content" ] ]
+          [ HP.classes [ HH.ClassName "content" ]
+          , HE.onMouseUp (const MouseUp)
+          ]
           [ renderCursorStateAndSpan state.cursorState state.span ]
       , HH.div
           [ HP.classes [ HH.ClassName "information" ] ]
@@ -336,8 +369,8 @@ renderSpanCursorStateAndSpan (SpanCursor pl pr) (Span es) =
       template cns sym =
         [ HH.div
             [ HP.classes ([ HH.ClassName "Point" ] <> cns)
-            , HE.onMouseDown (const (StartDrag p))
-            , HE.onMouseUp (const (EndDrag p))
+            , HE.onMouseDown (const (MouseDownOnPoint p))
+            , HE.onMouseOver (const (MouseOverOnPoint p))
             ]
             [ HH.text sym ]
         ]
@@ -395,8 +428,8 @@ renderZipperCursorStateAndSpan (ZipperCursor pol pil pir por) (Span es) =
       template cns sym =
         [ HH.div
             [ HP.classes ([ HH.ClassName "Point" ] <> cns)
-            , HE.onMouseDown (const (StartDrag p))
-            , HE.onMouseUp (const (EndDrag p))
+            , HE.onMouseDown (const (MouseDownOnPoint p))
+            , HE.onMouseOver (const (MouseOverOnPoint p))
             ]
             [ HH.text sym ]
         ]
